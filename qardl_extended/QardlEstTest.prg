@@ -1,6 +1,6 @@
 new;
 
-library Qreg, pgraph;
+library pgraph;
 #include pgraph.ext;
 #include qardl.prc;
 #include wtestlrb.prc;
@@ -11,11 +11,10 @@ library Qreg, pgraph;
 _pgrid = {1,1};
 _plwidth = 10;
 
-setQreg;
+
 cls;
 
-_Qreg_algr = 1;       
-_Qreg_PrintIters = 0; 
+
 __output = 0;         
 
 nnn = 10000;           /* sampel size */

@@ -1,5 +1,5 @@
 new;
-library Qreg, pgraph;
+library pgraph;
 #include pgraph.ext;
 #include qardl.prc;
 #include wtestlrb.prc;
@@ -10,11 +10,10 @@ library Qreg, pgraph;
 _pgrid = {1,1};
 _plwidth = 10;
 
-setQreg;
+
 cls;
 
-_Qreg_algr = 1;       /* Interior-point method       */
-_Qreg_PrintIters = 0; /* Do not print the iterations */
+
 __output = 0;         /* Print the statistics        */
 
 nnn = 5000;    /***************/

@@ -78,7 +78,19 @@ Jin Seo Cho
     fh = zeros(ss,1);
     jj = 1;
     do until jj > ss;
-        {bt1,up,um} = Qreg(Y,ONEX,tau[jj,1],0);
+        
+        // Turn off constant
+        struct qfitControl qCtl;
+        qctl = qfitControlCreate();
+        qCtl.const = 0;
+        qCtl.verbose = 0;
+        
+        struct qfitOut qOut;
+        qOut = quantileFit(Y, ONEX, tau[jj, 1], 0, qCtl);
+        bt1 = qOut.beta;
+        up = qOut.u_plus;
+        um = qOut.u_minus;
+        
         uu = Y - ONEX*bt1;
         fh[jj,1] = meanc(pdfn(-uu/hb[jj,1]))/hb[jj,1];
         bt[.,jj] = bt1;
@@ -155,9 +167,17 @@ Jin Seo Cho
         do until jj > ppp;
             Y = yyj[.,jj];
             ONEX = ones(nn-ppp,1)~xxj~wwj;
+            struct qfitOut qOut2;
+            
             ii = 1;
             do until ii > ss;
-                {bbt,up,um} = Qreg(Y,ONEX,tau[ii,1],0);
+                
+            qOut2 = quantileFit(Y, ONEX, tau[ii, 1], 0, qCtl);
+
+        bbt = qOut2.beta;
+        up = qOut2.u_plus;
+        um = qOut2.u_minus;
+                
                 kkk = Y - ONEX*bbt;
                 kk[.,jj+(ii-1)*ppp] = kkk;
                 ii = ii + 1;
@@ -190,9 +210,16 @@ Jin Seo Cho
         do until jj > ppp;
             Y = yyj[.,jj];
             ONEX = ones(nn-qqq,1)~xxj~wwj;
+            struct qfitOut qOut3;
+            
             ii = 1;
             do until ii > ss;
-                {bbt,up,um} = Qreg(Y,ONEX,tau[ii,1],0);
+                  qOut3 = quantileFit(Y, ONEX, tau[ii, 1], 0, qCtl);
+
+        bbt = qOut3.beta;
+        up = qOut3.u_plus;
+        um = qOut3.u_minus;
+                
                 kkk = Y - ONEX*bbt;
                 kk[.,jj+(ii-1)*ppp] = kkk;
                 ii = ii + 1;
