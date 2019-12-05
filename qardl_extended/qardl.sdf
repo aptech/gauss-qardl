@@ -1,0 +1,20 @@
+struct qardlOut {
+
+    // Long-run parameter
+    matrix bigbt;
+    
+    // Covariance of long-run parameter
+    matrix bigbt_cov;
+    
+    // Short-run phi
+    matrix phi;
+    
+    // Covariance of short-run phi
+    matrix phi_cov;
+
+    // Short-run gamma
+    matrix gamma;
+    
+    // Short-run gamma covariance
+    matrix gamma_cov;
+};

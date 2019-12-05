@@ -1,23 +1,45 @@
-proc (6) = qardl(data,ppp,qqq,tau);
+#include qardl.sdf
 
-/**************************************************************************************
-This procedure file provides the following outputs:
+/*
+**> qardl
+**
+**  Purpose:    Perform QARDL estimation
+**
+**  Format:     qOut = qardl(data, ppp, qqq, tau);
+**
+**  Input:      
+**              data:   (n *(1+k)) matrix, where the 1st column is the dependent variable, 
+**                      and the last k columns are explanatory variables.
+**
+**              ppp     p value of QARDL(p,q) model;
+**
+**
+**              qqq     q value of QARDL(p,q) model;
+**
+**              tau     (s * 1) vector of quantiles, which is sorted 
+**                      from the smallest to the largest.
 
-1) long-run parameter and its covariance matrix;
-2) short-run parameter (phi) and its covariance matrix;
-3) short-run parameter (gamma) and its covariance matrix.
+**  Output:     qOut            An instance of the qardlOut structure. The structure qOut contains
+**                              the following members:
+**
+**                  qOut.bigbt           Matrix, long-run parameter.
+**
+**                  qOut.bigbt_cov       Matrix, covariance of the long-run parameter.
+**
+**                  qOut.phi             Matrix, short-run parameter.
+**
+**                  qOut.phi_cov         Matrix, covariance of the short-run parameter.
+**
+**                  qOut.gamma           Matrix, short-run parameter.
+**
+**                  qOut.gamma_cov       Matrix, covariance of the short-run parameter.
+**
+**    Developed:    October 10, 2013
+**                  Jin Seo Cho
+*/
 
-For these outputs, the following inputs are required:
 
-1) data: (n *(1+k)) matrix, where the 1st column is the dependent variable, 
-         and the last k columns are explanatory variables;
-2) ppp: p value of QARDL(p,q) model;
-3) qqq: q value of QARDL(p,q) model;
-4) tau: (s * 1) vector of quantiles, which is sorted from the smallest to the largest.
-
-October 10, 2013
-Jin Seo Cho
-***************************************************************************************/
+proc (1) = qardl(data, ppp, qqq, tau);
 
     local za, nn, yy, xx, mm, ee, Y, X, ONEX, up, um, bigbt, psu, midbt,
     tw, bb, qq, eei, xxi, yyi, ii, yyj, xxj, wwj, kk, kkk, tilw, lll, 
@@ -34,19 +56,19 @@ Jin Seo Cho
     hs = zeros(ss,1);
     jj = 1;
     do until jj > ss;
-        hb[jj,1] = (4.5*pdfn(cdfni(tau[jj,1]))^4/(nn*(2*cdfni(tau[jj,1])^2+1)^2))^0.2;
-        hs[jj,1] = za^(2/3)*(1.5*pdfn(cdfni(tau[jj,1]))^2/(nn*(2*cdfni(tau[jj,1])^2+1)))^(1/3);
+        hb[jj, 1] = (4.5*pdfn(cdfni(tau[jj,1]))^4/(nn*(2*cdfni(tau[jj,1])^2+1)^2))^0.2;
+        hs[jj, 1] = za^(2/3)*(1.5*pdfn(cdfni(tau[jj,1]))^2/(nn*(2*cdfni(tau[jj,1])^2+1)))^(1/3);
         jj = jj + 1;
     endo;
 
-    yy = data[.,1];
-    xx = data[.,2:cols(data)];
-    ee = xx[2:nn,.] - xx[1:(nn-1),.];
-    ee = zeros(1,k0)|ee;
+    yy = data[., 1];
+    xx = data[., 2:cols(data)];
+    ee = xx[2:nn, .] - xx[1:(nn-1), .];
+    ee = zeros(1, k0)|ee;
 
-    eei = zeros(nn-qqq,qqq*k0);
-    xxi = xx[qqq+1:nn,.];
-    yyi = zeros(nn-ppp,ppp);
+    eei = zeros(nn-qqq, qqq*k0);
+    xxi = xx[qqq+1:nn, .];
+    yyi = zeros(nn-ppp, ppp);
 
     jj = 1;
     do until jj > k0;
@@ -60,22 +82,22 @@ Jin Seo Cho
 
     ii = 1;
     do until ii > ppp;
-        yyi[.,ii] = yy[(1+ppp-ii):(nn-ii),1];
+        yyi[.,ii] = yy[(1+ppp-ii):(nn-ii), 1];
         ii = ii + 1;
     endo;
 
     if ppp .> qqq;
-        X  = eei[(rows(eei)+1-rows(yyi)):rows(eei),.]~ xxi[(rows(xxi)+1-rows(yyi)):rows(xxi),.]~yyi;
+        X  = eei[(rows(eei)+1-rows(yyi)):rows(eei), .]~xxi[(rows(xxi)+1-rows(yyi)):rows(xxi), .]~yyi;
     else;
-        X  = eei~xxi~yyi[(rows(yyi)+1-rows(xxi)):rows(yyi),.];
+        X  = eei~xxi~yyi[(rows(yyi)+1-rows(xxi)):rows(yyi), .];
     endif;
 
     /* parameter estimation */
-    ONEX = ones(rows(X),1)~X;
-    Y  = yy[(nn-rows(X)+1):nn,1];
+    ONEX = ones(rows(X), 1)~X;
+    Y  = yy[(nn-rows(X)+1):nn, 1];
     
-    bt = zeros(cols(ONEX),ss);
-    fh = zeros(ss,1);
+    bt = zeros(cols(ONEX), ss);
+    fh = zeros(ss, 1);
     jj = 1;
     do until jj > ss;
         
@@ -92,50 +114,50 @@ Jin Seo Cho
         um = qOut.u_minus;
         
         uu = Y - ONEX*bt1;
-        fh[jj,1] = meanc(pdfn(-uu/hb[jj,1]))/hb[jj,1];
-        bt[.,jj] = bt1;
-        jj = jj +1;
+        fh[jj, 1] = meanc(pdfn(-uu/hb[jj, 1]))/hb[jj, 1];
+        bt[., jj] = bt1;
+        jj = jj + 1;
     endo;    
 
     /* testing long-run parameter: beta */
 
-    barw = zeros(nn-1,qqq*k0);
+    barw = zeros(nn-1, qqq*k0);
     jj = 1;
     do until jj > qqq;
-        barw[jj:(nn-1),(k0*(jj-1)+1):(k0*jj)] = ee[2:(nn-jj+1),.];
+        barw[jj:(nn-1), (k0*(jj-1)+1):(k0*jj)] = ee[2:(nn-jj+1), .];
         jj = jj + 1;
     endo;
 
 //    tw = ones(nn-1,1)~ee[2:nn,.];
     tw = ones(nn-1,1)~barw;
-    mm = (xx[(qqq+1):nn,.]'*xx[(qqq+1):nn,.] - xx[(qqq+1):nn,.]'*tw[qqq:(nn-1),.]*inv(tw[qqq:(nn-1),.]'*tw[qqq:(nn-1),.])*tw[qqq:(nn-1),.]'*xx[(qqq+1):nn,.])/(nn-qqq)^2;
+    mm = (xx[(qqq+1):nn, .]'*xx[(qqq+1):nn, .] - xx[(qqq+1):nn, .]'*tw[qqq:(nn-1), .]*inv(tw[qqq:(nn-1), .]'*tw[qqq:(nn-1), .])*tw[qqq:(nn-1), .]'*xx[(qqq+1):nn, .])/(nn-qqq)^2;
 
-    bb = zeros(ss,1);
+    bb = zeros(ss, 1);
 
     jj = 1;
     do until jj > ss;
-        bb[jj,1] = 1/((1-sumc(bt[2+(qqq+1)*k0:1+(qqq+1)*k0+ppp,jj]))*fh[jj,1]);
+        bb[jj, 1] = 1/((1-sumc(bt[2+(qqq+1)*k0:1+(qqq+1)*k0+ppp, jj]))*fh[jj, 1]);
         jj = jj + 1;
     endo;
 
-    qq = zeros(ss,ss);
+    qq = zeros(ss, ss);
     jj = 1;
     do until jj > ss;
         ii = 1;
         do until ii > ss;
-            psu = zeros(2,1);
-            psu[1,1] = tau[jj,1];
-            psu[2,1] = tau[ii,1];
-            qq[jj,ii] = (minc(psu) - tau[jj,1]*tau[ii,1])*bb[jj,1]*bb[ii,1];
+            psu = zeros(2, 1);
+            psu[1, 1] = tau[jj, 1];
+            psu[2, 1] = tau[ii, 1];
+            qq[jj, ii] = (minc(psu) - tau[jj, 1]*tau[ii, 1])*bb[jj, 1]*bb[ii, 1];
             ii = ii + 1;
         endo;
         jj = jj + 1;
     endo;
 
-    midbt = zeros(k0,ss);
+    midbt = zeros(k0, ss);
     jj = 1;
     do until jj > ss;
-          midbt[.,jj] = bt[2+qqq*k0:1+(qqq+1)*k0,jj]/(1-sumc(bt[2+(qqq+1)*k0:1+(qqq+1)*k0+ppp,jj]));
+          midbt[., jj] = bt[2+qqq*k0:1+(qqq+1)*k0, jj]/(1-sumc(bt[2+(qqq+1)*k0:1+(qqq+1)*k0+ppp, jj]));
         jj = jj + 1;
     endo;
     bigbt = vec(midbt);
@@ -144,29 +166,29 @@ Jin Seo Cho
     /* testing short-run parameters: phi */
 
     if ppp .> qqq; 
-        yyj = zeros(nn-ppp,ppp);
-        xxj = zeros(nn-ppp,k0);
-        wwj = zeros(nn-ppp,qqq*k0);
+        yyj = zeros(nn-ppp, ppp);
+        xxj = zeros(nn-ppp, k0);
+        wwj = zeros(nn-ppp, qqq*k0);
         jj = 1;
         do until jj > ppp;
-            yyj[.,jj] = yy[(ppp+1-jj):(nn-jj),1];
+            yyj[., jj] = yy[(ppp+1-jj):(nn-jj), 1];
             jj = jj + 1;
         endo;
         ii = 1;
         do until ii > k0;
             jj = 1;
             do until jj > qqq;
-                wwj[.,jj+(ii-1)*qqq] = ee[(ppp-jj+2):(nn-jj+1),ii];
+                wwj[., jj+(ii-1)*qqq] = ee[(ppp-jj+2):(nn-jj+1), ii];
                 jj = jj + 1;
             endo;
             ii = ii + 1;
         endo;
-        xxj = xx[(ppp+1):nn,.];
-        kk = zeros(nn-ppp,ss*ppp);
+        xxj = xx[(ppp+1):nn, .];
+        kk = zeros(nn-ppp, ss*ppp);
         jj = 1;
         do until jj > ppp;
-            Y = yyj[.,jj];
-            ONEX = ones(nn-ppp,1)~xxj~wwj;
+            Y = yyj[., jj];
+            ONEX = ones(nn-ppp, 1)~xxj~wwj;
             struct qfitOut qOut2;
             
             ii = 1;
@@ -179,37 +201,37 @@ Jin Seo Cho
         um = qOut2.u_minus;
                 
                 kkk = Y - ONEX*bbt;
-                kk[.,jj+(ii-1)*ppp] = kkk;
+                kk[., jj+(ii-1)*ppp] = kkk;
                 ii = ii + 1;
             endo;
             jj = jj + 1;
         endo;
-        tilw = tw[ppp:(nn-1),.];
+        tilw = tw[ppp:(nn-1), .];
         lll = (kk'*kk - kk'*tilw*inv(tilw'*tilw)*tilw'*kk)/(nn-ppp);
     else;
-        yyj = zeros(nn-qqq,ppp);
-        xxj = zeros(nn-qqq,k0);
-        wwj = zeros(nn-qqq,qqq*k0);
+        yyj = zeros(nn-qqq, ppp);
+        xxj = zeros(nn-qqq, k0);
+        wwj = zeros(nn-qqq, qqq*k0);
         jj = 1;
         do until jj > ppp;
-            yyj[.,jj] = yy[(qqq+1-jj):(nn-jj),1];
+            yyj[., jj] = yy[(qqq+1-jj):(nn-jj), 1];
             jj = jj + 1;
         endo;
         ii = 1;
         do until ii > k0;
             jj = 1;
             do until jj > qqq;
-                wwj[.,jj+(ii-1)*qqq] = ee[(qqq-jj+2):(nn-jj+1),ii];
+                wwj[., jj+(ii-1)*qqq] = ee[(qqq-jj+2):(nn-jj+1), ii];
                 jj = jj + 1;
             endo;
             ii = ii + 1;
         endo;
-        xxj = xx[(qqq+1):nn,.];
-        kk = zeros(nn-qqq,ss*ppp);
+        xxj = xx[(qqq+1):nn, .];
+        kk = zeros(nn-qqq, ss*ppp);
         jj = 1;
         do until jj > ppp;
-            Y = yyj[.,jj];
-            ONEX = ones(nn-qqq,1)~xxj~wwj;
+            Y = yyj[., jj];
+            ONEX = ones(nn-qqq, 1)~xxj~wwj;
             struct qfitOut qOut3;
             
             ii = 1;
@@ -282,5 +304,14 @@ Jin Seo Cho
     endo;
 
     bigff = bilam*bigpi*bilam';
-    retp(bigbt, bigbtmm, bigphi, bigpi, bigam, bigff);
+    
+    struct qardlOut qOut;
+    qOut.bigbt = bigbt;
+    qOut.bigbt_cov = bigbtmm;
+    qOut.phi = bigphi;
+    qOut.phi_cov = bigpi;
+    qOut.gamma = bigam;
+    qOut.gamma_cov = bigff;
+    
+    retp(qOut);
 endp;
