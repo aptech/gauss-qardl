@@ -1,0 +1,23 @@
+{
+    "author": "Jin Seo Cho",
+    "deps": [
+    ],
+    "description": "GAUSS code for quantile cointegration in the autoregressive distributed-lag",
+    "dlib": [
+    ],
+    "keywords": [
+    ],
+    "license": "GAUSS Standard License Agreement",
+    "name": "qardl",
+    "repo": "",
+    "src": [
+        "qardl.sdf",
+        "qardl.src",
+        "wtestlrb.src",
+        "wtestsrp.src",
+        "wtestsrg.src",
+        "icmean.src"
+
+    ],
+    "version": "1.0.0"
+}
