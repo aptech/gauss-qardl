@@ -1,0 +1,41 @@
+/*
+**  wtestlrb
+**
+**  Purpose:    Produces the Wald test statistics for the long-run parameter 
+**              and the associated p-value.
+**
+**  Format:     { wt, pv } = wtestlrb(_beta, cov, bigR, smr, data);
+**
+**  Input:      
+**              _beta   matrix, the estimated long-run parameter by qardl.src
+**
+**              cov     matrix, estimated covariance matrix of beta
+**
+**              bigR    matrix, R matrix in the null hypothesis
+**
+**              smlr    matrix, r matrix in the null hypothesis
+**
+**              data    matrix, dataset used for qardl.src
+**
+**  Output:     
+**              wt      scalar, wald test statistic.
+**
+**              pv      scalar, p-value of the wald test statistic. 
+**
+**  The hypotheses tested by the wald test is as follows:
+**  H0: R * b = r   vs.  H0: R * b \neq r
+**    
+**  Developed:    October 10, 2013
+**                Jin Seo Cho
+*/
+
+proc (2) = wtestlrb(_beta, cov, bigR, smr, data);
+    local nn, wt, rnk, pv;
+    
+    nn = rows(data);
+    wt = ((nn-1)^2)*(bigR*_beta-smr)'*inv(bigR*cov*bigR')*(bigR*_beta-smr);
+    rnk= rows(bigR);
+    pv = cdfchic(wt, rnk);
+    
+    retp(wt, pv);
+endp;

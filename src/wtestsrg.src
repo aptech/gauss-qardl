@@ -1,0 +1,42 @@
+/*
+**  wtestlrg
+**
+**  Purpose:    Produces the Wald test statistics for gamma 
+**              and the associated p-value.
+**
+**  Format:     { wt, pv } = wtestlrg(gamma, cov, bigR, smr, data);
+**
+**  Input:      
+**              gamma   matrix, the estimated short-run gamma 
+**                      parameter by qardl.src
+**
+**              cov     matrix, estimated covariance matrix of gamma
+**
+**              bigR    matrix, R matrix in the null hypothesis
+**
+**              smlr    matrix, r matrix in the null hypothesis
+**
+**              data    matrix, dataset used for qardl.src
+**
+**  Output:     
+**              wt      scalar, wald test statistic.
+**
+**              pv      scalar, p-value of the wald test statistic. 
+**
+**  The hypotheses tested by the wald test is as follows:
+**  H0: R * b = r   vs.  H0: R * b \neq r
+**    
+**  Developed:    October 10, 2013
+**                Jin Seo Cho
+*/
+
+proc (2) = wtestsrg(_gamma, cov, bigR, smr, data);
+    local nn, wt, rnk, pv;
+    
+    nn = rows(data);
+    wt = (nn-1)*(bigR*_gamma-smr)'*inv(bigR*cov*bigR')*(bigR*_gamma-smr);
+    rnk= rows(bigR);
+    pv = cdfchic(wt, rnk);
+    
+    retp(wt, pv);
+endp;
