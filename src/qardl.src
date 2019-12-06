@@ -314,11 +314,11 @@ proc (1) = qardl(data, ppp, qqq, tau);
     qaOut.gamma = bigam;
     qaOut.gamma_cov = bigff;
     
-    retp(qOut);
+    retp(qaOut);
 endp;
 
-proc (2) = qardlAR2Sim(n, alpha, phi, rho, the0, the1);
-    local gam, bes, ee1, ee2, eee, xxx, yyy, uuu, jjj;
+proc (2) = qardlAR2Sim(nnn, alpha, phi, rho, the0, the1);
+    local gam, bes, eee1, eee2, eee, xxx, yyy, uuu, jjj;
     
     gam = the0 + the1;
     bes = gam/(1 - phi);
@@ -333,7 +333,7 @@ proc (2) = qardlAR2Sim(n, alpha, phi, rho, the0, the1);
     jjj = 2;
     
     do until jjj > nnn;
-        yyy[jjj] = alp + phi*yyy[jjj-1] + the0*xxx[jjj, 1] + the1*xxx[jjj-1, 1]
+        yyy[jjj] = alpha + phi*yyy[jjj-1] + the0*xxx[jjj, 1] + the1*xxx[jjj-1, 1]
             + the0*xxx[jjj, 2] + the1*xxx[jjj-1, 2] + uuu[jjj];
         jjj = jjj + 1;
     endo;

@@ -43,7 +43,7 @@ endo;
 data = yyy~xxx;                         
 
 // qardl order estimation 
-{ pst, qst } = pqorder(y, x, pend, qend);   
+{ pst, qst } = pqorder(data, pend, qend);   
 
 // Parameter estimation
 struct qardlOut qaOut;

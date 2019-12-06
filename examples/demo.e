@@ -16,10 +16,10 @@ data = loadd(__FILE_DIR $+ "qardl_data.dat");
 
 // Specify dependent variable here
 // This is for demonstration 
-yyy = datafile[., 1];
+yyy = data[., 1];
 
 // Specify independent variables here
-xxx = datafile[., 2:3];  
+xxx = data[., 2:3];  
 
 // Data used in qardl should have
 // dependent variable in first column
@@ -28,11 +28,11 @@ xxx = datafile[., 2:3];
 data = yyy~xxx;                         
 
 // qardl order estimation 
-{ pst, qst } = pqorder(y, x, pend, qend);   
+{ pst, qst } = pqorder(data, pend, qend);   
 
 // Parameter estimation
 struct qardlOut qaOut;
-qaOut = qardl(data,pst,qst,tau); 
+qaOut = qardl(data, pst, qst, tau); 
 
 // Constructing hypotheses */
 ca1 = zeros(2, cols(xxx)*rows(tau));
