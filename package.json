@@ -7,7 +7,7 @@
     ],
     "keywords": [
     ],
-    "license": "GAUSS Standard License Agreement",
+    "license": "MIT",
     "name": "qardl",
     "repo": "",
     "src": [
@@ -19,5 +19,5 @@
         "icmean.src"
 
     ],
-    "version": "1.0.0"
+    "version": "0.1.0"
 }
