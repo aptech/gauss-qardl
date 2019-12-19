@@ -1,39 +1,36 @@
-This qardl.zip contains 11 files as follows:
+This qardl.zip contains the following:
 
-1)  WadTestsSims.prg
-2)  QardlEstTest.prg
-3)  icmean.prc
-4)  qardl.prc
-5)  wtestlrb.prc
-6)  wtestsrp.prc
-7)  wtestsrg.prc
-8)  exampledata.txt
-9)  demo.prg 
-10) demo_result_explanation.txt
-11) read.me
+1) doc directory
+i) JSCHO_05_25_15_QARDL.pdf - pdf copy of "Quantile Cointegration in the Autoregressive
+Distributed-Lag Modelling Framework" (Cho, J., Kim, T., and Shin, Y., 2015)
+ii) read.me
+iii) demo_result_explanation.txt
 
-They are specifically updated versions of the simulation codes used for 
-the Monte Carlo experiments in Cho, Kim, and Shin (2015). These fiels are
+2) examples directory
+i)   demo.e
+ii)  qardl_data.dat
+iii) qardl_est_test.e
+iv)  qardlestimation.e
+v)   wald_tests_sim.e
+
+3) src directory
+i)   icmean.src
+ii)  qardl.sdf
+iii) qardl.src
+iv)  wtestlrb.src
+v)   wtestsrg.src
+v)   wtestsrp.src 
+
+
+These files are modified versions of the simulation codes used for 
+the Monte Carlo experiments in Cho, Kim, and Shin (2015). These files are
 provided for the convenience of empirical researchers.
 
-To be able to run these files, it is necessary to install first the following
-GAUSS library: 
+The specific roles of the files provided in this zip file are as follows:
 
-    Qreg,
-
-which is written by Jacomy, Messines, and Roncalli, T. (2000). This Qreg library 
-was avaiable at http://www.thierry-roncalli.com/#gauss_library on Oct. 16, 2013.
-
-There are two lines to modify the source file: qreg.src.
-
-1) Omit line 76: X = ones(N,1)~X; 
-2) Modify line 83 from "beta = zeros(K+1,M);" to "beta = zeros(K,M);".
-
-The specific roles of the fiels provided in this zip file are as follows:
-
-1) QardlEstTest.prg: This program computes every estiamtion result
+1) qardl_est_test.e: This program computes every estiamtion result
                  considered by Cho, Kim, and Shin (2013).
-                 Specifically, 11 ourtcomes are given by this program.
+                 Specifically, 11 outcomes are given by this program.
                 
                  i)    p: Estimated AR order; 
                  ii)   q: Estimated MA order; 
@@ -56,8 +53,8 @@ The specific roles of the fiels provided in this zip file are as follows:
                  The coefficient matrices ca1, ca2, ca3, sm1, sm2, and sm3 are 
                  given in this program.
 
-2) WadTestsSims.prg: This program file iteratively computes the Wald tests in 
-                 QardlEstTest.prg and draw the following 6 figures.
+2) wald_tests_sim.e: This program file iteratively computes the Wald tests in 
+                 qardl_est_test.e and draws the following 6 figures.
 
                  i)    pp-plot between Wald test (beta) and its null distribution;
                  ii)   pp-plot between Wald test (phi) and its null distribution;
@@ -67,7 +64,7 @@ The specific roles of the fiels provided in this zip file are as follows:
                  v)    empirical and null distributions of Wald test (phi)
                  vi)   empirical and null distributions of Wald test (gamma)
 
-3) icmean.prc:   AR and MA orders selected by BIC are computed by this file. 
+3) icmean.src:   AR and MA orders selected by BIC are computed by this file. 
                  In order to run this program, 3 inputs are required.
 
                  i)    data set with (1+k) number of columns: the first column
@@ -89,39 +86,42 @@ The specific roles of the fiels provided in this zip file are as follows:
                  iii)  qst: the MA order selected by icmean.prc;  
                  iv)   tau: (s*1) matrix with quantile indicies.
 
-                 6 matrices are computed as its outputs. Let's call them A1 to A6.
+                 1 output, a qardlOut structre, is computed by this
+                 program
+                 
+                 The structure contains 6 matrices. 
                  They are given as follows:
 
-                 i)   A1 ((k*s) * 1): long-run parameter (beta) estimate;
-                 ii)  A2 ((k*s) * (k*s)): covariance matrix estiamte of A1;
-                 iii) A3 ((p*s) * 1): short-run parameter (phi) estimate;
-                 iv)  A4 ((p*s) * (p*s)): covariance matrix estiamte of A3;
-                 v)   A5 ((k*s) * 1): long-run parameter (gamma) estimate;
-                 vi)  A6 ((k*s) * (k*s)): covariance matrix estiamte of A5. 
+                 i)   bigbt     ((k*s) * 1): long-run parameter (beta) estimate;
+                 ii)  bigbt_cov ((k*s) * (k*s)): covariance matrix estiamte of A1;
+                 iii) phi       ((p*s) * 1): short-run parameter (phi) estimate;
+                 iv)  phi_cov   ((p*s) * (p*s)): covariance matrix estiamte of A3;
+                 v)   gamma    ((k*s) * 1): long-run parameter (gamma) estimate;
+                 vi)  gamma_cov ((k*s) * (k*s)): covariance matrix estiamte of A5. 
 
-                 Here, k is the number of explanatory variables; and
-                 p is the AR order selected by the icmean.prc. That is, p = pst.
+                   Here, k is the number of explanatory variables; and
+                   p is the AR order selected by the icmean.prc. That is, p = pst.
 
-5) wtestlrb.prc: This file is needed to compute the Wald test 
-                 using the long-run parameter (beta) estimate. 
-                 Its pvalue is also provided.
+5) wtestlrb.src:   This file is needed to compute the Wald test 
+                   using the long-run parameter (beta) estimate. 
+                   The pvalue is also provided.
 
-6) wtestsrp.prc: This file is needed to compute the Wald test 
-                 using the short-run parameter (phi) estimate.
-                 Its pvalue is also provided.
+6) wtestsrp.src:   This file is needed to compute the Wald test 
+                   using the short-run parameter (phi) estimate.
+                   The pvalue is also provided.
 
-7) wtestsrg.prc: This file is needed to compute the Wald test 
-                 using the long-run parameter (gamma) estimate.
-                 Its pvalue is also provided.
+7) wtestsrg.src:   This file is needed to compute the Wald test 
+                   using the long-run parameter (gamma) estimate.
+                   The pvalue is also provided.
 
-8) exampledata.txt: This file contains data set that is used for 
-                 demonstration.
+8) qardl_data.dat: This file contains the GAUSS dataset that is used for 
+                   demonstration.
 
-9) demo.prg: This file shows an illustration to estimate the qardl orders 
-                 and parameter values. 
+9) demo.e:         This file shows an illustration to estimate the qardl orders 
+                   and parameter values. 
 
 10)demo_result_explanation.txt: This file explains the estimation results 
-                 given by demo.prg.
+                                given by demo.prg.
 
 11) read.me:     The current file.
 
@@ -131,9 +131,11 @@ Cho, J., Kim, T., and Shin, Y. (2015): "Quantile Cointegration Regression
 Using Autoregressive Distributed-Lag Modeling Approach," Journal of Econometrics,
 188, 281-300.
 
-Jacomy, D., Messines, J., and Roncalli, T. (2000): "Qreg: A GAUSS library 
-for Computing Quantile Regression," mimeo. 
+Note that the original code also references:
+    Jacomy, D., Messines, J., and Roncalli, T. (2000): "Qreg: A GAUSS library 
+    for Computing Quantile Regression," mimeo. 
 
-July 27, 2016
-Jin Seo Cho
-jinseocho@yonsei.ac.kr
+Revised from original READ provided by 
+    July 27, 2016
+    Jin Seo Cho
+     jinseocho@yonsei.ac.kr
