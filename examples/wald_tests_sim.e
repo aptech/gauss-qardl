@@ -123,26 +123,36 @@ do until jjj > 9;
     jjj = jjj + 1;
 endo;
 
+// The 6 plots
+struct plotControl myPlot;
+myPlot = plotGetDefaults("xy");
+
+plotSetTitle(&myPlot, "PP-plot Beta Wald Test and its null distribution", "Arial", 18);
 // p-p plot of wald test (beta) 
 plotOpenWindow();
-plotXY(www[., 1]~www[., 5], www[., 1]);
+plotXY(myPlot, www[., 1]~www[., 5], www[., 1]);
 
+plotSetTitle(&myPlot, "PP-plot Phi Wald Test and its null distribution", "Arial", 18);
 // p-p plot of wald test (phi) 
 plotOpenWindow();
-plotXY(www[., 1]~www[., 6], www[., 1]);
+plotXY(myPlot, www[., 1]~www[., 6], www[., 1]);
 
+plotSetTitle(&myPlot, "PP-plot Phi Gamma Test and its null distribution", "Arial", 18);
 // p-p plot of wald test (gamma) 
 plotOpenWindow();
-plotXY(www[., 1]~www[., 7], www[., 1]);
+plotXY(myPlot, www[., 1]~www[., 7], www[., 1]);
 
+plotSetTitle(&myPlot, "Empirical and Null Distributions of Beta Wald Test ", "Arial", 18);
 // empirical and null distributions of wald test (beta) 
 plotOpenWindow();
-plotXY(www[., 2]~www[., 9], www[., 1]);
+plotXY(myPlot, www[., 2]~www[., 9], www[., 1]);
 
+plotSetTitle(&myPlot, "Empirical and Null Distributions of Phi Wald Test ", "Arial", 18);
 // empirical and null distributions of wald test (phi) 
 plotOpenWindow();
-plotXY(www[., 3]~www[., 8], www[., 1]);
+plotXY(myPlot, www[., 3]~www[., 8], www[., 1]);
 
+plotSetTitle(&myPlot, "Empirical and Null Distributions of Gamma Wald Test ", "Arial", 18);
 // empirical and null distributions of wald test (gamma) 
 plotOpenWindow();
-plotXY(www[., 4]~www[., 8], www[., 1]);
+plotXY(myPlot, www[., 4]~www[., 8], www[., 1]);
