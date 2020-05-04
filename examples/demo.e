@@ -14,8 +14,15 @@ tau = { 0.25, 0.5, 0.7 };
 // Load data
 data = loadd(__FILE_DIR $+ "qardl_data.dat");
 
+/*
+** This is for demonstration. This step needs 
+** to be done to:
+** 1) Make sure the data is the correct order, with
+**    the dependent variable first.
+** 2) Extract the subsets of independent variables
+*/
+
 // Specify dependent variable here
-// This is for demonstration 
 yyy = data[., 1];
 
 // Specify independent variables here
@@ -25,14 +32,14 @@ xxx = data[., 2:3];
 // dependent variable in first column
 // independent variable in remaining k 
 // cols
-data = yyy~xxx;                         
+data_test = yyy~xxx;                         
 
 // qardl order estimation 
-{ pst, qst } = pqorder(data, pend, qend);   
+{ pst, qst } = pqorder(data_test, pend, qend);   
 
 // Parameter estimation
 struct qardlOut qaOut;
-qaOut = qardl(data, pst, qst, tau); 
+qaOut = qardl(data_test, pst, qst, tau); 
 
 // Constructing hypotheses */
 ca1 = zeros(2, cols(xxx)*rows(tau));
@@ -54,13 +61,13 @@ ca3 = ca1;
 sm3 = sm1;
 
 // Long-run parameter (beta) testing 
-{ wtlrb1, pvlrb1 } = wtestlrb(qaOut.bigbt, qaOut.bigbt_cov, ca1, sm1, data);
+{ wtlrb1, pvlrb1 } = wtestlrb(qaOut.bigbt, qaOut.bigbt_cov, ca1, sm1, data_test);
 
 // Short-run parameter (phi) testing 
-{ wtsrp1, pvsrp1 } = wtestsrp(qaOut.phi, qaOut.phi_cov, ca2, sm2, data);
+{ wtsrp1, pvsrp1 } = wtestsrp(qaOut.phi, qaOut.phi_cov, ca2, sm2, data_test);
 
 // Short-run parameter (gamma) testing 
-{ wtsrg1, pvsrg1 } = wtestsrg(qaOut.gamma, qaOut.gamma_cov, ca3, sm3, data);
+{ wtsrg1, pvsrg1 } = wtestsrg(qaOut.gamma, qaOut.gamma_cov, ca3, sm3, data_test);
     
 print "=========================================================";    
 print "Estimated p order ";
