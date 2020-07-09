@@ -185,11 +185,11 @@ Each Wald test procedure requires 5 inputs to summarize the estimated parameters
 ### Constructing the restriction matrices
 The Wald tests in the QARDL library test the null hypothesis:
 
-<img src="https://render.githubusercontent.com/render/math?math=H_0 = R \beta">
+<img src="https://render.githubusercontent.com/render/math?math=H_0 : R \beta = r">
 
 against the alternative  
 
-<img src="https://render.githubusercontent.com/render/math?math=H_A = r \beta">  
+<img src="https://render.githubusercontent.com/render/math?math=H_A : R \beta \neq r">   
 
 ### Example
 As an example, consider the Wald test of &beta; that is performed in the `demo.e` program. This test looks at the null hypothesis:
