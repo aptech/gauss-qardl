@@ -86,7 +86,7 @@ Covariance matrix estimate of long-run parameter (Beta)
     -6.433      5.608    -10.524      9.174    -16.601     14.471
 ~~~
 
-### Short-run parameter estimate (&phi;)
+### Short-run parameter estimate (&Phi;)
 * These are the short-run parameters given from the lowest percentile first.
 * These are stored in the `qardlOut` structure in the `qardlOut.phi` element.
 
@@ -109,11 +109,11 @@ short-run parameters of the first and second lagged dependent variables, respect
 * The next two estimates (0.26163588 and -0.0069863046) are the short-run parameters of the first and second lagged dependent variables, respectively at the percentile of 0.50.
 *  The final two estimates (0.26073101 and -0.0063757138) are the short-run parameters of the first and second lagged dependent variables, respectively at the percentile of 0.75.
 
-### Covariance matrix estimate of short-run parameter (&phi;)
+### Covariance matrix estimate of short-run parameter (&Phi;)
 *  This is the estimated covariance of the short-run parameters.
 * These are stored in the `qardlOut` structure in the `qardlOut.phi_cov` element.
 
-*  The `demo.e` program estimates the following covariance for &phi; :
+*  The `demo.e` program estimates the following covariance for &Phi; :
 ~~~
 =========================================================
 Covariance matrix estimate of short-run parameter (Phi)
@@ -127,7 +127,7 @@ Covariance matrix estimate of short-run parameter (Phi)
     -0.047      0.030     -0.077      0.050     -0.122      0.079
 ~~~
 
-### Short-run parameter estimate (&Gamma;)
+### Short-run parameter estimate (&gamma;)
 *  These are the short-run parameters given from the lowest percentile.
 *  These are stored in the `qardlOut` structure in the `qardlOut.gamma` element.
 
@@ -150,8 +150,8 @@ Short-run parameter estimate (Gamma)
 *  The next two estimates (4.9684725 and 4.9690065) are the short-run parameters of the first and second explanatory variables, respectively at the percentile of 0.50.
 *  The final two estimates (4.9698987 and 4.9707210) are the short-run parameters of the first and second explanatory variables, respectively at the percentile of 0.75.
 
-### Covariance matrix estimate of short-run parameter (&Gamma;)
-* This is the estimated covariance of the short-run &Gamma; estimates.
+### Covariance matrix estimate of short-run parameter (&gamma;)
+* This is the estimated covariance of the short-run &gamma; estimates.
 * This is stored in the `qardlOut` structure in the `qardlOut.gamma_cov` element.
 
 *  The `demo.e` program estimates the following covariance for &gamma;:
