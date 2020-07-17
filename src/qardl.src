@@ -44,16 +44,24 @@ proc (1) = qardl(data, ppp, qqq, tau);
     local za, nn, yy, xx, mm, ee, Y, X, ONEX, up, um, bigbt, psu, midbt,
         tw, bb, qq, eei, xxi, yyi, ii, yyj, xxj, wwj, kk, kkk, tilw, lll,
         bbt, cc, bigpi, bigphi, midphi, jj, bigam, bilam, k0, ss, hb, hs,
-        bt, fh, uu, midgam, bt1, bigff, bigbtmm, barw;
+        bt, fh, uu, midgam, bt1, bigff, bigbtmm, barw, mtau, mbb, mfh;
     
+    // Number of observations
     nn = rows(data);
+    
+    // Number of variables
     k0 = cols(data)-1;
+    
+    // Number of quantiles
     ss = rows(tau);
+    
+    // Sort tau values
     tau = sortc(tau,1);
     
     za = cdfni(0.975);
     hb = zeros(ss,1);
     hs = zeros(ss,1);
+    
     jj = 1;
     do until jj > ss;
         hb[jj, 1] = (4.5*pdfn(cdfni(tau[jj,1]))^4/(nn*(2*cdfni(tau[jj,1])^2+1)^2))^0.2;
@@ -61,8 +69,11 @@ proc (1) = qardl(data, ppp, qqq, tau);
         jj = jj + 1;
     endo;
     
+    // Separate independent and dependent data
     yy = data[., 1];
     xx = data[., 2:cols(data)];
+    
+    // First difference of xx
     ee = xx[2:nn, .] - xx[1:(nn-1), .];
     ee = zeros(1, k0)|ee;
     
@@ -70,58 +81,67 @@ proc (1) = qardl(data, ppp, qqq, tau);
     xxi = xx[qqq+1:nn, .];
     yyi = zeros(nn-ppp, ppp);
     
+    // Create lagged differences of
+    // independent variables
+    // Variable counter
     jj = 1;
     do until jj > k0;
-        ii = 0;
-        do until ii > qqq-1;
-            eei[., ii+1+(jj-1)*qqq] = ee[(qqq+1-ii):(nn-ii),jj];
-            ii = ii + 1;
-        endo;
+        
+        // Forward lags of first differences
+        // of independent variables
+        eei[., 1+(jj-1)*qqq:(jj-1)*qqq+qqq] = packr(lagn(ee[.,jj], seqa(-qqq, 1, qqq)));
+        
         jj = jj+1;
     endo;
     
-    ii = 1;
-    do until ii > ppp;
-        yyi[.,ii] = yy[(1+ppp-ii):(nn-ii), 1];
-        ii = ii + 1;
-    endo;
+    yyi = packr(lagn(yy, seqa(-ppp+1, 1, ppp)));
+    yyi = yyi[1:rows(yyi)-1, .];
     
+    // Build independent variables
+    // First differences of x~foward lagged xx~ forward lagged yy
+    //  adjusted for appropriate lag length
     if ppp .> qqq;
         X  = eei[(rows(eei)+1-rows(yyi)):rows(eei), .]~xxi[(rows(xxi)+1-rows(yyi)):rows(xxi), .]~yyi;
     else;
         X  = eei~xxi~yyi[(rows(yyi)+1-rows(xxi)):rows(yyi), .];
     endif;
     
-    /* parameter estimation */
+    // Parameter estimation
+    // Add constant to x
     ONEX = ones(rows(X), 1)~X;
+    
+    // Adjust y for length of x
     Y  = yy[(nn-rows(X)+1):nn, 1];
     
+    // Storage for bt
     bt = zeros(cols(ONEX), ss);
     fh = zeros(ss, 1);
+    
+    // Turn off constant
+    struct qfitControl qCtl;
+    qctl = qfitControlCreate();
+    qCtl.const = 0;
+    qCtl.verbose = 0;
+    
+    struct qfitOut qOut;
+    qOut = quantileFit(Y, ONEX, tau, 0, qCtl);
+    bt = qOut.beta;
+    
+    //  Loop through all specified
+    //  tau values
     jj = 1;
     do until jj > ss;
         
-        // Turn off constant
-        struct qfitControl qCtl;
-        qctl = qfitControlCreate();
-        qCtl.const = 0;
-        qCtl.verbose = 0;
-        
-        struct qfitOut qOut;
-        qOut = quantileFit(Y, ONEX, tau[jj, 1], 0, qCtl);
-        bt1 = qOut.beta;
-        up = qOut.u_plus;
-        um = qOut.u_minus;
-        
-        uu = Y - ONEX*bt1;
+        // Residuals from estimation
+        uu = Y - ONEX*bt[.,jj];
         fh[jj, 1] = meanc(pdfn(-uu/hb[jj, 1]))/hb[jj, 1];
-        bt[., jj] = bt1;
+        
         jj = jj + 1;
     endo;
     
-    /* testing long-run parameter: beta */
-    
+    // Testing long-run parameter: beta
     barw = zeros(nn-1, qqq*k0);
+    
     jj = 1;
     do until jj > qqq;
         barw[jj:(nn-1), (k0*(jj-1)+1):(k0*jj)] = ee[2:(nn-jj+1), .];
@@ -129,28 +149,28 @@ proc (1) = qardl(data, ppp, qqq, tau);
     endo;
     
     //    tw = ones(nn-1,1)~ee[2:nn,.];
-    tw = ones(nn-1,1)~barw;
+    tw = ones(nn-1, 1)~barw;
     mm = (xx[(qqq+1):nn, .]'*xx[(qqq+1):nn, .] - xx[(qqq+1):nn, .]'*tw[qqq:(nn-1), .]*inv(tw[qqq:(nn-1), .]'*tw[qqq:(nn-1), .])*tw[qqq:(nn-1), .]'*xx[(qqq+1):nn, .])/(nn-qqq)^2;
     
-    bb = zeros(ss, 1);
-    
-    jj = 1;
-    do until jj > ss;
-        bb[jj, 1] = 1/((1-sumc(bt[2+(qqq+1)*k0:1+(qqq+1)*k0+ppp, jj]))*fh[jj, 1]);
-        jj = jj + 1;
-    endo;
+    bb = 1/((1-sumc(bt[2+(qqq+1)*k0:1+(qqq+1)*k0+ppp, .])).*fh);
     
     qq = zeros(ss, ss);
     jj = 1;
+    
+    mtau = tau.*tau';
+    mbb = bb.*bb';
     do until jj > ss;
         ii = 1;
         do until ii > ss;
+            
             psu = zeros(2, 1);
             psu[1, 1] = tau[jj, 1];
             psu[2, 1] = tau[ii, 1];
-            qq[jj, ii] = (minc(psu) - tau[jj, 1]*tau[ii, 1])*bb[jj, 1]*bb[ii, 1];
+            qq[jj, ii] = (minc(psu) - mtau[jj, ii])*mbb[jj, ii];
+            
             ii = ii + 1;
         endo;
+        
         jj = jj + 1;
     endo;
     
@@ -163,17 +183,13 @@ proc (1) = qardl(data, ppp, qqq, tau);
     bigbt = vec(midbt);
     bigbtmm = (qq.*. inv(mm));
     
-    /* testing short-run parameters: phi */
-    
+    // Testing short-run parameters: phi
     if ppp .> qqq;
-        yyj = zeros(nn-ppp, ppp);
         xxj = zeros(nn-ppp, k0);
         wwj = zeros(nn-ppp, qqq*k0);
-        jj = 1;
-        do until jj > ppp;
-            yyj[., jj] = yy[(ppp+1-jj):(nn-jj), 1];
-            jj = jj + 1;
-        endo;
+        
+        yyj = yyi;
+        
         ii = 1;
         do until ii > k0;
             jj = 1;
@@ -183,24 +199,22 @@ proc (1) = qardl(data, ppp, qqq, tau);
             endo;
             ii = ii + 1;
         endo;
+        
         xxj = xx[(ppp+1):nn, .];
         kk = zeros(nn-ppp, ss*ppp);
+        
         jj = 1;
         do until jj > ppp;
             Y = yyj[., jj];
             ONEX = ones(nn-ppp, 1)~xxj~wwj;
             struct qfitOut qOut2;
             
+            qOut2 = quantileFit(Y, ONEX, tau, 0, qCtl);
+            bbt = qOut2.beta;
+            
             ii = 1;
             do until ii > ss;
-                
-                qOut2 = quantileFit(Y, ONEX, tau[ii, 1], 0, qCtl);
-                
-                bbt = qOut2.beta;
-                up = qOut2.u_plus;
-                um = qOut2.u_minus;
-                
-                kkk = Y - ONEX*bbt;
+                kkk = Y - ONEX*bbt[., ii];
                 kk[., jj+(ii-1)*ppp] = kkk;
                 ii = ii + 1;
             endo;
@@ -233,16 +247,12 @@ proc (1) = qardl(data, ppp, qqq, tau);
             Y = yyj[., jj];
             ONEX = ones(nn-qqq, 1)~xxj~wwj;
             struct qfitOut qOut3;
+            qOut3 = quantileFit(Y, ONEX, tau, 0, qCtl);
+            bbt = qOut3.beta;
             
             ii = 1;
             do until ii > ss;
-                qOut3 = quantileFit(Y, ONEX, tau[ii, 1], 0, qCtl);
-                
-                bbt = qOut3.beta;
-                up = qOut3.u_plus;
-                um = qOut3.u_minus;
-                
-                kkk = Y - ONEX*bbt;
+                kkk = Y - ONEX*bbt[.,ii];
                 kk[.,jj+(ii-1)*ppp] = kkk;
                 ii = ii + 1;
             endo;
@@ -252,15 +262,17 @@ proc (1) = qardl(data, ppp, qqq, tau);
         lll = (kk'*kk - kk'*tilw*inv(tilw'*tilw)*tilw'*kk)/(nn-qqq);
     endif;
     
+    mfh = fh.*fh';
     cc = zeros(ss,ss);
     jj = 1;
+    
     do until jj > ss;
         ii = 1;
         do until ii > ss;
             psu = zeros(2,1);
             psu[1,1] = tau[jj,1];
             psu[2,1] = tau[ii,1];
-            cc[jj,ii] = (minc(psu) - tau[jj,1]*tau[ii,1])/(fh[ii,1]*fh[jj,1]);
+            cc[jj,ii] = (minc(psu) - mtau[jj, ii])/(mfh[jj, ii]);
             ii = ii + 1;
         endo;
         jj = jj + 1;
@@ -339,4 +351,319 @@ proc (2) = qardlAR2Sim(nnn, alpha, phi, rho, the0, the1);
     endo;
     
     retp(yyy, xxx);
+endp;
+
+proc (0) = plotQARDL(struct qardlOut qaOut, tau);
+    local _beta, _gamma, _phi, ntau, k, p, vnames_beta, vnames_gamma, vnames_phi,
+        gp_indx, nCols, nPlots;
+    
+    ntau = rows(tau);
+    
+    _beta = qaOut.bigbt;
+    _gamma = qaOut.gamma;
+    _phi = qaOut.phi;
+    
+    // Get dimensions of model
+    k = rows(_beta)/ntau;
+    p = rows(_phi)/ntau;
+    
+    // Reshape parameter matrices
+    _beta = reshape(_beta, ntau, k);
+    _phi = reshape(_phi, ntau, p);
+    _gamma = reshape(_gamma, ntau, k);
+    
+    // Set up graph controls
+    struct plotControl myPlot;
+    myPlot = plotSetQARDLDefaults(p, k);
+    
+    // Graph format counters
+    nPlots = 3*maxc(p|k);
+    ncols = nPlots/3;
+    
+    plotBetaGraphs(_beta, k, p, tau, nCols, myPlot);
+    plotGammaGraphs(_gamma, k, p, tau, nCols, myPlot);
+    plotPhiGraphs(_phi, k, p, tau, nCols, myPlot);
+    
+    plotClearLayout();
+    
+endp;
+
+proc (0) = plotBetaGraphs(_beta, k, p, tau, nCols, struct PlotControl myPlot);
+    local vnames_beta, gp_indx;
+    
+    gp_indx = 1;
+    vnames_beta = "\\beta_" $+ ntos(seqa(1, 1, k));
+    
+    // Plot beta and gamma graphs
+    for i(1, k, 1);
+        // Set beta graph location
+        plotLayout(3, nCols, gp_indx);
+        
+        // Graph Title
+        plotSetTitle(&myPlot, vnames_beta[i]);
+        
+        // Graph beta
+        plotXY(myPlot, tau, _beta[., i]);
+        
+        gp_indx = gp_indx + 1;
+    endfor;
+endp;
+
+proc (0) = plotGammaGraphs(_gamma, k, p, tau, nCols, struct PlotControl myPlot);
+    local vnames_gamma, gp_indx;
+    
+    gp_indx = maxc(k|p) + 1;
+    vnames_gamma = "\\gamma_" $+ ntos(seqa(1, 1, k));
+    
+    // Plot beta and gamma graphs
+    for i(1, k, 1);
+        // Set beta graph location
+        plotLayout(3, nCols, gp_indx);
+        
+        // Graph Title
+        plotSetTitle(&myPlot, vnames_gamma[i]);
+        
+        // Graph beta
+        plotXY(myPlot, tau, _gamma[., i]);
+        
+        gp_indx = gp_indx + 1;
+    endfor;
+endp;
+
+proc (0) = plotPhiGraphs(_phi, k, p, tau, nCols, struct plotControl myPlot);
+    local vnames_phi, gp_indx;
+    
+    // Plot phi graphs
+    gp_indx = 2*maxc(k|p)+1;
+    
+    // Title Names
+    vnames_phi = "\\phi_{t-" $+ ntos(seqa(1, 1, p)) $+ "}";
+    
+    for i(1, p, 1);
+        // Set phi graph location
+        plotLayout(3, nCols, gp_indx);
+        
+        // Graph Title
+        plotSetTitle(&myPlot, vnames_phi[i]);
+        
+        // Graph beta
+        plotXY(myPlot, tau, _phi[., i]);
+        
+        gp_indx = gp_indx + 1;
+    endfor;
+endp;
+
+proc(1) = plotSetQARDLDefaults(p, k);
+    local _font, title_size, axis_size, label_size;
+    
+    _font = "Arial";
+    title_size = 18 - maxc(k|p);
+    axis_size = 16 - maxc(k|p);
+    label_size = 14 - maxc(k|p);
+    
+    struct plotControl myPlot;
+    myPlot = plotGetDefaults("xy");
+    plotSetTitle(&myPlot, "", _font, title_size);
+    
+    plotSetTextInterpreter(&myPlot, "LaTex", "all");
+    
+    plotSetXLabel(&myPlot, "\\tau", _font, axis_size);
+    
+    plotSetTicLabelFont(&myPlot, _font, label_size);
+    
+    plotSetYTicCount(&myPlot, 5);
+    
+    retp(myPlot);
+endp;
+
+proc(1) = rollingQardl(data, pend, qend, tau, struct waldTestRestrictions wCtl);
+    local window_size, k, t, num_est, num_tau, st, fin_obs, pst, qst,
+        beta_array, phi_array, gamma_array, beta_se, gamma_se, phi_se, data_subset,
+    wald_beta, pv_beta, wald_gamma, wald_phi, pv_gamma, pv_phi, c_indx;
+    
+    // qardl order estimation
+    // Estimated using full sample
+    { pst, qst } = pqorder(data, pend, qend);
+    
+    // Select window size
+    window_size = trunc(0.1*rows(data));
+    
+    // Dimensions
+    k = cols(data) - 1;
+    T = rows(data);
+    num_est = T-window_size;
+    num_tau = rows(tau);
+    
+    // Starting indeces for rolling data
+    st = 1;
+    fin_obs = window_size;
+    
+    // Initialize storage arrays
+    beta_array = arrayinit(k|num_est|num_tau, 0);
+    gamma_array = beta_array;
+    phi_array = arrayinit(pst|num_est|num_tau, 0);
+    
+    beta_se = beta_array;
+    gamma_se = gamma_array;
+    phi_se = phi_array;
+    
+    // Wald test matrices
+    wald_beta = zeros(num_est, 1);
+    wald_phi = zeros(num_est, 1 );
+    wald_gamma = zeros(num_est, 1);
+    pv_beta = zeros(num_est, 1);
+    pv_phi = zeros(num_est, 1);
+    pv_gamma = zeros(num_est, 1);
+    
+    do while fin_obs<rows(data);
+        
+        // Get data subset
+        data_subset = data[st:fin_obs, .];
+        
+        // Parameter estimation
+        struct qardlOut qaOut;
+        qaOut = qardl(data_subset, pst, qst, tau);
+        
+        // Wald tests
+        // Long-run parameter (beta) testing
+        { wald_beta[st], pv_beta[st] } = wtestlrb(qaOut.bigbt, qaOut.bigbt_cov, wCtl.bigR_beta, wCtl.smlr_beta, data_subset);
+        
+        // Short-run parameter (phi) testing
+        if pst < pend;
+            c_indx = seqa(pst*rows(tau)+1, 1, cols(wCtl.bigR_phi)-(pst*rows(tau)));
+            wctl.bigR_phi = delcols(wCtl.bigR_phi, c_indx);
+        endif;   
+        { wald_phi[st], pv_phi[st] } = wtestsrp(qaOut.phi, qaOut.phi_cov, wCtl.bigR_phi, wCtl.smlr_phi, data_subset);
+        
+        // Short-run parameter (gamma) testing
+        { wald_gamma[st], pv_gamma[st] } = wtestsrg(qaOut.gamma, qaOut.gamma_cov, wCtl.bigR_gamma, wCtl.smlr_gamma, data_subset);
+        
+        // Extract estimates
+        beta_array[., st, .] = _getBetaArray(qaOut.bigbt, num_tau, k);
+        gamma_array[., st, .] = _getGammaArray(qaOut.gamma, num_tau, k);
+        phi_array[., st, .] = _getPhiArray(qaOut.phi, num_tau, pst);
+        
+        // Standard errors
+        beta_se[., st, .] = _getBetaSE(qaOut.bigbt_cov, num_tau, k);
+        gamma_se[., st, .] = _getGammaSE(qaOut.gamma_cov, num_tau, k);
+        phi_se[., st, .] = _getPhiSE(qaOut.phi_cov, num_tau, pst);
+
+        st = st + 1;
+        fin_obs = fin_obs + 1;
+    endo;
+    
+    // Output structure for results
+    struct rollingQardlOut rqaOut;
+    rqaOut.bigbt = beta_array;
+    rqaOut.bigbt_se = beta_se;
+    rqaOut.phi = phi_array;
+    rqaOut.phi_se = phi_se;
+    rqaOut.gamma = gamma_array;
+    rqaOut.gamma_se = gamma_se;
+    
+    // Wald Test Results
+    rqaOut.rWaldOut.wald_gamma = wald_gamma;
+    rqaOut.rWaldOut.pv_gamma = pv_gamma;
+    rqaOut.rWaldOut.wald_beta = wald_beta;
+    rqaOut.rWaldOut.pv_beta = pv_beta;
+    rqaOut.rWaldOut.wald_phi = wald_phi;
+    rqaOut.rWaldOut.pv_phi = pv_phi;
+    
+    retp(rqaOut);
+endp;
+
+proc (1) = _getBetaSE(_beta_cov, num_tau, k);
+    local beta_se, beta_se_array;
+    
+    // Get  SE
+    beta_se = sqrt(diag((_beta_cov)));
+    
+    // Reshape
+    beta_se = reshape(beta_se, num_tau, k);
+    
+    beta_se_array = arrayinit(k|1|num_tau, 0);
+    
+    for i(1, k, 1);
+        beta_se_array[i, ., .] = beta_se[., i]';
+    endfor;
+    
+    retp(beta_se_array);
+endp;
+
+proc (1) = _getGammaSE(_gamma_cov, num_tau, k);
+    local gamma_se, gamma_se_array;
+    
+    // Get  SE
+    gamma_se = sqrt(diag((_gamma_cov)));
+    
+    // Reshape
+    gamma_se = reshape(gamma_se, num_tau, k);
+    
+    gamma_se_array = arrayinit(k|1|num_tau, 0);
+    
+    for i(1, k, 1);
+        gamma_se_array[i, ., .] = gamma_se[., i]';
+    endfor;
+    
+    retp(gamma_se_array);
+endp;
+
+proc (1) = _getPhiSE(_phi_cov, num_tau, p);
+    local phi_se, phi_se_array;
+    
+    // Get  SE
+    phi_se = sqrt(diag((_phi_cov)));
+    
+    // Reshape
+    phi_se = reshape(phi_se, num_tau, p);
+    
+    phi_se_array = arrayinit(p|1|num_tau, 0);
+    
+    for i(1, p, 1);
+        phi_se_array[i, ., .] = phi_se[., i]';
+    endfor;
+    
+    retp(phi_se_array);
+endp;
+
+proc (1) = _getBetaArray(_beta, num_tau, k);
+    local beta_mat, beta_array;
+    
+    beta_mat = reshape(_beta, num_tau, k);
+    
+    beta_array = arrayinit(k|1|num_tau, 0);
+    
+    for i(1, k, 1);
+        beta_array[i, ., .] = beta_mat[., i]';
+    endfor;
+    
+    retp(beta_array);
+endp;
+
+proc (1) = _getGammaArray(_gamma, num_tau, k);
+    local gamma_mat, gamma_array;
+    
+    gamma_mat = reshape(_gamma, num_tau, k);
+    
+    gamma_array = arrayinit(k|1|num_tau, 0);
+    
+    for i(1, k, 1);
+        gamma_array[i, ., .] = gamma_mat[., i]';
+    endfor;
+    
+    retp(gamma_array);
+endp;
+
+proc (1) = _getPhiArray(_phi, num_tau, p);
+    local phi_mat, phi_array;
+    
+    phi_mat = reshape(_phi, num_tau, p);
+    
+    phi_array = arrayinit(p|1|num_tau, 0);
+    
+    for i(1, p, 1);
+        phi_array[i, ., .] = phi_mat[., i]';
+    endfor;
+    
+    retp(phi_array);
 endp;

@@ -18,4 +18,60 @@ struct qardlOut {
     // Short-run gamma covariance
     matrix gamma_cov;
 };
-                                                     
+
+struct rollingWaldTests {
+
+    // Gamma Ward test
+    matrix wald_gamma;
+    matrix pv_gamma;
+    
+    // Beta Ward test
+    matrix wald_beta;
+    matrix pv_beta;
+    
+    // Phi ward test
+    matrix wald_phi;
+    matrix pv_phi;
+
+};
+
+struct waldTestRestrictions {
+
+    // Restrictions for gamma
+    matrix bigR_gamma;
+    matrix smlr_gamma;
+    
+    // Retrictions for phi
+    matrix bigR_phi;
+    matrix smlr_phi;
+    
+    // Retrictions for beta
+    matrix bigR_beta;
+    matrix smlr_beta;
+}; 
+
+struct rollingQardlOut {
+    
+    // Long-run parameter
+    array bigbt;
+    
+    // Covariance of long-run parameter
+    array bigbt_se;
+    
+    // Short-run phi
+    array phi;
+    
+    // Covariance of short-run phi
+    array phi_se;
+
+    // Short-run gamma
+    array gamma;
+    
+    // Short-run gamma covariance
+    array gamma_se;
+    
+    // Ward test results
+    struct rollingWaldTests rWaldOut;
+};
+
+
