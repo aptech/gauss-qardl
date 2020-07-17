@@ -16,12 +16,12 @@
  ## Getting Started
  ### Installing
  **GAUSS 20+**
- The GAUSS Time Series and Panel data tests library can be installed and updated directly in GAUSS using the [GAUSS package manager](https://www.aptech.com/blog/gauss-package-manager-basics/).
+ The GAUSS QARDL library can be installed and updated directly in GAUSS using the [GAUSS package manager](https://www.aptech.com/blog/gauss-package-manager-basics/).
 
  **GAUSS 18+**
- The GAUSS Time Series and Panel data tests can be easily installed using the [**GAUSS Application Installer**](https://www.aptech.com/support/installation/using-the-applications-installer-wizard/), as shown below:
+ The GAUSS QARDL library can be easily installed using the [**GAUSS Application Installer**](https://www.aptech.com/support/installation/using-the-applications-installer-wizard/), as shown below:
 
- 1. Download the zipped folder `qardl_1.0.0.zip` from the [QARDL Library Release page](https://github.com/aptech/gauss-qardl/releases/tag/v0.1.0).
+ 1. Download the zipped folder `qardl_1.0.0.zip` from the [QARDL Library Release page](https://github.com/aptech/gauss-qardl/releases).
  2. Select **Tools > Install Application** from the main **GAUSS** menu.  
  ![install wizard](images/install_application.png)  
 
@@ -32,7 +32,7 @@
    *  Enter `library qardl` in the **Program Input/output Window**.
    *  Put the line `library qardl;` at the beginning of your program files.
 
- >Note: I have provided the individual files found in `qardl_1.0.0.zip` for examination and review. However, installation should always be done using the [`qardl_1.0.0.zip` from the release page](https://github.com/aptech/gauss-carrion-library/releases) and the [**GAUSS Application Installer**](https://www.aptech.com/support/installation/using-the-applications-installer-wizard/).
+ >Note: I have provided the individual files found in `qardl_1.0.0.zip` for examination and review. However, installation should always be done using the [`qardl_1.0.0.zip` from the release page](https://github.com/aptech/gauss-qardl/releases) and the [**GAUSS Application Installer**](https://www.aptech.com/support/installation/using-the-applications-installer-wizard/).
 
 ## The qardl Procedure Returns
 ### Estimated P and Q Orders
