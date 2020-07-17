@@ -9,7 +9,7 @@ pend = 7;
 qend = 7;                   
 
 // Quantile levels
-tau = { 0.25, 0.5, 0.7 }; 
+tau = seqa(0.1, 0.1, 9); 
 
 // Load data
 data = loadd(__FILE_DIR $+ "qardl_data.dat");
@@ -39,9 +39,10 @@ data_test = yyy~xxx;
 
 // Parameter estimation
 struct qardlOut qaOut;
+pst = 3;
 qaOut = qardl(data_test, pst, qst, tau); 
 
-// Constructing hypotheses */
+// Constructing hypotheses
 ca1 = zeros(2, cols(xxx)*rows(tau));
 ca1[1, 1] = 1; 
 ca1[1, cols(xxx)+1] = -1;
@@ -114,3 +115,5 @@ print " Wald test (Gamma) and its p-value";
 print "=========================================================";    
 print wtsrg1~pvsrg1;
 print "=========================================================";    
+
+plotQARDl(qaOut, tau);
