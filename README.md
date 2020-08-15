@@ -227,6 +227,33 @@ The `demo.e` program prints the following results for the Wald tests:
 
 These p-values suggest that we cannot reject the null hypothesis and there is not evidence for asymmetries in &beta;<sub>1</sub>.
 
+## Rolling QARDL Testing
+The `rollingQARDL` procedure computes the QARDL regression for a for a rolling fixed window. The window is fixed at 10% of the time series length.  
+
+### The `rollingQARDL` inputs
+The `rollingQARDL` procedure requires the same inputs as the `qardl` procedure and one additional input, the `waldTestRestrictions` structure. The `waldTestRestrictions` structure contains 6 members:
+
+|Member|Description|
+|:----|:----------|
+|waldR.bigR_gamma|Matrix, R restriction matrix in the null hypothesis for the test for &gamma;.|
+|waldR.smlr_gamma|Matrix, r restriction matrix in the null hypothesis for the test for &gamma;.|
+|waldR.bigR_phi| The R matrix in the null hypothesis for the test for &phi;.|
+|waldR.smlr_phi| The r restriction matrix in the null hypothesis for the test for &phi;.|
+|waldR.bigR_beta| The R matrix in the null hypothesis for the test for &beta;.|
+|waldR.smlr_beta| The r restriction matrix in the null hypothesis for the test for &beta;.|
+
+### The `rollingQARDL` outputs
+The `rollingQARDL` procedure has one output, the `rollingQARDLOut` output structure. The `rollingqardlOut` structure has 6 elements. In each element, the estimates for separate quantiles (&tau;) are stored in individual columns, while each row corresponds to the separate estimation window.
+
+|Member|Description|
+|:----|:----------|
+|rqaOut.bigbt| An array of beta estimates which contains the estimates for each of the independent variables on a separate plane. |
+|rqaOut.bigbt_se| An array of standard error estimates which contains the se estimates for each of the independent variables on a separate plane. .|
+|rqaOut.phi| An array of phi estimates which contains the estimates for each lagged independent variable on a separate plane. |
+|rqaOut.phi_se| An array of standard error estimates which contains the se estimates for each lagged independent variable on a separate plane. |
+|rqaOut.gamma|  An array of gamma estimates which contains the estimates for each of the independent variables on a separate plane. |
+|rqaOut.gamma_se|  An array of standard error estimates which contains the se estimates for each of the independent variables on a separate plane. |
+
  ## Authors
  [Erica Clower](mailto:erica@aptech.com)  
  [Aptech Systems, Inc](https://www.aptech.com/)  
