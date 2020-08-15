@@ -479,7 +479,7 @@ endp;
 proc(1) = rollingQardl(data, pend, qend, tau, struct waldTestRestrictions wCtl);
     local window_size, k, t, num_est, num_tau, st, fin_obs, pst, qst,
         beta_array, phi_array, gamma_array, beta_se, gamma_se, phi_se, data_subset,
-    wald_beta, pv_beta, wald_gamma, wald_phi, pv_gamma, pv_phi, c_indx;
+    wald_beta, pv_beta, wald_gamma, wald_phi, pv_gamma, pv_phi, c_indx, bigR_phi_test;
     
     // qardl order estimation
     // Estimated using full sample
@@ -531,9 +531,9 @@ proc(1) = rollingQardl(data, pend, qend, tau, struct waldTestRestrictions wCtl);
         // Short-run parameter (phi) testing
         if pst < pend;
             c_indx = seqa(pst*rows(tau)+1, 1, cols(wCtl.bigR_phi)-(pst*rows(tau)));
-            wctl.bigR_phi = delcols(wCtl.bigR_phi, c_indx);
+            bigR_phi_test = delcols(wCtl.bigR_phi, c_indx);
         endif;   
-        { wald_phi[st], pv_phi[st] } = wtestsrp(qaOut.phi, qaOut.phi_cov, wCtl.bigR_phi, wCtl.smlr_phi, data_subset);
+        { wald_phi[st], pv_phi[st] } = wtestsrp(qaOut.phi, qaOut.phi_cov, bigR_phi_test, wCtl.smlr_phi, data_subset);
         
         // Short-run parameter (gamma) testing
         { wald_gamma[st], pv_gamma[st] } = wtestsrg(qaOut.gamma, qaOut.gamma_cov, wCtl.bigR_gamma, wCtl.smlr_gamma, data_subset);
