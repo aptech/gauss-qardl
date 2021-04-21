@@ -38,7 +38,7 @@
 ### Estimated P and Q Orders
 These are the obtained QARDL orders obtained by the information criterion.
 
-* The `demo.e` progam estimate a p order of 2 and a q order of 1.
+* The `demo.e` program estimates a `p` order of 2 and a `q` order of 1.
 
 ~~~
 Estimated p order
@@ -51,7 +51,7 @@ Estimated q order
 ~~~
 
 ### Long-run parameter estimate (&beta;)
-*  These are the long-run parameters given from the lowest percentile. In the `demo.e` program there are two explanatory variables and three quantiles: 0.25, 0.50 and 0.75. The following results are printed for $\Beta$.
+*  These are the long-run parameters given from the lowest percentile. In the `demo.e` program there are two explanatory variables and three quantiles: 0.25, 0.50 and 0.75. The following results are printed for &beta;.
 
 *  These are stored in the `qardlOut` structure in the `qardlOut.bigBt` element.
 
