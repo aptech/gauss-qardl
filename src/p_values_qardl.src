@@ -1,0 +1,19 @@
+proc (2) = qarld_pval(struct qardlOut qaOut);
+    local stderr_bigbt, stderr_phi, stderr_gamma ,tmp;
+    
+     // Get standard errors
+     stderr_bigbt = sqrt(diag(qaOUt.bigbt_cov)); 
+     stderr_phi   = sqrt(diag(qaOUt.phi_cov));
+     stderr_gamma = sqrt(diag(qaOut.gamma_cov));
+    
+     // Get t-values
+     t_bigbt = qaOut.bigbt./stderr_bigbt;
+     t_phi = qaOut.phi./stderr_phi;
+     t_gamma = qaOut.gamma./stderr_gamma;
+    
+     // Get p-values
+     p_bigbt = 2*cdftc(abs(t_bigbt), df);
+     p_phi = 2*cdftc(abs(t_phi), df);
+     p_gamma = 2*cdftc(abs(t_gamma), df);
+    
+    retp
