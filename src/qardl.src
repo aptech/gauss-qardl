@@ -41,10 +41,10 @@
 
 proc (1) = qardl(data, ppp, qqq, tau);
     
-    local za, nn, yy, xx, mm, ee, Y, X, ONEX, up, um, bigbt, psu, midbt,
+    local za, nn, yy, xx, mm, ee, Y, X, ONEX, bigbt, psu, midbt,
         tw, bb, qq, eei, xxi, yyi, ii, yyj, xxj, wwj, kk, kkk, tilw, lll,
         bbt, cc, bigpi, bigphi, midphi, jj, bigam, bilam, k0, ss, hb, hs,
-        bt, fh, uu, midgam, bt1, bigff, bigbtmm, barw, mtau, mbb, mfh;
+        bt, fh, uu, midgam, bigff, bigbtmm, barw, mtau, mbb, mfh;
     
     // Number of observations
     nn = rows(data);

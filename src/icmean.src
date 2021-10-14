@@ -1,5 +1,5 @@
 proc icmean(data, ppp, qqq);
-    local yy, xx, us, um, ee, nn, eei, xxi, yyi, ii, jj, X, onex, Y, bt, uu, rh, bic, ic;
+    local yy, xx, ee, nn, eei, xxi, yyi, ii, jj, X, onex, Y, bt, uu, rh, bic;
     
     nn = rows(data);
     yy = data[., 1];
