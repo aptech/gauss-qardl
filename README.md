@@ -18,7 +18,7 @@
  **GAUSS 20+**
  The GAUSS QARDL library can be installed and updated directly in GAUSS using the [GAUSS package manager](https://www.aptech.com/blog/gauss-package-manager-basics/).
 
- **GAUSS 18+**
+ **GAUSS 19+**
  The GAUSS QARDL library can be easily installed using the [**GAUSS Application Installer**](https://www.aptech.com/support/installation/using-the-applications-installer-wizard/), as shown below:
 
  1. Download the zipped folder `qardl_1.0.0.zip` from the [QARDL Library Release page](https://github.com/aptech/gauss-qardl/releases).
