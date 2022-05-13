@@ -9,7 +9,7 @@ pend = 7;
 qend = 7;                   
 
 // Quantile levels
-tau = { 0.25, 0.5, 0.7 }; 
+tau = { 0.25, 0.5, 0.75 }; 
 
 // Load data
 data = loadd(__FILE_DIR $+ "qardl_data.dat");
@@ -37,6 +37,8 @@ data_test = yyy~xxx;
 // The pqorder procedure estimates the
 // optimal order to be used in the 
 // the qardl procedure
+// pst = lags for dependent var
+// qst = lags for independent vars
 { pst, qst } = pqorder(data_test, pend, qend);   
 
 /*
@@ -78,8 +80,13 @@ qaOut = qardl(data_test, pst, qst, tau);
 */
 
 /* Construct test matrices for beta
-** We set
+** Note that parameters are stored in order by tau. 
+** This implies that the columns in ca1 correspond to the following parameters:
 **
+**  Beta_1(0.25)  Beta_2(0.25)  Beta_1(0.5)  Beta_2(0.5)  Beta_1(0.75)  Beta_2(0.75)
+**
+** We set
+**   
 ** ca1 = { 1  0 -1  0  0  0,
 **         0  0  1  0 -1  0 }
 ** and
@@ -88,7 +95,7 @@ qaOut = qardl(data_test, pst, qst, tau);
 **         0 }
 **
 ** To test the hypothesis that
-**  Beta_1(tau = 0.25) - Beta_1(tau = 0.5) = 0
+**  Beta_1(tau = 0.25) - Beta_1(tau = 0.5)  = 0
 **  Beta_1(tau = 0.5)  - Beta_1(tau = 0.75) = 0
 */
             
@@ -99,7 +106,13 @@ sm1 = {0,
        0};
 
 /*  Construct test matrices for phi 
-** ( the autoregressive term for the independent variable)
+** ( the autoregressive term for the dependent variable)
+**  Note that parameters are stored in order by tau, then lag.
+**  Our optimal lags for the dependent variable, qst, is equal to 2.
+** 
+**  This implies that the columns in ca2 correspond to the following parameters:
+**
+**   phi_{t-1}(0.25)  phi_{t-2}(0.25)  phi_{t-1}(0.5)  phi_{t-2}(0.5)  phi_{t-1}(0.75)  phi_{t-2}(0.75)
 **
 ** We set
 **
@@ -122,7 +135,17 @@ sm2 = {0,
        0};
 
 /*  Construct test matrices for gamma
-** ( the autoregressive term for the dependent variable)
+** ( the autoregressive term for the independent variables)
+**  
+**  Note that parameters are stored in order by tau and that they represent the cumulative
+**  short-run impact of the independent variables. This means there is one parameter for each
+**  independent variable at each level of tau.
+**
+**  Our optimal lags for the dependent variable, qst, is equal to 2.
+** 
+**  This implies that the columns in ca3 correspond to the following parameters:
+**
+**   gamma_1(0.25)  gamma_2(0.25)  gamma_1(0.5)  gamma_2(0.5)  gamma_1(0.75)  gamma_2(0.75)
 **
 ** We set
 **
@@ -134,8 +157,8 @@ sm2 = {0,
 **        0 }
 **
 ** To test the hypothesis that
-**  gamma1_{t-1}(tau = 0.25) - gamma1_{t-1}(tau = 0.50) = 0
-**  gamma1_{t-1}(tau = 0.50) - gamma1_{t-1}(tau = 0.75) = 0
+**  gamma_1(tau = 0.25) - gamma_1(tau = 0.50) = 0
+**  gamma_1(tau = 0.50) - gamma_1(tau = 0.75) = 0
 ** 
 */
 ca3 = { 1 0 -1 0 0 0,
