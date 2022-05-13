@@ -9,7 +9,7 @@ pend = 7;
 qend = 7;                   
 
 // Quantile levels
-tau = seqa(0.1, 0.1, 9); 
+tau = { 0.25, 0.5, 0.7 }; 
 
 // Load data
 data = loadd(__FILE_DIR $+ "qardl_data.dat");
@@ -34,32 +34,115 @@ xxx = data[., 2:3];
 // cols
 data_test = yyy~xxx;                         
 
-// qardl order estimation 
+// The pqorder procedure estimates the
+// optimal order to be used in the 
+// the qardl procedure
 { pst, qst } = pqorder(data_test, pend, qend);   
 
-// Parameter estimation
+/*
+** Parameter estimations
+*/
+
+/*
+** The output structure qardlOut
+** contains the following members:
+**
+** q_out.bigbt          Matrix, long-run parameter.
+** q_out.bigbt_cov      Matrix, covariance of the long-run parameter.
+** q_out.phi            Matrix, short-run parameter for the autoregressive 
+**                      terms of the dependent variable.
+** q_out.phi_cov        Matrix, covariance of the short-run parameter for 
+**                      the autoregressive terms of the dependent variable.
+** q_out.gamma          Matrix, short-run parameter for the distributed lag 
+**                      terms of the independent variables.
+** q_out.gamma_cov      Matrix, covariance of the short-run parameter for 
+**                      the distributed lag terms of the independent variables.
+*/
+
+// Declare output structure
 struct qardlOut qaOut;
-pst = 3;
+
+// Call QARDL procedure
 qaOut = qardl(data_test, pst, qst, tau); 
 
-// Constructing hypotheses
-ca1 = zeros(2, cols(xxx)*rows(tau));
-ca1[1, 1] = 1; 
-ca1[1, cols(xxx)+1] = -1;
-ca1[2, cols(xxx)+1] = 1; 
-ca1[2, 2*cols(xxx)+1] = -1;
+/*
+** The hypotheses tests must be
+** constructed before calling the 
+** Wald tests procedures.
+**
+**   The Wald statistics test the following hypotheses:
+**
+**                 i)    Wald test (beta) : ca1 * beta  = sm1;
+**                ii)    Wald test (phi)  : ca2 * phi   = sm2;
+**               iii)    Wald test (gamma): ca3 * gamma = sm3.
+*/
 
-sm1 = zeros(2, 1);
+/* Construct test matrices for beta
+** We set
+**
+** ca1 = { 1  0 -1  0  0  0,
+**         0  0  1  0 -1  0 }
+** and
+**
+** sm1 = { 0,
+**         0 }
+**
+** To test the hypothesis that
+**  Beta_1(tau = 0.25) - Beta_1(tau = 0.5) = 0
+**  Beta_1(tau = 0.5)  - Beta_1(tau = 0.75) = 0
+*/
+            
+ca1 = { 1 0 -1 0 0 0,
+        0 0 1 0 -1 0 };
 
-ca2 = zeros(2, pst*rows(tau));
-ca2[1, 1] = 1; 
-ca2[1, pst+1] = -1;
-ca2[2, pst+1] = 1; 
-ca2[2, 2*pst+1] = -1;
-sm2 = sm1;
+sm1 = {0,
+       0};
 
-ca3 = ca1;
-sm3 = sm1;
+/*  Construct test matrices for phi 
+** ( the autoregressive term for the independent variable)
+**
+** We set
+**
+** ca2 = { 1  0 -1  0  0  0,
+**         0  0  1  0 -1  0 }
+** and
+**
+** sm2 = { 0,
+**         0 }
+**
+** To test the hypothesis that
+**  phi_{t-1}(tau = 0.25) - phi_{t-1}(tau = 0.50) = 0
+**  phi_{t-1}(tau = 0.50) - phi_{t-1}(tau = 0.75) = 0
+** 
+*/
+ca2 = { 1 0 -1 0 0 0,
+        0 0 1 0 -1 0 };
+        
+sm2 = {0,
+       0};
+
+/*  Construct test matrices for gamma
+** ( the autoregressive term for the dependent variable)
+**
+** We set
+**
+** ca3 = { 1  0 -1  0  0  0,
+**         0  0  1  0 -1  0 }
+** and
+**
+** sm3= { 0,
+**        0 }
+**
+** To test the hypothesis that
+**  gamma1_{t-1}(tau = 0.25) - gamma1_{t-1}(tau = 0.50) = 0
+**  gamma1_{t-1}(tau = 0.50) - gamma1_{t-1}(tau = 0.75) = 0
+** 
+*/
+ca3 = { 1 0 -1 0 0 0,
+        0 0 1 0 -1 0 };
+        
+sm3 = {0,
+       0};
 
 // Long-run parameter (beta) testing 
 { wtlrb1, pvlrb1 } = wtestlrb(qaOut.bigbt, qaOut.bigbt_cov, ca1, sm1, data_test);
