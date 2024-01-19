@@ -193,7 +193,7 @@ $`H_0 : R \beta = r`$
 
 against the alternative  
 
-$`H_A : R \beta neq r`$
+$`H_A : R \beta \neq r`$
 
 ### Example
 As an example, consider the Wald test of &beta; that is performed in the `demo.e` program. This test looks at the null hypothesis:
