@@ -254,7 +254,9 @@ The `rollingQARDL` procedure has one output, the `rollingQARDLOut` output struct
 |rqaOut.gamma|  An array of gamma estimates which contains the estimates for each of the independent variables on a separate plane. |
 |rqaOut.gamma_se|  An array of standard error estimates which contains the se estimates for each of the independent variables on a separate plane. |
 
- ## Authors
+More about the GAUSS QARDL library can be found in the blog, [The Quantile Autoregressive-Distributed Lag Parameter Estimation and Interpretation in GAUSS](https://www.aptech.com/blog/the-quantile-autoregressive-distributed-lag-parameter-estimation-and-interpretation-in-gauss/).
+
+## Authors
  [Eric Clower](mailto:eric@aptech.com)  
  [Aptech Systems, Inc](https://www.aptech.com/)  
  [![alt text][1.1]][1]
