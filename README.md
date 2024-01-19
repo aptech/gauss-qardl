@@ -191,16 +191,14 @@ The Wald tests in the QARDL library test the null hypothesis:
 
 $`H_0 : R \beta = r`$
 
-<img src="https://render.githubusercontent.com/render/math?math=H_0 : R \beta = r">
-
 against the alternative  
 
-<img src="https://render.githubusercontent.com/render/math?math=H_A : R \beta \neq r">   
+$`H_A : R \beta neq r`$
 
 ### Example
 As an example, consider the Wald test of &beta; that is performed in the `demo.e` program. This test looks at the null hypothesis:
 
-<img src="https://render.githubusercontent.com/render/math?math=H_0 = \beta_1(0.25) = \beta_1(0.50) = \beta_1(0.75)">    
+$`H_0 : \beta_1(0.25) = \beta_1(0.50) = \beta_1(0.75)`$
 
 To do this we set :
 
