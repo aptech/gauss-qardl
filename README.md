@@ -189,6 +189,8 @@ Each Wald test procedure requires 5 inputs to summarize the estimated parameters
 ### Constructing the restriction matrices
 The Wald tests in the QARDL library test the null hypothesis:
 
+$`H_0 : R \beta = r`$
+
 <img src="https://render.githubusercontent.com/render/math?math=H_0 : R \beta = r">
 
 against the alternative  
@@ -255,7 +257,7 @@ The `rollingQARDL` procedure has one output, the `rollingQARDLOut` output struct
 |rqaOut.gamma_se|  An array of standard error estimates which contains the se estimates for each of the independent variables on a separate plane. |
 
  ## Authors
- [Erica Clower](mailto:erica@aptech.com)  
+ [Eric Clower](mailto:eric@aptech.com)  
  [Aptech Systems, Inc](https://www.aptech.com/)  
  [![alt text][1.1]][1]
  [![alt text][2.1]][2]
