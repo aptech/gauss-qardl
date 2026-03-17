@@ -2,21 +2,45 @@ struct qardlOut {
 
     // Long-run parameter
     matrix bigbt;
-    
+
     // Covariance of long-run parameter
     matrix bigbt_cov;
-    
+
     // Short-run phi
     matrix phi;
-    
+
     // Covariance of short-run phi
     matrix phi_cov;
 
     // Short-run gamma
     matrix gamma;
-    
+
     // Short-run gamma covariance
     matrix gamma_cov;
+
+    // Intercept alpha(tau) at each quantile (ss x 1)
+    matrix alpha;
+
+    // ECM speed of adjustment rho(tau) = -(1 - sum_j phi_j(tau)) at each quantile (ss x 1)
+    matrix rho;
+};
+
+struct qardlECMOut {
+
+    // OLS long-run coefficients used to construct the error correction term (k x 1)
+    matrix beta_lr;
+
+    // OLS speed of adjustment -(1 - sum_j phi_j^OLS), scalar stored as 1x1 matrix
+    matrix rho_ols;
+
+    // Intercept alpha(tau) from ECM quantile regression (ss x 1)
+    matrix alpha;
+
+    // Speed of adjustment rho(tau) from ECM quantile regression (ss x 1)
+    matrix rho;
+
+    // Asymptotic covariance of rho estimates across quantiles (ss x ss)
+    matrix rho_cov;
 };
 
 struct rollingWaldTests {

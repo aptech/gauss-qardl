@@ -325,8 +325,220 @@ proc (1) = qardl(data, ppp, qqq, tau);
     qaOut.phi_cov = bigpi;
     qaOut.gamma = bigam;
     qaOut.gamma_cov = bigff;
-    
+
+    // Intercept: alpha(tau) = bt[1, .], transposed to (ss x 1)
+    qaOut.alpha = bt[1, .]';
+
+    // ECM adjustment coefficient: rho(tau) = -(1 - sum_j phi_j(tau))
+    // sumc over (ppp x ss) matrix gives 1 x ss; transpose to ss x 1
+    qaOut.rho = -(1 - sumc(bt[2+(qqq+1)*k0:1+(qqq+1)*k0+ppp, .]))';
+
     retp(qaOut);
+endp;
+
+/*
+**> qardlECM
+**
+**  Purpose:    Perform two-step QARDL-ECM estimation.
+**
+**              Step 1: Estimate the ARDL model by OLS to obtain consistent
+**                      long-run coefficient estimates (beta_lr) and the OLS
+**                      speed of adjustment (rho_ols).
+**              Step 2: Form the error correction term EC_{t-1} = y_{t-1} - beta_lr'*x_{t-1}
+**                      and estimate the ECM by quantile regression:
+**                        Dy_t = alpha(tau) + rho(tau)*EC_{t-1}
+**                               + sum_j psi_j(tau)*Dy_{t-j}      [j=1,...,p-1]
+**                               + sum_j delta_j(tau)*Dx_{t-j}    [j=0,...,q-1]
+**                               + u_t(tau)
+**
+**  Format:     qECMOut = qardlECM(data, ppp, qqq, tau);
+**
+**  Input:      data        (n x (1+k)) matrix. Column 1 is the dependent variable;
+**                          columns 2:(1+k) are the k regressors.
+**
+**              ppp         scalar, AR lag order p >= 1.
+**
+**              qqq         scalar, distributed-lag order q >= 1.
+**
+**              tau         (s x 1) vector of quantile levels, sorted ascending.
+**
+**  Output:     qECMOut     instance of qardlECMOut. Members:
+**
+**                  qECMOut.beta_lr     (k x 1) OLS long-run coefficients used
+**                                      to construct the error correction term.
+**
+**                  qECMOut.rho_ols     scalar (1x1 matrix), OLS speed of adjustment
+**                                      rho_OLS = -(1 - sum_j phi_j^OLS).
+**
+**                  qECMOut.alpha       (s x 1) ECM intercept at each quantile.
+**
+**                  qECMOut.rho         (s x 1) speed of adjustment at each quantile.
+**
+**                  qECMOut.rho_cov     (s x s) asymptotic covariance of rho across
+**                                      quantiles, based on stationary-regressor QR
+**                                      sandwich estimator.
+**
+**  Notes:      Requires cointegration between y_t and x_t. The two-step
+**              approach avoids nonlinear QR by using OLS for the long-run
+**              relationship (Cho, Kim & Shin 2015; Aptech GAUSS forum).
+**
+**  Developed:  March 2026
+*/
+
+proc (1) = qardlECM(data, ppp, qqq, tau);
+    local nn, k0, ss, jj, ii, j;
+    local yy, xx, ee;
+    local eei, xxi, yyi, X_ols, ONEX_ols, Y_ols;
+    local bt_ols, rho_ols, beta_lr_ols;
+    local N, T0, N_ecm;
+    local ec_lag, dy_lags, dx_ecm, ONEX_ecm, Y_ecm;
+    local bt_ecm, fh_ecm, uu_ecm, hb;
+    local za, cc, mfh, mtau, psu;
+    local D_ecm, D_inv_ecm, rho_cov;
+
+    nn = rows(data);
+    k0 = cols(data) - 1;
+    ss = rows(tau);
+    tau = sortc(tau, 1);
+
+    // Bandwidth for density estimation at each quantile
+    za = cdfni(0.975);
+    hb = zeros(ss, 1);
+    jj = 1;
+    do until jj > ss;
+        hb[jj] = (4.5*pdfn(cdfni(tau[jj]))^4/(nn*(2*cdfni(tau[jj])^2+1)^2))^0.2;
+        jj = jj + 1;
+    endo;
+
+    yy = data[., 1];
+    xx = data[., 2:cols(data)];
+
+    // First differences of x (prepend zero row for alignment)
+    ee = xx[2:nn, .] - xx[1:(nn-1), .];
+    ee = zeros(1, k0)|ee;
+
+    // ---- Step 1: OLS ARDL (identical regressor construction to qardl) ----
+    eei = zeros(nn-qqq, qqq*k0);
+    xxi = xx[qqq+1:nn, .];
+    yyi = zeros(nn-ppp, ppp);
+
+    jj = 1;
+    do until jj > k0;
+        eei[., 1+(jj-1)*qqq:(jj-1)*qqq+qqq] = packr(lagn(ee[., jj], seqa(-qqq, 1, qqq)));
+        jj = jj + 1;
+    endo;
+
+    yyi = packr(lagn(yy, seqa(-ppp+1, 1, ppp)));
+    yyi = yyi[1:rows(yyi)-1, .];
+
+    if ppp .> qqq;
+        X_ols = eei[(rows(eei)+1-rows(yyi)):rows(eei), .]~xxi[(rows(xxi)+1-rows(yyi)):rows(xxi), .]~yyi;
+    else;
+        X_ols = eei~xxi~yyi[(rows(yyi)+1-rows(xxi)):rows(yyi), .];
+    endif;
+
+    ONEX_ols = ones(rows(X_ols), 1)~X_ols;
+    Y_ols = yy[(nn-rows(X_ols)+1):nn, 1];
+    N = rows(Y_ols);
+    T0 = nn - N;
+
+    // OLS ARDL coefficient vector
+    bt_ols = inv(ONEX_ols'*ONEX_ols)*ONEX_ols'*Y_ols;
+
+    // OLS speed of adjustment: rho_ols = -(1 - sum_j phi_j)
+    rho_ols = -(1 - sumc(bt_ols[2+(qqq+1)*k0:1+(qqq+1)*k0+ppp]));
+
+    // OLS long-run coefficient: beta_lr = theta / (-rho_ols)
+    // where theta = bt_ols[2+qqq*k0:1+(qqq+1)*k0] are the x-level coefficients
+    beta_lr_ols = bt_ols[2+qqq*k0:1+(qqq+1)*k0] ./ (-rho_ols);
+
+    // ---- Step 2: Build ECM regressors (N_ecm = N-1 usable observations) ----
+    // t runs from T0+2 to nn; the extra lag consumed by first-differencing y
+    N_ecm = N - 1;
+
+    // Dependent variable: Dy_t = y_t - y_{t-1} for t = T0+2,...,nn
+    Y_ecm = yy[(T0+2):nn] - yy[(T0+1):(nn-1)];
+
+    // Error correction term (lagged): EC_{t-1} = y_{t-1} - beta_lr' * x_{t-1}
+    ec_lag = yy[(T0+1):(nn-1)] - xx[(T0+1):(nn-1), .]*beta_lr_ols;
+
+    // Start with constant and EC term
+    ONEX_ecm = ones(N_ecm, 1)~ec_lag;
+
+    // Lagged first-differences of y: Dy_{t-j} for j = 1,...,ppp-1
+    if ppp > 1;
+        dy_lags = zeros(N_ecm, ppp-1);
+        for j(1, ppp-1, 1);
+            dy_lags[., j] = yy[(T0+2-j):(nn-j)] - yy[(T0+1-j):(nn-j-1)];
+        endfor;
+        ONEX_ecm = ONEX_ecm~dy_lags;
+    endif;
+
+    // First-differences of x: Dx_{t-j} for j = 0,...,qqq-1
+    // j=0 is contemporaneous Dx_t; j=qqq-1 is Dx_{t-q+1}
+    dx_ecm = zeros(N_ecm, qqq*k0);
+    for ii(1, k0, 1);
+        for j(0, qqq-1, 1);
+            dx_ecm[., j+1+(ii-1)*qqq] = xx[(T0+2-j):(nn-j), ii] - xx[(T0+1-j):(nn-j-1), ii];
+        endfor;
+    endfor;
+    ONEX_ecm = ONEX_ecm~dx_ecm;
+
+    // ---- Step 3: Quantile regression of ECM ----
+    struct qfitControl qCtl;
+    qCtl = qfitControlCreate();
+    qCtl.const = 0;
+    qCtl.verbose = 0;
+
+    struct qfitOut qOutECM;
+    qOutECM = quantileFit(Y_ecm, ONEX_ecm, tau, 0, qCtl);
+    bt_ecm = qOutECM.beta;
+
+    // Density estimates at quantile residuals (for covariance computation)
+    fh_ecm = zeros(ss, 1);
+    jj = 1;
+    do until jj > ss;
+        uu_ecm = Y_ecm - ONEX_ecm*bt_ecm[., jj];
+        fh_ecm[jj] = meanc(pdfn(-uu_ecm/hb[jj]))/hb[jj];
+        jj = jj + 1;
+    endo;
+
+    // ---- Asymptotic covariance of rho estimates ----
+    // For stationary ECM regressors, Cov(rho(tau_i), rho(tau_j)) = cc[i,j]*D_inv[2,2]/N_ecm
+    // where cc[i,j] = (min(tau_i, tau_j) - tau_i*tau_j) / (fh_i * fh_j)
+    // and D = ONEX_ecm'*ONEX_ecm / N_ecm
+    mtau = tau.*tau';
+    mfh = fh_ecm.*fh_ecm';
+
+    cc = zeros(ss, ss);
+    jj = 1;
+    do until jj > ss;
+        ii = 1;
+        do until ii > ss;
+            psu = zeros(2, 1);
+            psu[1] = tau[jj];
+            psu[2] = tau[ii];
+            cc[jj, ii] = (minc(psu) - mtau[jj, ii]) / mfh[jj, ii];
+            ii = ii + 1;
+        endo;
+        jj = jj + 1;
+    endo;
+
+    D_ecm = ONEX_ecm'*ONEX_ecm / N_ecm;
+    D_inv_ecm = inv(D_ecm);
+
+    // rho is coefficient row 2 in bt_ecm; extract its variance contribution
+    rho_cov = cc * D_inv_ecm[2, 2] / N_ecm;
+
+    // ---- Package results ----
+    struct qardlECMOut qECMOut;
+    qECMOut.beta_lr = beta_lr_ols;
+    qECMOut.rho_ols = rho_ols;
+    qECMOut.alpha   = bt_ecm[1, .]';
+    qECMOut.rho     = bt_ecm[2, .]';
+    qECMOut.rho_cov = rho_cov;
+
+    retp(qECMOut);
 endp;
 
 proc (2) = qardlAR2Sim(nnn, alpha, phi, rho, the0, the1);

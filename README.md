@@ -34,6 +34,49 @@
 
  >Note: I have provided the individual files found in `qardl_1.0.0.zip` for examination and review. However, installation should always be done using the [`qardl_1.0.0.zip` from the release page](https://github.com/aptech/gauss-qardl/releases) and the [**GAUSS Application Installer**](https://www.aptech.com/support/installation/using-the-applications-installer-wizard/).
 
+## Recent Updates (March 2026)
+
+### New: `qardlECM` — Two-Step QARDL-ECM Estimator
+The library now includes `qardlECM`, which implements the QARDL error-correction model form described in Cho, Kim & Shin (2015). The two-step procedure is:
+
+1. **Step 1 (OLS baseline):** Estimate the ARDL model by OLS to obtain consistent long-run coefficient estimates (`beta_lr`) and the OLS speed of adjustment (`rho_ols`).
+2. **Step 2 (Quantile regression):** Form the error correction term `EC_{t-1} = y_{t-1} - beta_lr'*x_{t-1}` and estimate the ECM by quantile regression, directly yielding `rho(tau)` — the speed of adjustment at each quantile.
+
+This approach avoids nonlinear quantile regression by using OLS for the long-run relationship and is the recommended approach per the Aptech GAUSS forum.
+
+```gauss
+struct qardlECMOut qECMOut;
+qECMOut = qardlECM(data, ppp, qqq, tau);
+
+// OLS long-run coefficients used to form the EC term
+print qECMOut.beta_lr;
+
+// Speed of adjustment at each quantile (directly estimated)
+print qECMOut.rho;
+
+// Covariance of rho across quantiles
+print qECMOut.rho_cov;
+```
+
+### New: `alpha` and `rho` in `qardlOut`
+The `qardlOut` structure returned by `qardl()` now includes two additional members derived algebraically from the levels-form estimates:
+
+| Member | Description |
+|:-------|:------------|
+|`qaOut.alpha`| `(s x 1)` intercept &alpha;(&tau;) at each quantile. |
+|`qaOut.rho`| `(s x 1)` ECM adjustment coefficient &rho;(&tau;) = &minus;(1 &minus; &sum;&phi;<sub>j</sub>(&tau;)) at each quantile. |
+
+### Fixed: `qardl_pval`
+The `qardl_pval` function has been corrected and completed. It now:
+- Returns three outputs: p-values for &beta;, &phi;, and &gamma;.
+- Uses the asymptotically correct standard normal distribution (appropriate for quantile regression).
+
+```gauss
+{ p_beta, p_phi, p_gamma } = qardl_pval(qaOut);
+```
+
+---
+
 ## The qardl Procedure Returns
 ### Estimated P and Q Orders
 These are the obtained QARDL orders obtained by the information criterion.
@@ -172,6 +215,28 @@ Covariance matrix estimate of short-run parameter (Gamma)
      1.017      1.017      1.659      1.659      2.619      2.619
 ~~~
 
+### Intercept (&alpha;) and ECM adjustment coefficient (&rho;)
+
+Two new members are returned by `qardl()` alongside the existing parameters.
+
+**`qardlOut.alpha`** — intercept &alpha;(&tau;) at each quantile (`s x 1` vector):
+
+```
+qaOut.alpha[1]  // alpha at tau = 0.25
+qaOut.alpha[2]  // alpha at tau = 0.50
+qaOut.alpha[3]  // alpha at tau = 0.75
+```
+
+**`qardlOut.rho`** — ECM speed of adjustment &rho;(&tau;) = &minus;(1 &minus; &sum;<sub>j</sub>&phi;<sub>j</sub>(&tau;)) at each quantile (`s x 1` vector). A value near &minus;1 indicates fast mean reversion; a value near 0 indicates slow adjustment:
+
+```
+qaOut.rho[1]    // rho at tau = 0.25
+qaOut.rho[2]    // rho at tau = 0.50
+qaOut.rho[3]    // rho at tau = 0.75
+```
+
+For directly estimated &rho;(&tau;) via the two-step ECM approach, use `qardlECM` instead.
+
 ## Wald Testing
 The QARDl library provides the functions for performing Wald tests. The `wtestlrb`, `wtestlrp`, and `wtestlrg` procedures. The procedures perform Wald tests for &beta;, &phi;, and &gamma;, respectively. Each test returns the test statistic and it's corresponding p-value.
 
@@ -226,6 +291,52 @@ The `demo.e` program prints the following results for the Wald tests:
 ~~~
 
 These p-values suggest that we cannot reject the null hypothesis and there is not evidence for asymmetries in &beta;<sub>1</sub>.
+
+## QARDL-ECM Estimation
+
+The `qardlECM` procedure estimates the error-correction form of the QARDL model. It requires cointegration between `y_t` and `x_t`.
+
+### `qardlECM` inputs
+
+| Input | Description |
+|:------|:------------|
+|`data`| `(n x (1+k))` matrix. Column 1 is the dependent variable; columns 2:(1+k) are regressors. |
+|`ppp`| Scalar, AR lag order p &ge; 1. |
+|`qqq`| Scalar, distributed-lag order q &ge; 1. |
+|`tau`| `(s x 1)` vector of quantile levels. |
+
+### `qardlECMOut` output structure
+
+| Member | Description |
+|:-------|:------------|
+|`qECMOut.beta_lr`| `(k x 1)` OLS long-run coefficients used to construct the error correction term. |
+|`qECMOut.rho_ols`| Scalar (1&times;1 matrix), OLS speed of adjustment &rho;<sub>OLS</sub>. |
+|`qECMOut.alpha`| `(s x 1)` ECM intercept &alpha;(&tau;) at each quantile. |
+|`qECMOut.rho`| `(s x 1)` speed of adjustment &rho;(&tau;) directly estimated at each quantile. |
+|`qECMOut.rho_cov`| `(s x s)` asymptotic covariance of &rho; across quantiles. |
+
+### Example
+
+```gauss
+library qardl;
+
+tau = { 0.25, 0.5, 0.75 };
+
+struct qardlECMOut qECMOut;
+qECMOut = qardlECM(data, 1, 2, tau);
+
+// OLS long-run relationship (used for EC term)
+print "OLS long-run beta:";
+print qECMOut.beta_lr;
+
+// Speed of adjustment at each quantile
+print "rho(tau):";
+print qECMOut.rho;
+
+// Standard errors of rho
+print "SE of rho(tau):";
+print sqrt(diag(qECMOut.rho_cov));
+```
 
 ## Rolling QARDL Testing
 The `rollingQARDL` procedure computes the QARDL regression for a for a rolling fixed window. The window is fixed at 10% of the time series length.  
