@@ -41,6 +41,9 @@ struct qardlECMOut {
 
     // Asymptotic covariance of rho estimates across quantiles (ss x ss)
     matrix rho_cov;
+
+    // Asymptotic covariance of alpha estimates across quantiles (ss x ss)
+    matrix alpha_cov;
 };
 
 struct rollingWaldTests {
@@ -73,6 +76,27 @@ struct waldTestRestrictions {
     matrix bigR_beta;
     matrix smlr_beta;
 }; 
+
+struct rollingQardlECMOut {
+
+    // Rolling alpha(tau): (num_est x ss) matrix, each row is one window
+    matrix alpha;
+
+    // Rolling rho(tau): (num_est x ss) matrix, each row is one window
+    matrix rho;
+
+    // Rolling SE of alpha: (num_est x ss) matrix
+    matrix alpha_se;
+
+    // Rolling SE of rho: (num_est x ss) matrix
+    matrix rho_se;
+
+    // Rolling OLS long-run coefficients: (num_est x k) matrix
+    matrix beta_lr;
+
+    // Rolling OLS rho: (num_est x 1) vector
+    matrix rho_ols;
+};
 
 struct rollingQardlOut {
     

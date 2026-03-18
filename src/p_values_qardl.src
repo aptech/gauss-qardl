@@ -24,6 +24,45 @@
 **  Developed:  Jin Seo Cho; updated March 2026
 */
 
+/*
+**> qardl_pval_ecm
+**
+**  Purpose:    Compute two-sided p-values for the ECM intercept alpha(tau)
+**              and the speed-of-adjustment rho(tau) from a qardlECMOut
+**              instance, using the asymptotic standard normal distribution.
+**
+**  Format:     { p_alpha, p_rho } = qardl_pval_ecm(qECMOut);
+**
+**  Input:      qECMOut     struct, instance of qardlECMOut returned by
+**                          qardlECM().
+**
+**  Output:     p_alpha     (s x 1) two-sided p-values for alpha(tau).
+**
+**              p_rho       (s x 1) two-sided p-values for rho(tau).
+**
+**  Developed:  March 2026
+*/
+
+proc (2) = qardl_pval_ecm(struct qardlECMOut qECMOut);
+    local se_alpha, se_rho;
+    local z_alpha, z_rho;
+    local p_alpha, p_rho;
+
+    // Standard errors from diagonal of covariance matrices
+    se_alpha = sqrt(diag(qECMOut.alpha_cov));
+    se_rho   = sqrt(diag(qECMOut.rho_cov));
+
+    // z-statistics
+    z_alpha = qECMOut.alpha ./ se_alpha;
+    z_rho   = qECMOut.rho   ./ se_rho;
+
+    // Two-sided p-values
+    p_alpha = 2 * cdfnc(abs(z_alpha));
+    p_rho   = 2 * cdfnc(abs(z_rho));
+
+    retp(p_alpha, p_rho);
+endp;
+
 proc (3) = qardl_pval(struct qardlOut qaOut);
     local stderr_bigbt, stderr_phi, stderr_gamma;
     local z_bigbt, z_phi, z_gamma;

@@ -394,7 +394,7 @@ proc (1) = qardlECM(data, ppp, qqq, tau);
     local ec_lag, dy_lags, dx_ecm, ONEX_ecm, Y_ecm;
     local bt_ecm, fh_ecm, uu_ecm, hb;
     local za, cc, mfh, mtau, psu;
-    local D_ecm, D_inv_ecm, rho_cov;
+    local D_ecm, D_inv_ecm, rho_cov, alpha_cov;
 
     nn = rows(data);
     k0 = cols(data) - 1;
@@ -527,16 +527,18 @@ proc (1) = qardlECM(data, ppp, qqq, tau);
     D_ecm = ONEX_ecm'*ONEX_ecm / N_ecm;
     D_inv_ecm = inv(D_ecm);
 
-    // rho is coefficient row 2 in bt_ecm; extract its variance contribution
-    rho_cov = cc * D_inv_ecm[2, 2] / N_ecm;
+    // Extract variance contributions: row 1 = alpha, row 2 = rho
+    rho_cov   = cc * D_inv_ecm[2, 2] / N_ecm;
+    alpha_cov = cc * D_inv_ecm[1, 1] / N_ecm;
 
     // ---- Package results ----
     struct qardlECMOut qECMOut;
-    qECMOut.beta_lr = beta_lr_ols;
-    qECMOut.rho_ols = rho_ols;
-    qECMOut.alpha   = bt_ecm[1, .]';
-    qECMOut.rho     = bt_ecm[2, .]';
-    qECMOut.rho_cov = rho_cov;
+    qECMOut.beta_lr   = beta_lr_ols;
+    qECMOut.rho_ols   = rho_ols;
+    qECMOut.alpha     = bt_ecm[1, .]';
+    qECMOut.rho       = bt_ecm[2, .]';
+    qECMOut.rho_cov   = rho_cov;
+    qECMOut.alpha_cov = alpha_cov;
 
     retp(qECMOut);
 endp;
@@ -566,101 +568,200 @@ proc (2) = qardlAR2Sim(nnn, alpha, phi, rho, the0, the1);
 endp;
 
 proc (0) = plotQARDL(struct qardlOut qaOut, tau);
-    local _beta, _gamma, _phi, ntau, k, p, vnames_beta, vnames_gamma, vnames_phi,
-        gp_indx, nCols, nPlots;
-    
+    local _beta, _gamma, _phi, _alpha, _rho, ntau, k, p, nCols;
+
     ntau = rows(tau);
-    
-    _beta = qaOut.bigbt;
+
+    _beta  = qaOut.bigbt;
     _gamma = qaOut.gamma;
-    _phi = qaOut.phi;
-    
+    _phi   = qaOut.phi;
+    _alpha = qaOut.alpha;
+    _rho   = qaOut.rho;
+
     // Get dimensions of model
-    k = rows(_beta)/ntau;
-    p = rows(_phi)/ntau;
-    
+    k = rows(_beta) / ntau;
+    p = rows(_phi)  / ntau;
+
     // Reshape parameter matrices
-    _beta = reshape(_beta, ntau, k);
-    _phi = reshape(_phi, ntau, p);
+    _beta  = reshape(_beta,  ntau, k);
+    _phi   = reshape(_phi,   ntau, p);
     _gamma = reshape(_gamma, ntau, k);
-    
+
     // Set up graph controls
     struct plotControl myPlot;
     myPlot = plotSetQARDLDefaults(p, k);
-    
-    // Graph format counters
-    nPlots = 3*maxc(p|k);
-    ncols = nPlots/3;
-    
-    plotBetaGraphs(_beta, k, p, tau, nCols, myPlot);
+
+    // 4-row layout: beta | gamma | phi | alpha+rho
+    nCols = maxc(p|k);
+
+    plotBetaGraphs(_beta,  k, p, tau, nCols, myPlot);
     plotGammaGraphs(_gamma, k, p, tau, nCols, myPlot);
-    plotPhiGraphs(_phi, k, p, tau, nCols, myPlot);
-    
+    plotPhiGraphs(_phi,    k, p, tau, nCols, myPlot);
+    plotAlphaRhoGraphs(_alpha, _rho, tau, nCols, myPlot);
+
     plotClearLayout();
-    
+
 endp;
 
 proc (0) = plotBetaGraphs(_beta, k, p, tau, nCols, struct PlotControl myPlot);
     local vnames_beta, gp_indx;
-    
+
     gp_indx = 1;
     vnames_beta = "\\beta_" $+ ntos(seqa(1, 1, k));
-    
-    // Plot beta and gamma graphs
+
     for i(1, k, 1);
-        // Set beta graph location
-        plotLayout(3, nCols, gp_indx);
-        
-        // Graph Title
+        plotLayout(4, nCols, gp_indx);
         plotSetTitle(&myPlot, vnames_beta[i]);
-        
-        // Graph beta
         plotXY(myPlot, tau, _beta[., i]);
-        
         gp_indx = gp_indx + 1;
     endfor;
 endp;
 
 proc (0) = plotGammaGraphs(_gamma, k, p, tau, nCols, struct PlotControl myPlot);
     local vnames_gamma, gp_indx;
-    
+
     gp_indx = maxc(k|p) + 1;
     vnames_gamma = "\\gamma_" $+ ntos(seqa(1, 1, k));
-    
-    // Plot beta and gamma graphs
+
     for i(1, k, 1);
-        // Set beta graph location
-        plotLayout(3, nCols, gp_indx);
-        
-        // Graph Title
+        plotLayout(4, nCols, gp_indx);
         plotSetTitle(&myPlot, vnames_gamma[i]);
-        
-        // Graph beta
         plotXY(myPlot, tau, _gamma[., i]);
-        
         gp_indx = gp_indx + 1;
     endfor;
 endp;
 
 proc (0) = plotPhiGraphs(_phi, k, p, tau, nCols, struct plotControl myPlot);
     local vnames_phi, gp_indx;
-    
-    // Plot phi graphs
-    gp_indx = 2*maxc(k|p)+1;
-    
-    // Title Names
+
+    gp_indx = 2*maxc(k|p) + 1;
     vnames_phi = "\\phi_{t-" $+ ntos(seqa(1, 1, p)) $+ "}";
-    
+
     for i(1, p, 1);
-        // Set phi graph location
-        plotLayout(3, nCols, gp_indx);
-        
-        // Graph Title
+        plotLayout(4, nCols, gp_indx);
         plotSetTitle(&myPlot, vnames_phi[i]);
-        
-        // Graph beta
         plotXY(myPlot, tau, _phi[., i]);
-        
+        gp_indx = gp_indx + 1;
+    endfor;
+endp;
+
+proc (0) = plotAlphaRhoGraphs(_alpha, _rho, tau, nCols, struct plotControl myPlot);
+    local gp_indx;
+
+    // Row 4, columns 1 and 2
+    gp_indx = 3*nCols + 1;
+
+    plotLayout(4, nCols, gp_indx);
+    plotSetTitle(&myPlot, "\\alpha(\\tau)");
+    plotXY(myPlot, tau, _alpha);
+
+    plotLayout(4, nCols, gp_indx + 1);
+    plotSetTitle(&myPlot, "\\rho(\\tau)");
+    plotXY(myPlot, tau, _rho);
+endp;
+
+/*
+**> plotQARDLbands
+**
+**  Purpose:    Plot quantile process curves with 95% asymptotic confidence
+**              bands for long-run (beta), short-run (gamma), and AR (phi)
+**              parameters.  Bands are point-wise: estimate +/- 1.96 * SE,
+**              where SE is extracted from the diagonal of the covariance
+**              matrices stored in the qardlOut struct.
+**
+**  Format:     plotQARDLbands(qaOut, tau);
+**
+**  Input:      qaOut       struct qardlOut returned by qardl().
+**              tau         (ss x 1) vector of quantile indices.
+*/
+proc (0) = plotQARDLbands(struct qardlOut qaOut, tau);
+    local _beta, _gamma, _phi, ntau, k, p, nCols;
+    local se_beta, se_gamma, se_phi;
+    local lb_beta, ub_beta, lb_gamma, ub_gamma, lb_phi, ub_phi;
+
+    ntau = rows(tau);
+
+    _beta  = qaOut.bigbt;
+    _gamma = qaOut.gamma;
+    _phi   = qaOut.phi;
+
+    // Recover dimensions
+    k = rows(_beta) / ntau;
+    p = rows(_phi)  / ntau;
+
+    // Reshape to (ntau x param)
+    _beta  = reshape(_beta,  ntau, k);
+    _phi   = reshape(_phi,   ntau, p);
+    _gamma = reshape(_gamma, ntau, k);
+
+    // Standard errors from covariance diagonals
+    se_beta  = reshape(sqrt(diag(qaOut.bigbt_cov)),  ntau, k);
+    se_phi   = reshape(sqrt(diag(qaOut.phi_cov)),    ntau, p);
+    se_gamma = reshape(sqrt(diag(qaOut.gamma_cov)),  ntau, k);
+
+    // 95% pointwise bands
+    lb_beta  = _beta  - 1.96 * se_beta;
+    ub_beta  = _beta  + 1.96 * se_beta;
+    lb_gamma = _gamma - 1.96 * se_gamma;
+    ub_gamma = _gamma + 1.96 * se_gamma;
+    lb_phi   = _phi   - 1.96 * se_phi;
+    ub_phi   = _phi   + 1.96 * se_phi;
+
+    // Set up graph controls
+    struct plotControl myPlot;
+    myPlot = plotSetQARDLDefaults(p, k);
+
+    // Line styles: dashed | solid | dashed  (lower, estimate, upper)
+    plotSetLineStyle(&myPlot, 2|1|2);
+
+    nCols = maxc(p|k);
+
+    plotBetaBandGraphs(_beta, lb_beta, ub_beta, k, p, tau, nCols, myPlot);
+    plotGammaBandGraphs(_gamma, lb_gamma, ub_gamma, k, p, tau, nCols, myPlot);
+    plotPhiBandGraphs(_phi, lb_phi, ub_phi, k, p, tau, nCols, myPlot);
+
+    plotClearLayout();
+
+endp;
+
+proc (0) = plotBetaBandGraphs(_beta, lb, ub, k, p, tau, nCols, struct plotControl myPlot);
+    local vnames, gp_indx;
+
+    gp_indx = 1;
+    vnames = "\\beta_" $+ ntos(seqa(1, 1, k));
+
+    for i(1, k, 1);
+        plotLayout(3, nCols, gp_indx);
+        plotSetTitle(&myPlot, vnames[i]);
+        plotXY(myPlot, tau, lb[., i]~_beta[., i]~ub[., i]);
+        gp_indx = gp_indx + 1;
+    endfor;
+endp;
+
+proc (0) = plotGammaBandGraphs(_gamma, lb, ub, k, p, tau, nCols, struct plotControl myPlot);
+    local vnames, gp_indx;
+
+    gp_indx = maxc(k|p) + 1;
+    vnames = "\\gamma_" $+ ntos(seqa(1, 1, k));
+
+    for i(1, k, 1);
+        plotLayout(3, nCols, gp_indx);
+        plotSetTitle(&myPlot, vnames[i]);
+        plotXY(myPlot, tau, lb[., i]~_gamma[., i]~ub[., i]);
+        gp_indx = gp_indx + 1;
+    endfor;
+endp;
+
+proc (0) = plotPhiBandGraphs(_phi, lb, ub, k, p, tau, nCols, struct plotControl myPlot);
+    local vnames, gp_indx;
+
+    gp_indx = 2*maxc(k|p) + 1;
+    vnames = "\\phi_{t-" $+ ntos(seqa(1, 1, p)) $+ "}";
+
+    for i(1, p, 1);
+        plotLayout(3, nCols, gp_indx);
+        plotSetTitle(&myPlot, vnames[i]);
+        plotXY(myPlot, tau, lb[., i]~_phi[., i]~ub[., i]);
         gp_indx = gp_indx + 1;
     endfor;
 endp;
@@ -784,6 +885,83 @@ proc(1) = rollingQardl(data, pend, qend, tau, struct waldTestRestrictions wCtl);
     retp(rqaOut);
 endp;
 
+/*
+**> rollingQardlECM
+**
+**  Purpose:    Rolling-window estimation of the QARDL-ECM model.  For each
+**              window of length window_size = floor(0.1*T) rows, qardlECM()
+**              is called and the resulting alpha(tau), rho(tau) and their
+**              asymptotic standard errors are stored.
+**
+**  Format:     rECMOut = rollingQardlECM(data, ppp, qqq, tau);
+**
+**  Input:      data    (T x (1+k)) matrix.
+**              ppp     scalar, AR lag order.
+**              qqq     scalar, distributed-lag order.
+**              tau     (ss x 1) vector of quantile levels.
+**
+**  Output:     rECMOut     struct rollingQardlECMOut with fields:
+**                  .alpha      (num_est x ss) rolling intercept at each tau.
+**                  .rho        (num_est x ss) rolling speed of adjustment.
+**                  .alpha_se   (num_est x ss) SE of alpha.
+**                  .rho_se     (num_est x ss) SE of rho.
+**                  .beta_lr    (num_est x k) OLS long-run coefficients.
+**                  .rho_ols    (num_est x 1) OLS speed of adjustment.
+**
+**  Developed:  March 2026
+*/
+proc (1) = rollingQardlECM(data, ppp, qqq, tau);
+    local window_size, k, T, num_est, ss, st, fin_obs;
+    local alpha_mat, rho_mat, alpha_se_mat, rho_se_mat;
+    local beta_lr_mat, rho_ols_vec;
+    local data_subset;
+
+    T          = rows(data);
+    k          = cols(data) - 1;
+    ss         = rows(tau);
+    window_size = trunc(0.1 * T);
+    num_est    = T - window_size;
+
+    // Storage matrices: each row = one estimation window
+    alpha_mat    = zeros(num_est, ss);
+    rho_mat      = zeros(num_est, ss);
+    alpha_se_mat = zeros(num_est, ss);
+    rho_se_mat   = zeros(num_est, ss);
+    beta_lr_mat  = zeros(num_est, k);
+    rho_ols_vec  = zeros(num_est, 1);
+
+    st      = 1;
+    fin_obs = window_size;
+
+    do while fin_obs < rows(data);
+
+        data_subset = data[st:fin_obs, .];
+
+        struct qardlECMOut qECMOut;
+        qECMOut = qardlECM(data_subset, ppp, qqq, tau);
+
+        alpha_mat[st, .]    = qECMOut.alpha';
+        rho_mat[st, .]      = qECMOut.rho';
+        alpha_se_mat[st, .] = sqrt(diag(qECMOut.alpha_cov))';
+        rho_se_mat[st, .]   = sqrt(diag(qECMOut.rho_cov))';
+        beta_lr_mat[st, .]  = qECMOut.beta_lr';
+        rho_ols_vec[st]     = qECMOut.rho_ols[1, 1];
+
+        st      = st + 1;
+        fin_obs = fin_obs + 1;
+    endo;
+
+    struct rollingQardlECMOut rECMOut;
+    rECMOut.alpha    = alpha_mat;
+    rECMOut.rho      = rho_mat;
+    rECMOut.alpha_se = alpha_se_mat;
+    rECMOut.rho_se   = rho_se_mat;
+    rECMOut.beta_lr  = beta_lr_mat;
+    rECMOut.rho_ols  = rho_ols_vec;
+
+    retp(rECMOut);
+endp;
+
 proc (1) = _getBetaSE(_beta_cov, num_tau, k);
     local beta_se, beta_se_array;
     
@@ -868,14 +1046,464 @@ endp;
 
 proc (1) = _getPhiArray(_phi, num_tau, p);
     local phi_mat, phi_array;
-    
+
     phi_mat = reshape(_phi, num_tau, p);
-    
+
     phi_array = arrayinit(p|1|num_tau, 0);
-    
+
     for i(1, p, 1);
         phi_array[i, ., .] = phi_mat[., i]';
     endfor;
-    
+
     retp(phi_array);
+endp;
+
+/*
+**> printQARDL
+**
+**  Purpose:    Print a formatted summary table of QARDL estimation results,
+**              including parameter estimates, asymptotic standard errors,
+**              z-statistics, and two-sided p-values for all parameter sets.
+**
+**  Format:     printQARDL(qaOut, tau);
+**
+**  Input:      qaOut   struct, instance of qardlOut returned by qardl().
+**
+**              tau     (s x 1) vector of quantile levels used in estimation.
+**
+**  Output:     Prints to screen only. No return value.
+**
+**  Note:       The printed table has columns [tau, variable, estimate, SE,
+**              z-stat, p-value]. For alpha and rho, the variable index is
+**              replaced by a label column. P-values use the asymptotic
+**              standard normal (z-test) as in qardl_pval().
+**
+**  Developed:  March 2026
+*/
+
+proc (0) = printQARDL(struct qardlOut qaOut, tau);
+    local ss, k, p, jj, ii, idx;
+    local se_bt, se_phi, se_gam;
+    local z_bt, z_phi, z_gam;
+    local pv_bt, pv_phi, pv_gam;
+    local tbl;
+
+    ss = rows(tau);
+    k  = rows(qaOut.bigbt) / ss;
+    p  = rows(qaOut.phi)   / ss;
+
+    // Standard errors
+    se_bt  = sqrt(diag(qaOut.bigbt_cov));
+    se_phi = sqrt(diag(qaOut.phi_cov));
+    se_gam = sqrt(diag(qaOut.gamma_cov));
+
+    // z-statistics
+    z_bt  = qaOut.bigbt  ./ se_bt;
+    z_phi = qaOut.phi    ./ se_phi;
+    z_gam = qaOut.gamma  ./ se_gam;
+
+    // Two-sided p-values
+    pv_bt  = 2 * cdfnc(abs(z_bt));
+    pv_phi = 2 * cdfnc(abs(z_phi));
+    pv_gam = 2 * cdfnc(abs(z_gam));
+
+    print "===================================================================";
+    print " QARDL Estimation Results";
+    print "===================================================================";
+    print " Columns: tau | var | estimate | SE | z-stat | p-value";
+
+    // --- Long-run parameters (Beta) ---
+    print "";
+    print " Long-run parameters (Beta)";
+    print " ------------------------------------------------------------------";
+    tbl = zeros(k*ss, 6);
+    jj = 1;
+    do until jj > ss;
+        ii = 1;
+        do until ii > k;
+            idx = (jj-1)*k + ii;
+            tbl[idx, 1] = tau[jj];
+            tbl[idx, 2] = ii;
+            tbl[idx, 3] = qaOut.bigbt[idx];
+            tbl[idx, 4] = se_bt[idx];
+            tbl[idx, 5] = z_bt[idx];
+            tbl[idx, 6] = pv_bt[idx];
+            ii = ii + 1;
+        endo;
+        jj = jj + 1;
+    endo;
+    print tbl;
+
+    // --- Short-run parameters (Phi) ---
+    print "";
+    print " Short-run parameters (Phi — lagged dependent variable)";
+    print " ------------------------------------------------------------------";
+    tbl = zeros(p*ss, 6);
+    jj = 1;
+    do until jj > ss;
+        ii = 1;
+        do until ii > p;
+            idx = (jj-1)*p + ii;
+            tbl[idx, 1] = tau[jj];
+            tbl[idx, 2] = ii;
+            tbl[idx, 3] = qaOut.phi[idx];
+            tbl[idx, 4] = se_phi[idx];
+            tbl[idx, 5] = z_phi[idx];
+            tbl[idx, 6] = pv_phi[idx];
+            ii = ii + 1;
+        endo;
+        jj = jj + 1;
+    endo;
+    print tbl;
+
+    // --- Short-run parameters (Gamma) ---
+    print "";
+    print " Short-run parameters (Gamma — x-level)";
+    print " ------------------------------------------------------------------";
+    tbl = zeros(k*ss, 6);
+    jj = 1;
+    do until jj > ss;
+        ii = 1;
+        do until ii > k;
+            idx = (jj-1)*k + ii;
+            tbl[idx, 1] = tau[jj];
+            tbl[idx, 2] = ii;
+            tbl[idx, 3] = qaOut.gamma[idx];
+            tbl[idx, 4] = se_gam[idx];
+            tbl[idx, 5] = z_gam[idx];
+            tbl[idx, 6] = pv_gam[idx];
+            ii = ii + 1;
+        endo;
+        jj = jj + 1;
+    endo;
+    print tbl;
+
+    // --- ECM parameters (Alpha, Rho) ---
+    print "";
+    print " ECM parameters (Alpha = intercept, Rho = adjustment speed)";
+    print " Columns: tau | alpha | rho";
+    print " ------------------------------------------------------------------";
+    print tau~qaOut.alpha~qaOut.rho;
+
+    print "===================================================================";
+
+endp;
+
+/*
+**> saveQARDLResults
+**
+**  Purpose:    Export QARDL estimation results to CSV files.  One file is
+**              written per parameter group (beta, gamma, phi, ecm).  Each
+**              file contains columns: tau, param_index, estimate, se, z, pval.
+**
+**  Format:     saveQARDLResults(qaOut, tau, outdir);
+**
+**  Input:      qaOut       struct qardlOut returned by qardl().
+**
+**              tau         (ss x 1) vector of quantile levels.
+**
+**              outdir      string, output directory path.  A trailing path
+**                          separator is added automatically if absent.
+**                          Pass "." to write to the current working directory.
+**
+**  Output:     Writes four CSV files:
+**                  <outdir>/qardl_beta.csv
+**                  <outdir>/qardl_gamma.csv
+**                  <outdir>/qardl_phi.csv
+**                  <outdir>/qardl_ecm.csv
+**
+**  Developed:  March 2026
+*/
+proc (0) = saveQARDLResults(struct qardlOut qaOut, tau, outdir);
+    local ss, k, p;
+    local se_beta, se_gamma, se_phi;
+    local _beta, _gamma, _phi;
+    local z_beta, z_gamma, z_phi;
+    local pv_beta, pv_gamma, pv_phi;
+    local out_beta, out_gamma, out_phi, out_ecm;
+    local jj, ii, row;
+    local fpath, sep;
+
+    ss = rows(tau);
+
+    _beta  = qaOut.bigbt;
+    _gamma = qaOut.gamma;
+    _phi   = qaOut.phi;
+
+    k = rows(_beta) / ss;
+    p = rows(_phi)  / ss;
+
+    // Reshape to (ss x param)
+    _beta  = reshape(_beta,  ss, k);
+    _gamma = reshape(_gamma, ss, k);
+    _phi   = reshape(_phi,   ss, p);
+
+    // Standard errors
+    se_beta  = reshape(sqrt(diag(qaOut.bigbt_cov)),  ss, k);
+    se_gamma = reshape(sqrt(diag(qaOut.gamma_cov)),  ss, k);
+    se_phi   = reshape(sqrt(diag(qaOut.phi_cov)),    ss, p);
+
+    // z-statistics and p-values
+    z_beta   = _beta  ./ se_beta;
+    z_gamma  = _gamma ./ se_gamma;
+    z_phi    = _phi   ./ se_phi;
+
+    pv_beta  = 2 * cdfnc(abs(z_beta));
+    pv_gamma = 2 * cdfnc(abs(z_gamma));
+    pv_phi   = 2 * cdfnc(abs(z_phi));
+
+    // Ensure outdir ends with a separator
+    if strsect(outdir, strlen(outdir), 1) $/= "/";
+        outdir = outdir $+ "/";
+    endif;
+
+    // --- Write beta CSV ---
+    // Rows: (tau, param_index, estimate, se, z, pval)
+    out_beta = zeros(ss * k, 6);
+    row = 1;
+    jj = 1;
+    do until jj > ss;
+        ii = 1;
+        do until ii > k;
+            out_beta[row, 1] = tau[jj];
+            out_beta[row, 2] = ii;
+            out_beta[row, 3] = _beta[jj, ii];
+            out_beta[row, 4] = se_beta[jj, ii];
+            out_beta[row, 5] = z_beta[jj, ii];
+            out_beta[row, 6] = pv_beta[jj, ii];
+            row = row + 1;
+            ii = ii + 1;
+        endo;
+        jj = jj + 1;
+    endo;
+    fpath = outdir $+ "qardl_beta.csv";
+    _saveCSV(out_beta, "tau,param_index,estimate,se,z,pval", fpath);
+
+    // --- Write gamma CSV ---
+    out_gamma = zeros(ss * k, 6);
+    row = 1;
+    jj = 1;
+    do until jj > ss;
+        ii = 1;
+        do until ii > k;
+            out_gamma[row, 1] = tau[jj];
+            out_gamma[row, 2] = ii;
+            out_gamma[row, 3] = _gamma[jj, ii];
+            out_gamma[row, 4] = se_gamma[jj, ii];
+            out_gamma[row, 5] = z_gamma[jj, ii];
+            out_gamma[row, 6] = pv_gamma[jj, ii];
+            row = row + 1;
+            ii = ii + 1;
+        endo;
+        jj = jj + 1;
+    endo;
+    fpath = outdir $+ "qardl_gamma.csv";
+    _saveCSV(out_gamma, "tau,param_index,estimate,se,z,pval", fpath);
+
+    // --- Write phi CSV ---
+    out_phi = zeros(ss * p, 6);
+    row = 1;
+    jj = 1;
+    do until jj > ss;
+        ii = 1;
+        do until ii > p;
+            out_phi[row, 1] = tau[jj];
+            out_phi[row, 2] = ii;
+            out_phi[row, 3] = _phi[jj, ii];
+            out_phi[row, 4] = se_phi[jj, ii];
+            out_phi[row, 5] = z_phi[jj, ii];
+            out_phi[row, 6] = pv_phi[jj, ii];
+            row = row + 1;
+            ii = ii + 1;
+        endo;
+        jj = jj + 1;
+    endo;
+    fpath = outdir $+ "qardl_phi.csv";
+    _saveCSV(out_phi, "tau,param_index,estimate,se,z,pval", fpath);
+
+    // --- Write ECM CSV (alpha and rho, no SE available in qardlOut) ---
+    out_ecm = zeros(ss, 3);
+    out_ecm[., 1] = tau;
+    out_ecm[., 2] = qaOut.alpha;
+    out_ecm[., 3] = qaOut.rho;
+    fpath = outdir $+ "qardl_ecm.csv";
+    _saveCSV(out_ecm, "tau,alpha,rho", fpath);
+
+    print "saveQARDLResults: wrote results to " $+ outdir;
+
+endp;
+
+// Helper: write numeric matrix with header line to a CSV file
+proc (0) = _saveCSV(mat, header, fpath);
+    local fid, nr, nc, jj, ii, line;
+
+    fid = fopen(fpath, "w");
+
+    if fid == -1;
+        print "saveQARDLResults: ERROR - could not open " $+ fpath;
+        retp;
+    endif;
+
+    // Write header
+    fputs(fid, header $+ "\n");
+
+    // Write data rows
+    nr = rows(mat);
+    nc = cols(mat);
+    jj = 1;
+    do until jj > nr;
+        line = "";
+        ii = 1;
+        do until ii > nc;
+            if ii > 1;
+                line = line $+ ",";
+            endif;
+            line = line $+ ftos(mat[jj, ii], "%g", 1, 0);
+            ii = ii + 1;
+        endo;
+        fputs(fid, line $+ "\n");
+        jj = jj + 1;
+    endo;
+
+    fclose(fid);
+endp;
+
+/*
+**> blockBootstrapQARDL
+**
+**  Purpose:    Compute bootstrap confidence intervals for QARDL parameter
+**              estimates using the moving-block bootstrap (Kunsch 1989;
+**              Liu & Singh 1992).  Resampling blocks of consecutive
+**              observations preserves the short-run serial dependence
+**              structure of the data.
+**
+**  Format:     { ci_beta, ci_gamma, ci_phi } =
+**                  blockBootstrapQARDL(data, ppp, qqq, tau, B, blk_len, alpha);
+**
+**  Input:      data        (T x (1+k)) matrix.
+**
+**              ppp         scalar, AR lag order.
+**
+**              qqq         scalar, distributed-lag order.
+**
+**              tau         (ss x 1) vector of quantile levels.
+**
+**              B           scalar, number of bootstrap replications
+**                          (e.g., 999).
+**
+**              blk_len     scalar, block length.  If missing or <= 0,
+**                          defaults to floor(T^(1/3)).
+**
+**              alpha       scalar, confidence level in (0,1), e.g., 0.05
+**                          for 95% intervals.
+**
+**  Output:     ci_beta     (k*ss x 2) matrix.  Each row is one (tau,param)
+**                          combination; columns are [lower, upper] bounds.
+**
+**              ci_gamma    (k*ss x 2) confidence intervals for gamma.
+**
+**              ci_phi      (p*ss x 2) confidence intervals for phi.
+**
+**  Remarks:    The bootstrap resamples blocks of length blk_len with
+**              replacement and stacks them to form a pseudo-sample of
+**              length T.  qardl() is re-estimated on each pseudo-sample.
+**              The (alpha/2) and (1-alpha/2) empirical quantiles of the
+**              B bootstrap draws are returned as the CI bounds.
+**
+**              The procedure uses rndu() for random block starts; results
+**              are NOT reproducible unless the seed is set by the caller
+**              via rndseed.
+**
+**  Developed:  March 2026
+*/
+proc (3) = blockBootstrapQARDL(data, ppp, qqq, tau, B, blk_len, alpha);
+    local T, k0, ss, jj, ii, b;
+    local n_blks, starts, idx, boot_data, qa_b;
+    local dim_beta, dim_phi, dim_gamma;
+    local boot_beta, boot_gamma, boot_phi;
+    local ci_beta, ci_gamma, ci_phi;
+    local q_lo, q_hi;
+
+    T   = rows(data);
+    k0  = cols(data) - 1;
+    ss  = rows(tau);
+
+    // Default block length
+    if blk_len <= 0 or scalmiss(blk_len);
+        blk_len = trunc(T^(1/3));
+        if blk_len < 2;
+            blk_len = 2;
+        endif;
+    endif;
+
+    // Number of blocks needed to cover T obs
+    n_blks = ceil(T / blk_len);
+
+    // Storage for bootstrap parameter vectors
+    dim_beta  = k0 * ss;
+    dim_gamma = k0 * ss;
+    dim_phi   = ppp * ss;
+
+    boot_beta  = zeros(B, dim_beta);
+    boot_gamma = zeros(B, dim_gamma);
+    boot_phi   = zeros(B, dim_phi);
+
+    b = 1;
+    do until b > B;
+
+        // Draw n_blks random block starts (uniform on 1 to T-blk_len+1)
+        starts = ceil(rndu(n_blks, 1) * (T - blk_len + 1));
+
+        // Build pseudo-sample by concatenating blocks, then trim to T
+        idx = zeros(0, 1);
+        jj = 1;
+        do until jj > n_blks;
+            idx = idx | seqa(starts[jj], 1, blk_len);
+            jj = jj + 1;
+        endo;
+        idx = idx[1:T, .];
+
+        boot_data = data[idx, .];
+
+        // Re-estimate QARDL on bootstrap sample
+        struct qardlOut qa_b;
+        qa_b = qardl(boot_data, ppp, qqq, tau);
+
+        boot_beta[b, .]  = qa_b.bigbt';
+        boot_gamma[b, .] = qa_b.gamma';
+        boot_phi[b, .]   = qa_b.phi';
+
+        b = b + 1;
+    endo;
+
+    // Empirical quantile CI bounds
+    q_lo = alpha / 2;
+    q_hi = 1 - q_lo;
+
+    ci_beta  = zeros(dim_beta,  2);
+    ci_gamma = zeros(dim_gamma, 2);
+    ci_phi   = zeros(dim_phi,   2);
+
+    jj = 1;
+    do until jj > dim_beta;
+        ci_beta[jj, 1] = quantile(boot_beta[., jj],  q_lo);
+        ci_beta[jj, 2] = quantile(boot_beta[., jj],  q_hi);
+        jj = jj + 1;
+    endo;
+
+    jj = 1;
+    do until jj > dim_gamma;
+        ci_gamma[jj, 1] = quantile(boot_gamma[., jj], q_lo);
+        ci_gamma[jj, 2] = quantile(boot_gamma[., jj], q_hi);
+        jj = jj + 1;
+    endo;
+
+    jj = 1;
+    do until jj > dim_phi;
+        ci_phi[jj, 1] = quantile(boot_phi[., jj], q_lo);
+        ci_phi[jj, 2] = quantile(boot_phi[., jj], q_hi);
+        jj = jj + 1;
+    endo;
+
+    retp(ci_beta, ci_gamma, ci_phi);
 endp;

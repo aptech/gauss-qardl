@@ -1,0 +1,155 @@
+/*
+**> wtestsym
+**
+**  Purpose:    Wald test for quantile symmetry of QARDL parameters.
+**              Tests H0: theta(tau) = theta(1-tau) for all symmetric
+**              quantile pairs found in the supplied tau grid.  For each
+**              of beta, gamma, and phi the restriction matrix R is
+**              constructed so that each row imposes equality of one
+**              parameter at one symmetric pair.
+**
+**  Format:     { wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi }
+**                  = wtestsym(qaOut, tau, data);
+**
+**  Input:      qaOut   struct qardlOut returned by qardl().
+**
+**              tau     (ss x 1) vector of quantile indices.
+**
+**              data    matrix, the dataset passed to qardl() (used only
+**                      for the sample size n).
+**
+**  Output:     wt_beta     scalar, Wald statistic for long-run beta.
+**
+**              pv_beta     scalar, chi-squared p-value for wt_beta.
+**
+**              wt_gamma    scalar, Wald statistic for short-run gamma.
+**
+**              pv_gamma    scalar, chi-squared p-value for wt_gamma.
+**
+**              wt_phi      scalar, Wald statistic for short-run phi.
+**
+**              pv_phi      scalar, chi-squared p-value for wt_phi.
+**
+**  Remarks:    A "symmetric pair" is a pair of indices (j, m) with j < m
+**              such that |tau[j] + tau[m] - 1| < 1e-10.  If no such
+**              pairs exist the procedure returns missing values (error
+**              code) for all outputs and prints a warning.
+**
+**              The Wald statistic follows the same scaling as wtestlrb:
+**                  W = (n-1)^2 * (R*b)' * inv(R*V*R') * (R*b)
+**              under H0: R*b = 0, distributed chi-squared(rank(R)).
+**
+**  Developed:  March 2026
+*/
+
+proc (6) = wtestsym(struct qardlOut qaOut, tau, data);
+    local ss, k, p, nn;
+    local pair_j, pair_m, n_pairs, tol;
+    local jj, mm, idx;
+    local R_beta, R_gamma, R_phi;
+    local wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi;
+
+    ss = rows(tau);
+    nn = rows(data);
+    k  = rows(qaOut.bigbt)   / ss;
+    p  = rows(qaOut.phi)     / ss;
+
+    // --- Find symmetric quantile pairs (tau[j] + tau[m] = 1, j < m) ---
+    tol = 1e-10;
+    pair_j = zeros(0, 1);
+    pair_m = zeros(0, 1);
+
+    jj = 1;
+    do until jj > ss;
+        mm = jj + 1;
+        do until mm > ss;
+            if abs(tau[jj] + tau[mm] - 1) < tol;
+                pair_j = pair_j | jj;
+                pair_m = pair_m | mm;
+            endif;
+            mm = mm + 1;
+        endo;
+        jj = jj + 1;
+    endo;
+
+    n_pairs = rows(pair_j);
+
+    if n_pairs == 0;
+        print "WARNING (wtestsym): no symmetric quantile pairs found in tau grid.";
+        print "                    Returning missing values.";
+        wt_beta  = error(0);
+        pv_beta  = error(0);
+        wt_gamma = error(0);
+        pv_gamma = error(0);
+        wt_phi   = error(0);
+        pv_phi   = error(0);
+        retp(wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi);
+    endif;
+
+    // --- Build restriction matrices ---
+    // bigbt and bigam are (k*ss x 1): stacked as [param_1(tau_1),...,param_k(tau_1), ..., param_k(tau_ss)]
+    // bigphi is (p*ss x 1): same pattern with p parameters
+
+    R_beta  = zeros(n_pairs * k, k * ss);
+    R_gamma = zeros(n_pairs * k, k * ss);
+    R_phi   = zeros(n_pairs * p, p * ss);
+
+    idx = 1;
+    jj = 1;
+    do until jj > n_pairs;
+        local j_q, m_q;
+        j_q = pair_j[jj];
+        m_q = pair_m[jj];
+
+        // Beta and gamma: k parameters per quantile
+        mm = 1;
+        do until mm > k;
+            R_beta[idx, (j_q-1)*k + mm] =  1;
+            R_beta[idx, (m_q-1)*k + mm] = -1;
+            R_gamma[idx, (j_q-1)*k + mm] =  1;
+            R_gamma[idx, (m_q-1)*k + mm] = -1;
+            idx = idx + 1;
+            mm = mm + 1;
+        endo;
+        jj = jj + 1;
+    endo;
+
+    // Phi: p parameters per quantile
+    idx = 1;
+    jj = 1;
+    do until jj > n_pairs;
+        j_q = pair_j[jj];
+        m_q = pair_m[jj];
+
+        mm = 1;
+        do until mm > p;
+            R_phi[idx, (j_q-1)*p + mm] =  1;
+            R_phi[idx, (m_q-1)*p + mm] = -1;
+            idx = idx + 1;
+            mm = mm + 1;
+        endo;
+        jj = jj + 1;
+    endo;
+
+    // --- Wald statistics: W = (n-1)^2 * (Rb)' * inv(R*V*R') * (Rb) ---
+    local rb_beta, rb_gamma, rb_phi;
+    local rnk_beta, rnk_gamma, rnk_phi;
+
+    rb_beta  = R_beta  * qaOut.bigbt;
+    rb_gamma = R_gamma * qaOut.gamma;
+    rb_phi   = R_phi   * qaOut.phi;
+
+    rnk_beta  = rows(R_beta);
+    rnk_gamma = rows(R_gamma);
+    rnk_phi   = rows(R_phi);
+
+    wt_beta  = ((nn-1)^2) * rb_beta'  * inv(R_beta  * qaOut.bigbt_cov  * R_beta')  * rb_beta;
+    wt_gamma = ((nn-1)^2) * rb_gamma' * inv(R_gamma * qaOut.gamma_cov  * R_gamma') * rb_gamma;
+    wt_phi   = ((nn-1)^2) * rb_phi'   * inv(R_phi   * qaOut.phi_cov    * R_phi')   * rb_phi;
+
+    pv_beta  = cdfchic(wt_beta,  rnk_beta);
+    pv_gamma = cdfchic(wt_gamma, rnk_gamma);
+    pv_phi   = cdfchic(wt_phi,   rnk_phi);
+
+    retp(wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi);
+endp;

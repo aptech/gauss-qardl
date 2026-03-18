@@ -17,7 +17,9 @@
         "wtestsrp.src",
         "wtestsrg.src",
         "icmean.src",
-        "p_values_qardl.src"
+        "p_values_qardl.src",
+        "wtestsym.src",
+        "ardlbounds.src"
     ],
-    "version": "1.0.2"
+    "version": "1.0.3"
 }
