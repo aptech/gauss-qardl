@@ -1335,7 +1335,7 @@ endp;
 
 // Helper: write numeric matrix with header line to a CSV file
 proc (0) = _saveCSV(mat, header, fpath);
-    local fid, nr, nc, jj, ii, line;
+    local fid, nr, nc, jj, ii, csv_row;
 
     fid = fopen(fpath, "w");
 
@@ -1352,16 +1352,16 @@ proc (0) = _saveCSV(mat, header, fpath);
     nc = cols(mat);
     jj = 1;
     do until jj > nr;
-        line = "";
+        csv_row = "";
         ii = 1;
         do until ii > nc;
             if ii > 1;
-                line = line $+ ",";
+                csv_row = csv_row $+ ",";
             endif;
-            line = line $+ ftos(mat[jj, ii], "%g", 1, 0);
+            csv_row = csv_row $+ ftos(mat[jj, ii], "%g", 1, 0);
             ii = ii + 1;
         endo;
-        fputs(fid, line $+ "\n");
+        fputs(fid, csv_row $+ "\n");
         jj = jj + 1;
     endo;
 
