@@ -6,19 +6,24 @@ Context file for Claude Code sessions working on this repository.
 
 Implements the **Quantile Autoregressive Distributed Lag (QARDL)** model from Cho, Kim & Shin (2015), which extends ARDL cointegration to allow long-run and short-run parameters to vary across quantiles of the conditional distribution of `y_t`. Use cases: testing for asymmetric cointegration, studying heterogeneous adjustment speeds.
 
-The library is a **GAUSS application package** (version 1.0.1). It loads via `library qardl;` and depends only on GAUSS's built-in `quantileFit` (no external library required).
+The library is a **GAUSS application package** (version 1.0.3). It loads via `library qardl;` and depends only on GAUSS's built-in `quantileFit` (no external library required).
 
 ## Repository layout
 
 ```
 src/
-  qardl.sdf          # Structure definitions (qardlOut, qardlECMOut, rollingQardlOut, etc.)
-  qardl.src          # Core procedures: qardl(), qardlECM(), rollingQardl(), plotQARDL(), helpers
+  qardl.sdf          # Structure definitions (qardlOut, qardlECMOut, rollingQardlOut,
+                     #   rollingQardlECMOut, etc.)
+  qardl.src          # Core procedures: qardl(), qardlECM(), rollingQardl(),
+                     #   rollingQardlECM(), plotQARDL(), plotQARDLbands(),
+                     #   saveQARDLResults(), blockBootstrapQARDL(), printQARDL(), helpers
   icmean.src         # BIC-based lag order selection: icmean(), pqorder()
-  p_values_qardl.src # qardl_pval() — asymptotic z-test p-values for all three parameter sets
+  p_values_qardl.src # qardl_pval(), qardl_pval_ecm() — asymptotic z-test p-values
   wtestlrb.src       # wtestlrb() — Wald test for long-run beta
   wtestsrp.src       # wtestsrp() — Wald test for short-run phi
   wtestsrg.src       # wtestsrg() — Wald test for short-run gamma
+  wtestsym.src       # wtestsym() — quantile symmetry Wald test H0: theta(tau)=theta(1-tau)
+  ardlbounds.src     # ardlbounds(), ardlbounds_print() — PSS (2001) bounds F-test
 examples/
   demo.e             # Main worked example
   qardlestimation.e  # Monte Carlo simulation of QARDL estimation
@@ -73,6 +78,30 @@ where `EC_{t-1} = y_{t-1} − β_OLS'·x_{t-1}` uses OLS β from Step 1.
 | `alpha` | `s x 1` | ECM intercept at each quantile |
 | `rho` | `s x 1` | Directly estimated speed of adjustment at each quantile |
 | `rho_cov` | `s x s` | Asymptotic covariance of ρ across quantiles |
+| `alpha_cov` | `s x s` | Asymptotic covariance of α across quantiles |
+
+## `rollingQardlECMOut` structure fields
+
+| Field | Dimensions | Description |
+|-------|-----------|-------------|
+| `alpha` | `num_est x s` | Rolling α(τ); each row is one window |
+| `rho` | `num_est x s` | Rolling ρ(τ); each row is one window |
+| `alpha_se` | `num_est x s` | Rolling SE of α |
+| `rho_se` | `num_est x s` | Rolling SE of ρ |
+| `beta_lr` | `num_est x k` | Rolling OLS long-run β |
+| `rho_ols` | `num_est x 1` | Rolling OLS ρ |
+
+## New procedures (March 2026 additions)
+
+| Procedure | File | Description |
+|-----------|------|-------------|
+| `plotQARDLbands(qaOut, tau)` | qardl.src | 3-row quantile process plot with ±1.96·SE bands for β, γ, φ |
+| `saveQARDLResults(qaOut, tau, outdir)` | qardl.src | Export β, γ, φ, ECM to CSV files in `outdir/` |
+| `rollingQardlECM(data, p, q, tau)` | qardl.src | Rolling-window `qardlECM`; returns `rollingQardlECMOut` |
+| `blockBootstrapQARDL(data, p, q, tau, B, blk_len, alpha)` | qardl.src | Moving-block bootstrap CIs for β, γ, φ; returns 3 `(dim x 2)` matrices |
+| `wtestsym(qaOut, tau, data)` | wtestsym.src | Wald test H₀: θ(τ)=θ(1−τ) for all symmetric pairs in tau |
+| `ardlbounds(data, p, q)` | ardlbounds.src | PSS (2001) bounds F-test; returns `(Fstat, cv)` |
+| `ardlbounds_print(Fstat, cv, k)` | ardlbounds.src | Print formatted bounds test summary |
 
 ## GAUSS language conventions for this codebase
 
@@ -117,7 +146,7 @@ Long-run β uses rows `2+qqq*k0 : 1+(qqq+1)*k0` divided by `(1 − sumc(φ rows)
 
 ## Package manifest
 
-`package.json` lists all src files loaded by `library qardl`. Current version: **1.0.2**. All `.src` files in `src/` including `p_values_qardl.src` are registered. If you add a new `.src` file, add it to the `"src"` array and bump the patch version.
+`package.json` lists all src files loaded by `library qardl`. Current version: **1.0.3**. All `.src` files in `src/` are registered, including `p_values_qardl.src`, `wtestsym.src`, and `ardlbounds.src`. If you add a new `.src` file, add it to the `"src"` array and bump the patch version.
 
 ## Reference
 
