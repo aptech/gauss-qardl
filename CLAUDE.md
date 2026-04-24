@@ -6,24 +6,29 @@ Context file for Claude Code sessions working on this repository.
 
 Implements the **Quantile Autoregressive Distributed Lag (QARDL)** model from Cho, Kim & Shin (2015), which extends ARDL cointegration to allow long-run and short-run parameters to vary across quantiles of the conditional distribution of `y_t`. Use cases: testing for asymmetric cointegration, studying heterogeneous adjustment speeds.
 
-The library is a **GAUSS application package** (version 1.0.3). It loads via `library qardl;` and depends only on GAUSS's built-in `quantileFit` (no external library required).
+The library is a **GAUSS application package** (version 2.1.0). It loads via `library qardl;` and depends only on GAUSS's built-in `quantileFit` (no external library required).
 
 ## Repository layout
 
 ```
 src/
   qardl.sdf          # Structure definitions (qardlOut, qardlECMOut, rollingQardlOut,
-                     #   rollingQardlECMOut, etc.)
+                     #   rollingQardlECMOut, qardlFullOut, qirfOut)
   qardl.src          # Core procedures: qardl(), qardlECM(), rollingQardl(),
                      #   rollingQardlECM(), plotQARDL(), plotQARDLbands(),
-                     #   saveQARDLResults(), blockBootstrapQARDL(), printQARDL(), helpers
+                     #   plotRollingQARDL(), plotRollingQARDLECM(),
+                     #   saveQARDLResults(), saveQARDLECMResults(),
+                     #   blockBootstrapQARDL(), blockBootstrapQARDLECM(),
+                     #   printQARDL(), printQARDLECM(), qardlFull(), _applyFormula()
   icmean.src         # BIC-based lag order selection: icmean(), pqorder()
   p_values_qardl.src # qardl_pval(), qardl_pval_ecm() — asymptotic z-test p-values
   wtestlrb.src       # wtestlrb() — Wald test for long-run beta
   wtestsrp.src       # wtestsrp() — Wald test for short-run phi
   wtestsrg.src       # wtestsrg() — Wald test for short-run gamma
   wtestsym.src       # wtestsym() — quantile symmetry Wald test H0: theta(tau)=theta(1-tau)
+  wtestconst.src     # wtestconst() — cross-quantile constancy Wald test
   ardlbounds.src     # ardlbounds(), ardlbounds_print() — PSS (2001) bounds F-test
+  qirf.src           # qirf(), plotQIRF() — quantile impulse response functions
 examples/
   demo.e             # Main worked example
   qardlestimation.e  # Monte Carlo simulation of QARDL estimation
@@ -31,7 +36,7 @@ examples/
   wald_tests_sim.e   # Wald test size simulation
   rolling_qardl.e    # Rolling QARDL example
   sp500.e            # S&P 500 application
-package.json         # GAUSS package manifest (name: qardl, version: 1.0.1)
+package.json         # GAUSS package manifest (name: qardl, version: 2.1.0)
 ```
 
 ## The QARDL model
@@ -64,10 +69,11 @@ where `EC_{t-1} = y_{t-1} − β_OLS'·x_{t-1}` uses OLS β from Step 1.
 | `bigbt_cov` | `(k·s) x (k·s)` | Asymptotic covariance of bigbt |
 | `phi` | `(p·s) x 1` | Short-run φ lags, stacked by quantile |
 | `phi_cov` | `(p·s) x (p·s)` | Asymptotic covariance of phi |
-| `gamma` | `(k·s) x 1` | Short-run γ (x differences), stacked by quantile |
+| `gamma` | `(k·s) x 1` | Short-run γ (x-level θ coefficient), stacked by quantile |
 | `gamma_cov` | `(k·s) x (k·s)` | Asymptotic covariance of gamma |
 | `alpha` | `s x 1` | Intercept α(τ) at each quantile |
-| `rho` | `s x 1` | ECM adjustment speed ρ(τ) at each quantile |
+| `rho` | `s × 1` | ECM adjustment speed ρ(τ) at each quantile |
+| `bt` | `(1+q·k+k+p) x s` | Full quantileFit coefficient matrix; used by `qirf()` |
 
 ## `qardlECMOut` structure fields
 
@@ -91,6 +97,20 @@ where `EC_{t-1} = y_{t-1} − β_OLS'·x_{t-1}` uses OLS β from Step 1.
 | `beta_lr` | `num_est x k` | Rolling OLS long-run β |
 | `rho_ols` | `num_est x 1` | Rolling OLS ρ |
 
+## New procedures (April 2026 additions)
+
+| Procedure | File | Description |
+|-----------|------|-------------|
+| `qardlFull(data, pend, qend, tau, formula)` | qardl.src | Integrated workflow: lag select + bounds test + qardl + qardlECM + print |
+| `printQARDLECM(qECMOut, tau)` | qardl.src | Formatted results table for qardlECMOut |
+| `saveQARDLECMResults(qECMOut, tau, outdir)` | qardl.src | Export ECM α, ρ to CSV |
+| `plotRollingQARDLECM(rECMOut, tau, dates)` | qardl.src | Plot rolling ρ(τ,t) and α(τ,t) with SE bands |
+| `plotRollingQARDL(rqaOut, tau, dates)` | qardl.src | Plot rolling β(τ,t) with SE bands (ss×k grid) |
+| `blockBootstrapQARDLECM(data, p, q, tau, B, blk_len, alpha, formula)` | qardl.src | Moving-block bootstrap CIs for ECM ρ and α |
+| `wtestconst(qaOut, tau, data)` | wtestconst.src | Wald test H₀: θ(τ₁)=…=θ(τₛ) for all quantiles simultaneously |
+| `qirf(qaOut, p, q, H, tau, k_x, permanent)` | qirf.src | Quantile impulse response functions using qaOut.bt |
+| `plotQIRF(qirfOut)` | qirf.src | Plot QIRF paths, one panel per quantile |
+
 ## New procedures (March 2026 additions)
 
 | Procedure | File | Description |
@@ -113,6 +133,69 @@ where `EC_{t-1} = y_{t-1} − β_OLS'·x_{t-1}` uses OLS β from Step 1.
 - **Element-wise ops**: `.>`, `.*`, `./` etc.
 - **`packr(lagn(x, seqa(-q,1,q)))`**: idiom for building lagged-difference regressors. `seqa(-q,1,q)` = `[-q,...,-1]`; `lagn` with negative lag = lead, which after `packr` (drop NAs) produces the appropriately aligned columns. This is the original author's convention — do not change it.
 - **Regressor matrix ONEX**: always `ones(N,1)~X` with `qCtl.const = 0` so `quantileFit` does not add a second constant.
+
+### Newer GAUSS language features used in this library
+
+**Structure inference** — procs that return a user-defined struct declare the type in the return slot so callers do not need to pre-declare the variable:
+```gauss
+// Proc declaration
+proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
+
+// Caller — pre-declaration is now optional
+qaOut = qardl(data, pst, qst, tau);          // type inferred
+struct qardlOut qaOut;                        // still valid (backwards compat)
+qaOut = qardl(data, pst, qst, tau);
+```
+Inside the proc body, local struct variables are still declared with explicit `struct TypeName varName;`.
+
+**Named arguments** — trailing proc arguments can carry default values; callers may pass them positionally, by name, or omit them entirely:
+```gauss
+proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
+
+// All three call forms are equivalent and backwards-compatible:
+qaOut = qardl(data, pst, qst);                         // use default tau
+qaOut = qardl(data, pst, qst, tau);                    // positional
+qaOut = qardl(data, pst, qst, tau = { 0.1, 0.5, 0.9 }); // named
+```
+Named args are only added to **trailing** parameters to preserve positional compatibility. Struct-typed parameters (e.g., `struct waldTestRestrictions wCtl`) cannot carry default values and must remain positional.
+
+**Applied defaults in this library:**
+
+| Proc | Named defaults |
+|------|---------------|
+| `qardl` | `tau = { 0.25, 0.5, 0.75 }` |
+| `qardlECM` | `tau = { 0.25, 0.5, 0.75 }` |
+| `qardlFull` | `tau = { 0.25, 0.5, 0.75 }`, `formula = ""` |
+| `rollingQardlECM` | `tau = { 0.25, 0.5, 0.75 }` |
+| `plotQARDL` | `tau = { 0.25, 0.5, 0.75 }` |
+| `plotQARDLbands` | `tau = { 0.25, 0.5, 0.75 }` |
+| `plotRollingQARDLECM` | `tau = { 0.25, 0.5, 0.75 }`, `dates = 0` |
+| `plotRollingQARDL` | `tau = { 0.25, 0.5, 0.75 }`, `dates = 0` |
+| `printQARDL` | `tau = { 0.25, 0.5, 0.75 }` |
+| `printQARDLECM` | `tau = { 0.25, 0.5, 0.75 }` |
+| `saveQARDLResults` | `tau = { 0.25, 0.5, 0.75 }`, `outdir = "."` |
+| `saveQARDLECMResults` | `tau = { 0.25, 0.5, 0.75 }`, `outdir = "."` |
+| `blockBootstrapQARDL` | `tau = { 0.25, 0.5, 0.75 }`, `B = 999`, `blk_len = 0`, `alpha = 0.05` |
+| `blockBootstrapQARDLECM` | `tau = { 0.25, 0.5, 0.75 }`, `B = 999`, `blk_len = 0`, `alpha = 0.05` |
+| `pqorder` | `pend = 8`, `qend = 8` |
+| `qirf` | `tau = { 0.25, 0.5, 0.75 }`, `k_x = 1`, `permanent = 1` |
+
+**Formula string support** — implemented via two mechanisms:
+
+1. **`applyQARDLFormula(data, formula)`** — public preprocessing helper. Call before any proc:
+   ```gauss
+   data = applyQARDLFormula(data, "consumption ~ income + wealth");
+   qaOut = qardl(data, pst, qst);
+   ```
+
+2. **`qardlFull(..., formula = "")`** — formula integrated into the new pipeline proc:
+   ```gauss
+   qfOut = qardlFull(data, 8, 8, formula = "consumption ~ income + wealth");
+   ```
+
+The private `_applyFormula(data, formula)` helper at the bottom of `qardl.src` is the single implementation. It uses native GAUSS string functions (`strindx`, `strsect`, `strtrim`, `indcv`, `getcolnames`) — no external library dependency. Column names are matched case-insensitively.
+
+**Why formula is NOT a named arg on individual procs**: GAUSS 26 requires all trailing named args to be supplied together positionally — once any optional arg is provided positionally, all subsequent optional args must also be provided. Adding `formula = ""` after `tau = {...}` would break existing calls like `qardl(data, p, q, tau)`. The preprocessing helper sidesteps this constraint entirely.
 
 ## `bt` coefficient vector layout
 
@@ -146,7 +229,7 @@ Long-run β uses rows `2+qqq*k0 : 1+(qqq+1)*k0` divided by `(1 − sumc(φ rows)
 
 ## Package manifest
 
-`package.json` lists all src files loaded by `library qardl`. Current version: **1.0.3**. All `.src` files in `src/` are registered, including `p_values_qardl.src`, `wtestsym.src`, and `ardlbounds.src`. If you add a new `.src` file, add it to the `"src"` array and bump the patch version.
+`package.json` lists all src files loaded by `library qardl`. Current version: **2.1.0**. All `.src` files in `src/` are registered, including `wtestconst.src` and `qirf.src`. If you add a new `.src` file, add it to the `"src"` array and bump the patch version.
 
 ## Reference
 

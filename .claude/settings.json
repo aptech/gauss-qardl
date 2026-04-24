@@ -5,7 +5,10 @@
       "Bash(git diff*)",
       "Bash(git log*)",
       "Bash(python*)",
-      "Bash(pip*)"
+      "Bash(pip*)",
+      "Bash(where gauss *)",
+      "Read(//c/Users/eclow/Documents/GitHub/pddcce/**)",
+      "Bash(\"c:/gauss26/tgauss.exe\" --help)"
     ],
     "deny": [
       "Bash(git push*)",

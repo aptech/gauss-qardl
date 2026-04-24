@@ -45,7 +45,7 @@ proc icmean(data, ppp, qqq);
     retp(bic);
 endp;
 
-proc (2) = pqorder(data, pend, qend);
+proc (2) = pqorder(data, pend = 8, qend = 8);
 
     local icb, jj1, jj2, lst, pst, qst;
 

@@ -5,7 +5,9 @@
 **
 **  Purpose:    Perform QARDL estimation
 **
-**  Format:     qOut = qardl(data, ppp, qqq, tau);
+**  Format:     qOut = qardl(data, ppp, qqq);
+**              qOut = qardl(data, ppp, qqq, tau);
+**              qOut = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
 **
 **  Input:
 **              data:   (n *(1+k)) matrix, where the 1st column is the dependent variable,
@@ -39,8 +41,8 @@
 */
 
 
-proc (1) = qardl(data, ppp, qqq, tau);
-    
+proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
+
     local za, nn, yy, xx, mm, ee, Y, X, ONEX, bigbt, psu, midbt,
         tw, bb, qq, eei, xxi, yyi, ii, yyj, xxj, wwj, kk, kkk, tilw, lll,
         bbt, cc, bigpi, bigphi, midphi, jj, bigam, bilam, k0, ss, hb, hs,
@@ -330,8 +332,11 @@ proc (1) = qardl(data, ppp, qqq, tau);
     qaOut.alpha = bt[1, .]';
 
     // ECM adjustment coefficient: rho(tau) = -(1 - sum_j phi_j(tau))
-    // sumc over (ppp x ss) matrix gives 1 x ss; transpose to ss x 1
-    qaOut.rho = -(1 - sumc(bt[2+(qqq+1)*k0:1+(qqq+1)*k0+ppp, .]))';
+    // sumc over (ppp x ss) matrix gives (ss x 1) column vector directly
+    qaOut.rho = -(1 - sumc(bt[2+(qqq+1)*k0:1+(qqq+1)*k0+ppp, .]));
+
+    // Full coefficient matrix for downstream use (e.g., QIRF)
+    qaOut.bt = bt;
 
     retp(qaOut);
 endp;
@@ -351,7 +356,9 @@ endp;
 **                               + sum_j delta_j(tau)*Dx_{t-j}    [j=0,...,q-1]
 **                               + u_t(tau)
 **
-**  Format:     qECMOut = qardlECM(data, ppp, qqq, tau);
+**  Format:     qECMOut = qardlECM(data, ppp, qqq);
+**              qECMOut = qardlECM(data, ppp, qqq, tau);
+**              qECMOut = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
 **
 **  Input:      data        (n x (1+k)) matrix. Column 1 is the dependent variable;
 **                          columns 2:(1+k) are the k regressors.
@@ -385,7 +392,7 @@ endp;
 **  Developed:  March 2026
 */
 
-proc (1) = qardlECM(data, ppp, qqq, tau);
+proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
     local nn, k0, ss, jj, ii, j;
     local yy, xx, ee;
     local eei, xxi, yyi, X_ols, ONEX_ols, Y_ols;
@@ -567,7 +574,7 @@ proc (2) = qardlAR2Sim(nnn, alpha, phi, rho, the0, the1);
     retp(yyy, xxx);
 endp;
 
-proc (0) = plotQARDL(struct qardlOut qaOut, tau);
+proc (0) = plotQARDL(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
     local _beta, _gamma, _phi, _alpha, _rho, ntau, k, p, nCols;
 
     ntau = rows(tau);
@@ -674,7 +681,7 @@ endp;
 **  Input:      qaOut       struct qardlOut returned by qardl().
 **              tau         (ss x 1) vector of quantile indices.
 */
-proc (0) = plotQARDLbands(struct qardlOut qaOut, tau);
+proc (0) = plotQARDLbands(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
     local _beta, _gamma, _phi, ntau, k, p, nCols;
     local se_beta, se_gamma, se_phi;
     local lb_beta, ub_beta, lb_gamma, ub_gamma, lb_phi, ub_phi;
@@ -766,7 +773,7 @@ proc (0) = plotPhiBandGraphs(_phi, lb, ub, k, p, tau, nCols, struct plotControl 
     endfor;
 endp;
 
-proc(1) = plotSetQARDLDefaults(p, k);
+proc (struct plotControl) = plotSetQARDLDefaults(p, k);
     local _font, title_size, axis_size, label_size;
     
     _font = "Arial";
@@ -789,10 +796,148 @@ proc(1) = plotSetQARDLDefaults(p, k);
     retp(myPlot);
 endp;
 
-proc(1) = rollingQardl(data, pend, qend, tau, struct waldTestRestrictions wCtl);
+/*
+**> plotRollingQARDLECM
+**
+**  Purpose:    Plot rolling-window QARDL-ECM estimates.  Produces a 2-row
+**              layout: top row shows rho(tau,t) with +/-1.96*SE bands; bottom
+**              row shows alpha(tau,t) with bands.  One panel per quantile.
+**
+**  Format:     plotRollingQARDLECM(rECMOut);
+**              plotRollingQARDLECM(rECMOut, tau = { 0.25, 0.5, 0.75 });
+**              plotRollingQARDLECM(rECMOut, tau, dates);
+**
+**  Input:      rECMOut     struct rollingQardlECMOut returned by rollingQardlECM().
+**              tau         (ss x 1) quantile vector.
+**              dates       (num_est x 1) vector of date values for x-axis.
+**                          Pass 0 (default) to use window indices 1, 2, ...
+**
+**  Developed:  April 2026
+*/
+proc (0) = plotRollingQARDLECM(struct rollingQardlECMOut rECMOut, tau = { 0.25, 0.5, 0.75 }, dates = 0);
+    local ss, num_est, t_axis, jj;
+    local rho_lb, rho_ub, alpha_lb, alpha_ub;
+    local _font, title_size, axis_size, label_size;
+    struct plotControl myPlot;
+
+    ss      = rows(tau);
+    num_est = rows(rECMOut.rho);
+
+    // Build time axis
+    if scalmiss(dates) or (rows(dates) == 1 and dates == 0);
+        t_axis = seqa(1, 1, num_est);
+    else;
+        t_axis = dates;
+    endif;
+
+    // 95% pointwise bands
+    rho_lb   = rECMOut.rho   - 1.96 * rECMOut.rho_se;
+    rho_ub   = rECMOut.rho   + 1.96 * rECMOut.rho_se;
+    alpha_lb = rECMOut.alpha - 1.96 * rECMOut.alpha_se;
+    alpha_ub = rECMOut.alpha + 1.96 * rECMOut.alpha_se;
+
+    _font      = "Arial";
+    title_size = 16 - ss;
+    axis_size  = 14 - ss;
+    label_size = 12 - ss;
+
+    myPlot = plotGetDefaults("xy");
+    plotSetTitle(&myPlot, "", _font, title_size);
+    plotSetTextInterpreter(&myPlot, "LaTex", "all");
+    plotSetXLabel(&myPlot, "Window", _font, axis_size);
+    plotSetTicLabelFont(&myPlot, _font, label_size);
+    plotSetYTicCount(&myPlot, 5);
+    plotSetLineStyle(&myPlot, 2|1|2);
+
+    for jj(1, ss, 1);
+        plotLayout(2, ss, jj);
+        plotSetTitle(&myPlot, "\\rho(" $+ ntos(tau[jj]) $+ ")");
+        plotXY(myPlot, t_axis, rho_lb[., jj]~rECMOut.rho[., jj]~rho_ub[., jj]);
+
+        plotLayout(2, ss, ss + jj);
+        plotSetTitle(&myPlot, "\\alpha(" $+ ntos(tau[jj]) $+ ")");
+        plotXY(myPlot, t_axis, alpha_lb[., jj]~rECMOut.alpha[., jj]~alpha_ub[., jj]);
+    endfor;
+
+    plotClearLayout();
+endp;
+
+/*
+**> plotRollingQARDL
+**
+**  Purpose:    Plot rolling-window QARDL long-run beta estimates with +/-1.96*SE
+**              bands.  Produces a grid with ss rows (one per quantile) and k
+**              columns (one per x variable).
+**
+**  Format:     plotRollingQARDL(rqaOut);
+**              plotRollingQARDL(rqaOut, tau = { 0.25, 0.5, 0.75 });
+**              plotRollingQARDL(rqaOut, tau, dates);
+**
+**  Input:      rqaOut      struct rollingQardlOut returned by rollingQardl().
+**              tau         (ss x 1) quantile vector.
+**              dates       (num_est x 1) x-axis values.  Pass 0 for 1..num_est.
+**
+**  Developed:  April 2026
+*/
+proc (0) = plotRollingQARDL(struct rollingQardlOut rqaOut, tau = { 0.25, 0.5, 0.75 }, dates = 0);
+    local ss, num_est, k, t_axis, jj, vv;
+    local beta_v, se_v, lb, ub;
+    local _font, title_size, axis_size, label_size;
+    struct plotControl myPlot;
+
+    local _dims;
+    ss  = rows(tau);
+    _dims   = getorders(rqaOut.bigbt);  // [k, num_est, num_tau]
+    k       = _dims[1];
+    num_est = _dims[2];
+
+    // Build time axis
+    if scalmiss(dates) or (rows(dates) == 1 and dates == 0);
+        t_axis = seqa(1, 1, num_est);
+    else;
+        t_axis = dates;
+    endif;
+
+    _font      = "Arial";
+    title_size = 16 - maxc(k|ss);
+    axis_size  = 14 - maxc(k|ss);
+    label_size = 12 - maxc(k|ss);
+
+    myPlot = plotGetDefaults("xy");
+    plotSetTitle(&myPlot, "", _font, title_size);
+    plotSetTextInterpreter(&myPlot, "LaTex", "all");
+    plotSetXLabel(&myPlot, "Window", _font, axis_size);
+    plotSetTicLabelFont(&myPlot, _font, label_size);
+    plotSetYTicCount(&myPlot, 5);
+    plotSetLineStyle(&myPlot, 2|1|2);
+
+    // Grid: rows = quantiles, cols = x variables
+    for jj(1, ss, 1);
+        for vv(1, k, 1);
+            // Extract rolling beta and SE for variable vv at quantile jj
+            // Arrays indexed [variable, window, quantile]
+            beta_v = squeeze(rqaOut.bigbt[vv, ., jj]);
+            se_v   = squeeze(rqaOut.bigbt_se[vv, ., jj]);
+            lb     = beta_v - 1.96 * se_v;
+            ub     = beta_v + 1.96 * se_v;
+
+            plotLayout(ss, k, (jj-1)*k + vv);
+            plotSetTitle(&myPlot, "\\beta_" $+ ntos(vv) $+ "(\\tau=" $+ ntos(tau[jj]) $+ ")");
+            plotXY(myPlot, t_axis, lb~beta_v~ub);
+        endfor;
+    endfor;
+
+    plotClearLayout();
+endp;
+
+proc (struct rollingQardlOut) = rollingQardl(data, pend, qend, tau, struct waldTestRestrictions wCtl);
     local window_size, k, t, num_est, num_tau, st, fin_obs, pst, qst,
         beta_array, phi_array, gamma_array, beta_se, gamma_se, phi_se, data_subset,
     wald_beta, pv_beta, wald_gamma, wald_phi, pv_gamma, pv_phi, c_indx, bigR_phi_test;
+
+    // Struct declared once at proc scope (not inside the loop)
+    struct qardlOut qaOut;
+    struct rollingQardlOut rqaOut;
     
     // qardl order estimation
     // Estimated using full sample
@@ -834,7 +979,6 @@ proc(1) = rollingQardl(data, pend, qend, tau, struct waldTestRestrictions wCtl);
         data_subset = data[st:fin_obs, .];
         
         // Parameter estimation
-        struct qardlOut qaOut;
         qaOut = qardl(data_subset, pst, qst, tau);
         
         // Wald tests
@@ -866,7 +1010,6 @@ proc(1) = rollingQardl(data, pend, qend, tau, struct waldTestRestrictions wCtl);
     endo;
     
     // Output structure for results
-    struct rollingQardlOut rqaOut;
     rqaOut.bigbt = beta_array;
     rqaOut.bigbt_se = beta_se;
     rqaOut.phi = phi_array;
@@ -910,11 +1053,15 @@ endp;
 **
 **  Developed:  March 2026
 */
-proc (1) = rollingQardlECM(data, ppp, qqq, tau);
+proc (struct rollingQardlECMOut) = rollingQardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
     local window_size, k, T, num_est, ss, st, fin_obs;
     local alpha_mat, rho_mat, alpha_se_mat, rho_se_mat;
     local beta_lr_mat, rho_ols_vec;
     local data_subset;
+
+    // Structs declared once at proc scope (not inside the loop)
+    struct qardlECMOut qECMOut;
+    struct rollingQardlECMOut rECMOut;
 
     T          = rows(data);
     k          = cols(data) - 1;
@@ -937,7 +1084,6 @@ proc (1) = rollingQardlECM(data, ppp, qqq, tau);
 
         data_subset = data[st:fin_obs, .];
 
-        struct qardlECMOut qECMOut;
         qECMOut = qardlECM(data_subset, ppp, qqq, tau);
 
         alpha_mat[st, .]    = qECMOut.alpha';
@@ -951,7 +1097,6 @@ proc (1) = rollingQardlECM(data, ppp, qqq, tau);
         fin_obs = fin_obs + 1;
     endo;
 
-    struct rollingQardlECMOut rECMOut;
     rECMOut.alpha    = alpha_mat;
     rECMOut.rho      = rho_mat;
     rECMOut.alpha_se = alpha_se_mat;
@@ -1081,7 +1226,7 @@ endp;
 **  Developed:  March 2026
 */
 
-proc (0) = printQARDL(struct qardlOut qaOut, tau);
+proc (0) = printQARDL(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
     local ss, k, p, jj, ii, idx;
     local se_bt, se_phi, se_gam;
     local z_bt, z_phi, z_gam;
@@ -1190,6 +1335,135 @@ proc (0) = printQARDL(struct qardlOut qaOut, tau);
 endp;
 
 /*
+**> printQARDLECM
+**
+**  Purpose:    Print a formatted results table for a qardlECMOut instance.
+**              Shows OLS long-run coefficients, then quantile-varying alpha(tau)
+**              and rho(tau) with asymptotic standard errors, z-statistics, and
+**              two-sided p-values.
+**
+**  Format:     printQARDLECM(qECMOut);
+**              printQARDLECM(qECMOut, tau = { 0.25, 0.5, 0.75 });
+**
+**  Input:      qECMOut     struct qardlECMOut returned by qardlECM().
+**              tau         (ss x 1) vector of quantile levels.
+**
+**  Developed:  April 2026
+*/
+proc (0) = printQARDLECM(struct qardlECMOut qECMOut, tau = { 0.25, 0.5, 0.75 });
+    local ss, k, jj;
+    local se_alpha, se_rho;
+    local z_alpha, z_rho;
+    local pv_alpha, pv_rho;
+    local tbl;
+
+    ss = rows(tau);
+    k  = rows(qECMOut.beta_lr);
+
+    // Standard errors from diagonal of covariance matrices
+    se_alpha = sqrt(diag(qECMOut.alpha_cov));
+    se_rho   = sqrt(diag(qECMOut.rho_cov));
+
+    // z-statistics and two-sided p-values
+    z_alpha  = qECMOut.alpha ./ se_alpha;
+    z_rho    = qECMOut.rho   ./ se_rho;
+    pv_alpha = 2 * cdfnc(abs(z_alpha));
+    pv_rho   = 2 * cdfnc(abs(z_rho));
+
+    print "===================================================================";
+    print " QARDL-ECM Estimation Results (Two-Step)";
+    print "===================================================================";
+
+    // OLS long-run coefficients
+    print "";
+    print " Step 1 - OLS Long-Run Coefficients";
+    print " ------------------------------------------------------------------";
+    print " Variable | beta_lr";
+    jj = 1;
+    do until jj > k;
+        sprintf("  x%-3d     | %12.6f", jj, qECMOut.beta_lr[jj]);
+        jj = jj + 1;
+    endo;
+    sprintf("  rho_OLS  | %12.6f", qECMOut.rho_ols[1, 1]);
+
+    // ECM intercept alpha(tau)
+    print "";
+    print " Step 2 - ECM Quantile Parameters";
+    print " Columns: tau | estimate | SE | z-stat | p-value";
+    print "";
+    print " alpha(tau) - ECM intercept";
+    print " ------------------------------------------------------------------";
+    tbl = tau~qECMOut.alpha~se_alpha~z_alpha~pv_alpha;
+    print tbl;
+
+    // Speed of adjustment rho(tau)
+    print "";
+    print " rho(tau) - Speed of Adjustment";
+    print " ------------------------------------------------------------------";
+    tbl = tau~qECMOut.rho~se_rho~z_rho~pv_rho;
+    print tbl;
+
+    print "===================================================================";
+
+endp;
+
+/*
+**> saveQARDLECMResults
+**
+**  Purpose:    Export QARDL-ECM estimation results to CSV files.
+**              Writes OLS long-run coefficients and quantile-varying alpha(tau)
+**              and rho(tau) with standard errors, z-statistics, and p-values.
+**
+**  Format:     saveQARDLECMResults(qECMOut);
+**              saveQARDLECMResults(qECMOut, tau = { 0.25, 0.5, 0.75 }, outdir = ".");
+**
+**  Input:      qECMOut     struct qardlECMOut returned by qardlECM().
+**              tau         (ss x 1) vector of quantile levels.
+**              outdir      string, output directory.  Default: current directory.
+**
+**  Output:     Writes two CSV files:
+**                  <outdir>/qardl_ecm_lr.csv   (OLS long-run: var_index, beta_lr)
+**                  <outdir>/qardl_ecm_qr.csv   (QR ECM: tau, alpha, se_alpha,
+**                                               z_alpha, pval_alpha, rho, se_rho,
+**                                               z_rho, pval_rho)
+**
+**  Developed:  April 2026
+*/
+proc (0) = saveQARDLECMResults(struct qardlECMOut qECMOut, tau = { 0.25, 0.5, 0.75 }, outdir = ".");
+    local ss, k, jj, sep, fpath;
+    local se_alpha, se_rho, z_alpha, z_rho, pv_alpha, pv_rho;
+    local out_lr, out_qr;
+
+    ss = rows(tau);
+    k  = rows(qECMOut.beta_lr);
+
+    // Ensure outdir ends with separator
+    if strsect(outdir, strlen(outdir), 1) $/= "/";
+        outdir = outdir $+ "/";
+    endif;
+
+    // OLS long-run CSV: [var_index, beta_lr]
+    out_lr = seqa(1, 1, k)~qECMOut.beta_lr;
+    fpath  = outdir $+ "qardl_ecm_lr.csv";
+    _saveCSV(out_lr, "var_index,beta_lr", fpath);
+
+    // Quantile ECM CSV: [tau, alpha, se_alpha, z_alpha, pval_alpha, rho, se_rho, z_rho, pval_rho]
+    se_alpha = sqrt(diag(qECMOut.alpha_cov));
+    se_rho   = sqrt(diag(qECMOut.rho_cov));
+    z_alpha  = qECMOut.alpha ./ se_alpha;
+    z_rho    = qECMOut.rho   ./ se_rho;
+    pv_alpha = 2 * cdfnc(abs(z_alpha));
+    pv_rho   = 2 * cdfnc(abs(z_rho));
+
+    out_qr = tau~qECMOut.alpha~se_alpha~z_alpha~pv_alpha~qECMOut.rho~se_rho~z_rho~pv_rho;
+    fpath  = outdir $+ "qardl_ecm_qr.csv";
+    _saveCSV(out_qr, "tau,alpha,se_alpha,z_alpha,pval_alpha,rho,se_rho,z_rho,pval_rho", fpath);
+
+    print "saveQARDLECMResults: wrote results to " $+ outdir;
+
+endp;
+
+/*
 **> saveQARDLResults
 **
 **  Purpose:    Export QARDL estimation results to CSV files.  One file is
@@ -1214,7 +1488,7 @@ endp;
 **
 **  Developed:  March 2026
 */
-proc (0) = saveQARDLResults(struct qardlOut qaOut, tau, outdir);
+proc (0) = saveQARDLResults(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 }, outdir = ".");
     local ss, k, p;
     local se_beta, se_gamma, se_phi;
     local _beta, _gamma, _phi;
@@ -1365,7 +1639,7 @@ proc (0) = _saveCSV(mat, header, fpath);
         jj = jj + 1;
     endo;
 
-    fclose(fid);
+    fid = close(fid);
 endp;
 
 /*
@@ -1378,7 +1652,12 @@ endp;
 **              structure of the data.
 **
 **  Format:     { ci_beta, ci_gamma, ci_phi } =
+**                  blockBootstrapQARDL(data, ppp, qqq);
+**              { ci_beta, ci_gamma, ci_phi } =
 **                  blockBootstrapQARDL(data, ppp, qqq, tau, B, blk_len, alpha);
+**              { ci_beta, ci_gamma, ci_phi } =
+**                  blockBootstrapQARDL(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 },
+**                                      B = 999, blk_len = 0, alpha = 0.05);
 **
 **  Input:      data        (T x (1+k)) matrix.
 **
@@ -1387,15 +1666,16 @@ endp;
 **              qqq         scalar, distributed-lag order.
 **
 **              tau         (ss x 1) vector of quantile levels.
+**                          Default: { 0.25, 0.5, 0.75 }.
 **
-**              B           scalar, number of bootstrap replications
-**                          (e.g., 999).
+**              B           scalar, number of bootstrap replications.
+**                          Default: 999.
 **
-**              blk_len     scalar, block length.  If missing or <= 0,
-**                          defaults to floor(T^(1/3)).
+**              blk_len     scalar, block length.  0 or omitted =>
+**                          auto-select floor(T^(1/3)).  Default: 0.
 **
-**              alpha       scalar, confidence level in (0,1), e.g., 0.05
-**                          for 95% intervals.
+**              alpha       scalar, confidence level in (0,1).
+**                          Default: 0.05 (95% intervals).
 **
 **  Output:     ci_beta     (k*ss x 2) matrix.  Each row is one (tau,param)
 **                          combination; columns are [lower, upper] bounds.
@@ -1416,13 +1696,16 @@ endp;
 **
 **  Developed:  March 2026
 */
-proc (3) = blockBootstrapQARDL(data, ppp, qqq, tau, B, blk_len, alpha);
-    local T, k0, ss, jj, ii, b;
-    local n_blks, starts, idx, boot_data, qa_b;
+proc (3) = blockBootstrapQARDL(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, B = 999, blk_len = 0, alpha = 0.05);
+    local T, k0, ss, jj, ii, bbb;
+    local n_blks, starts, idx, boot_data;
     local dim_beta, dim_phi, dim_gamma;
     local boot_beta, boot_gamma, boot_phi;
     local ci_beta, ci_gamma, ci_phi;
     local q_lo, q_hi;
+
+    // Struct declared once at proc scope (not inside the loop)
+    struct qardlOut qa_b;
 
     T   = rows(data);
     k0  = cols(data) - 1;
@@ -1448,8 +1731,8 @@ proc (3) = blockBootstrapQARDL(data, ppp, qqq, tau, B, blk_len, alpha);
     boot_gamma = zeros(B, dim_gamma);
     boot_phi   = zeros(B, dim_phi);
 
-    b = 1;
-    do until b > B;
+    bbb = 1;
+    do until bbb > B;
 
         // Draw n_blks random block starts (uniform on 1 to T-blk_len+1)
         starts = ceil(rndu(n_blks, 1) * (T - blk_len + 1));
@@ -1465,15 +1748,13 @@ proc (3) = blockBootstrapQARDL(data, ppp, qqq, tau, B, blk_len, alpha);
 
         boot_data = data[idx, .];
 
-        // Re-estimate QARDL on bootstrap sample
-        struct qardlOut qa_b;
         qa_b = qardl(boot_data, ppp, qqq, tau);
 
-        boot_beta[b, .]  = qa_b.bigbt';
-        boot_gamma[b, .] = qa_b.gamma';
-        boot_phi[b, .]   = qa_b.phi';
+        boot_beta[bbb, .]  = qa_b.bigbt';
+        boot_gamma[bbb, .] = qa_b.gamma';
+        boot_phi[bbb, .]   = qa_b.phi';
 
-        b = b + 1;
+        bbb = bbb + 1;
     endo;
 
     // Empirical quantile CI bounds
@@ -1506,4 +1787,242 @@ proc (3) = blockBootstrapQARDL(data, ppp, qqq, tau, B, blk_len, alpha);
     endo;
 
     retp(ci_beta, ci_gamma, ci_phi);
+endp;
+
+/*
+**> blockBootstrapQARDLECM
+**
+**  Purpose:    Moving-block bootstrap confidence intervals for the QARDL-ECM
+**              speed-of-adjustment rho(tau) and intercept alpha(tau).  Uses
+**              the same block-resampling scheme as blockBootstrapQARDL.
+**
+**  Format:     { ci_rho, ci_alpha } = blockBootstrapQARDLECM(data, ppp, qqq);
+**              { ci_rho, ci_alpha } = blockBootstrapQARDLECM(data, ppp, qqq,
+**                  tau = { 0.25, 0.5, 0.75 }, B = 999, blk_len = 0,
+**                  alpha = 0.05, formula = "");
+**
+**  Input:      data        (T x (1+k)) matrix.
+**              ppp         scalar, AR lag order.
+**              qqq         scalar, distributed-lag order.
+**              tau         (ss x 1) quantile vector.
+**              B           scalar, bootstrap replications. Default 999.
+**              blk_len     scalar, block length. 0 = floor(T^(1/3)). Default 0.
+**              alpha       scalar, confidence level. Default 0.05 (95% CI).
+**              formula     string, Wilkinson formula. Default "".
+**
+**  Output:     ci_rho      (ss x 2) [lower, upper] CI bounds for rho(tau).
+**              ci_alpha    (ss x 2) [lower, upper] CI bounds for alpha(tau).
+**
+**  Developed:  April 2026
+*/
+proc (2) = blockBootstrapQARDLECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, B = 999, blk_len = 0, alpha = 0.05);
+    local T, ss, jj, bbb;
+    local n_blks, starts, idx, boot_data;
+    local boot_rho, boot_alpha;
+    local ci_rho, ci_alpha;
+    local q_lo, q_hi;
+
+    struct qardlECMOut qecm_b;
+
+    T  = rows(data);
+    ss = rows(tau);
+
+    if blk_len <= 0 or scalmiss(blk_len);
+        blk_len = trunc(T^(1/3));
+        if blk_len < 2;
+            blk_len = 2;
+        endif;
+    endif;
+
+    n_blks = ceil(T / blk_len);
+
+    boot_rho   = zeros(B, ss);
+    boot_alpha = zeros(B, ss);
+
+    bbb = 1;
+    do until bbb > B;
+
+        starts = ceil(rndu(n_blks, 1) * (T - blk_len + 1));
+
+        idx = zeros(0, 1);
+        jj = 1;
+        do until jj > n_blks;
+            idx = idx | seqa(starts[jj], 1, blk_len);
+            jj = jj + 1;
+        endo;
+        idx = idx[1:T, .];
+
+        boot_data = data[idx, .];
+
+        qecm_b = qardlECM(boot_data, ppp, qqq, tau);
+
+        boot_rho[bbb, .]   = qecm_b.rho';
+        boot_alpha[bbb, .] = qecm_b.alpha';
+
+        bbb = bbb + 1;
+    endo;
+
+    q_lo = alpha / 2;
+    q_hi = 1 - q_lo;
+
+    ci_rho   = zeros(ss, 2);
+    ci_alpha = zeros(ss, 2);
+
+    jj = 1;
+    do until jj > ss;
+        ci_rho[jj, 1]   = quantile(boot_rho[., jj],   q_lo);
+        ci_rho[jj, 2]   = quantile(boot_rho[., jj],   q_hi);
+        ci_alpha[jj, 1] = quantile(boot_alpha[., jj], q_lo);
+        ci_alpha[jj, 2] = quantile(boot_alpha[., jj], q_hi);
+        jj = jj + 1;
+    endo;
+
+    retp(ci_rho, ci_alpha);
+endp;
+
+/*
+**> qardlFull
+**
+**  Purpose:    Integrated QARDL workflow: lag selection, ARDL bounds test,
+**              QARDL levels estimation, and QARDL-ECM estimation in one call.
+**              Prints a complete results summary to the screen.
+**
+**  Format:     qfOut = qardlFull(data, pend, qend);
+**              qfOut = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 },
+**                                formula = "");
+**
+**  Input:      data    (T x (1+k)) matrix (or dataframe with formula).
+**              pend    scalar, maximum AR lag to search.
+**              qend    scalar, maximum DL lag to search.
+**              tau     (ss x 1) quantile vector.
+**              formula string, Wilkinson formula for column selection.
+**
+**  Output:     qfOut   struct qardlFullOut:
+**                  .pst        Selected AR lag order (BIC).
+**                  .qst        Selected DL lag order (BIC).
+**                  .ardl_fstat Bounds test F-statistic.
+**                  .ardl_cv    (3 x 2) I(0)/I(1) critical values.
+**                  .qa         qardlOut (levels estimates).
+**                  .ecm        qardlECMOut (ECM two-step estimates).
+**
+**  Developed:  April 2026
+*/
+proc (struct qardlFullOut) = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 }, formula = "");
+    local pst, qst, fstat, cv;
+
+    struct qardlFullOut qfOut;
+    struct qardlOut qa;
+    struct qardlECMOut ecm;
+
+    data = _applyFormula(data, formula);
+
+    // Step 1: BIC lag order selection
+    print "qardlFull: selecting lag orders (BIC) ...";
+    { pst, qst } = pqorder(data, pend, qend);
+    sprintf("  BIC-selected: p = %d, q = %d", pst, qst);
+
+    // Step 2: ARDL bounds test
+    print "qardlFull: running ARDL bounds test ...";
+    { fstat, cv } = ardlbounds(data, pst, qst);
+    ardlbounds_print(fstat, cv, cols(data) - 1);
+
+    // Step 3: QARDL levels estimation
+    print "qardlFull: estimating QARDL (levels form) ...";
+    qa = qardl(data, pst, qst, tau);
+    printQARDL(qa, tau);
+
+    // Step 4: QARDL-ECM two-step estimation
+    print "qardlFull: estimating QARDL-ECM (two-step) ...";
+    ecm = qardlECM(data, pst, qst, tau);
+    printQARDLECM(ecm, tau);
+
+    qfOut.pst        = pst;
+    qfOut.qst        = qst;
+    qfOut.ardl_fstat = fstat;
+    qfOut.ardl_cv    = cv;
+    qfOut.qa         = qa;
+    qfOut.ecm        = ecm;
+
+    retp(qfOut);
+endp;
+
+/*
+**> applyQARDLFormula
+**
+**  Purpose:    Preprocess a named-column GAUSS dataframe using a Wilkinson
+**              formula string.  Selects and reorders columns so that the
+**              dependent variable is in column 1 and the regressors follow.
+**              Use this before calling qardl(), qardlECM(), rollingQardl(),
+**              or any other procedure that expects data in [y, x1, x2, ...]
+**              column order.
+**
+**  Format:     data = applyQARDLFormula(data, formula);
+**
+**  Input:      data      GAUSS dataframe with named columns.
+**              formula   Wilkinson formula string, e.g. "y ~ x1 + x2".
+**
+**  Output:     data      Reordered data matrix with y in column 1.
+**
+**  Example:
+**              data = loadd("macro.csv");
+**              data = applyQARDLFormula(data, "consumption ~ income + wealth");
+**              qaOut = qardl(data, pst, qst);
+**
+**  Developed:  April 2026
+*/
+proc (1) = applyQARDLFormula(data, formula);
+    retp(_applyFormula(data, formula));
+endp;
+
+// Internal helper: apply Wilkinson formula "y ~ x1 + x2" to reorder data as [y, x1, x2, ...]
+// Uses native GAUSS string functions — no external library required.
+// If formula is empty or data has no column names, returns data unchanged.
+proc (1) = _applyFormula(data, formula);
+    local tilde_pos, lhs, rhs, xvars, n_x, ii;
+    local colnames, y_idx, x_idx, pos, part, remaining;
+
+    if strlen(formula) == 0;
+        retp(data);
+    endif;
+
+    tilde_pos = strindx(formula, "~", 1);
+    if tilde_pos == 0;
+        retp(data);
+    endif;
+
+    // LHS: y variable name
+    lhs = strtrim(strsect(formula, 1, tilde_pos - 1));
+
+    // RHS: parse "x1 + x2 + ..." into a string array
+    remaining = strtrim(strsect(formula, tilde_pos + 1, strlen(formula)));
+    xvars = "";
+    n_x   = 0;
+
+    do while strlen(remaining) > 0;
+        pos = strindx(remaining, "+", 1);
+        if pos == 0;
+            part      = strtrim(remaining);
+            remaining = "";
+        else;
+            part      = strtrim(strsect(remaining, 1, pos - 1));
+            remaining = strtrim(strsect(remaining, pos + 1, strlen(remaining)));
+        endif;
+        if strlen(part) > 0;
+            if n_x == 0;
+                xvars = part;
+            else;
+                xvars = xvars $| part;
+            endif;
+            n_x = n_x + 1;
+        endif;
+    endo;
+
+    // Case-insensitive column index lookup
+    colnames = lower(getcolnames(data));
+    y_idx    = indcv(lower(lhs),   colnames);
+    x_idx    = indcv(lower(xvars), colnames);
+
+    data = data[., y_idx | x_idx];
+
+    retp(data);
 endp;

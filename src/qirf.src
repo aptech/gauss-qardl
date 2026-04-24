@@ -1,0 +1,220 @@
+#include qardl.sdf
+
+/*
+**> qirf
+**
+**  Purpose:    Compute quantile impulse response functions (QIRFs) from an
+**              estimated QARDL model.  For each quantile tau(j), the QIRF
+**              traces the response of y to a unit shock in x variable k_x,
+**              holding all other initial conditions at zero.
+**
+**              The recursion uses all QARDL(p,q) coefficients stored in
+**              qaOut.bt (the full quantileFit output matrix).  Coefficient
+**              layout (1-indexed GAUSS rows):
+**
+**                Row 1           : intercept alpha(tau)
+**                Rows 2 : 1+q*k  : delta-x (Gamma) coefficients
+**                                  ordered [Dx1_t, Dx1_{t-1}, ..., Dx1_{t-q+1},
+**                                           Dx2_t, ..., Dxk_{t-q+1}]
+**                Rows 2+q*k :     : x-level (Theta) coefficients [theta_1,...,theta_k]
+**                  1+(q+1)*k
+**                Rows 2+(q+1)*k : : AR (Phi) coefficients [phi_1,...,phi_p]
+**                  1+(q+1)*k+p
+**
+**  Format:     qirfOut = qirf(qaOut, ppp, qqq, H);
+**              qirfOut = qirf(qaOut, ppp, qqq, H, tau = { 0.25, 0.5, 0.75 },
+**                             k_x = 1, permanent = 1);
+**
+**  Input:      qaOut       struct qardlOut returned by qardl().  Must contain
+**                          the .bt field (set automatically by qardl()).
+**
+**              ppp         scalar, AR lag order used in qardl estimation.
+**
+**              qqq         scalar, DL lag order used in qardl estimation.
+**
+**              H           scalar, maximum horizon (number of periods ahead).
+**
+**              tau         (ss x 1) quantile vector.
+**
+**              k_x         scalar, index of the shocked x variable (1-based).
+**                          Default: 1.
+**
+**              permanent   scalar.  1 = permanent unit shock (x moves from 0
+**                          to 1 and stays).  0 = temporary (one-period) shock
+**                          (Δx = 1 at t=1, x returns to 0 from t=2 onward).
+**                          Default: 1.
+**
+**  Output:     qirfOut     struct qirfOut:
+**                  .irf        ((H+1) x ss) matrix.  Row h+1 = response at
+**                              horizon h (h=0 is the pre-shock period, h=1 is
+**                              the impact period).
+**                  .tau        (ss x 1) quantile vector (copy of input).
+**                  .H          Maximum horizon (copy of input).
+**                  .k_x        Shocked variable index (copy of input).
+**                  .permanent  Shock type (copy of input).
+**
+**  Remarks:    Initial conditions: y_t = 0 and x_t = 0 for all t <= 0.
+**              The intercept alpha(tau) is suppressed so that the QIRF
+**              measures the pure dynamic response to the shock, not the
+**              deterministic trend.
+**
+**              The long-run response (as H -> inf) converges to beta(tau)
+**              for a permanent shock when |sum_j phi_j| < 1.
+**
+**  Developed:  April 2026
+*/
+proc (struct qirfOut) = qirf(struct qardlOut qaOut, ppp, qqq, H, tau = { 0.25, 0.5, 0.75 }, k_x = 1, permanent = 1);
+    local ss, k0, jj, hh, ll;
+    local theta_row, gamma_start, phi_start;
+    local theta, gamma_col, phi_vec;
+    local y_hist, dx_hist, x_hist;
+    local y_h, contrib;
+    local irf_mat;
+
+    struct qirfOut qOut;
+
+    ss = rows(tau);
+    k0 = rows(qaOut.bigbt) / ss;
+
+    // bt row-index bases (1-indexed)
+    gamma_start = 2;                        // first Gamma row
+    theta_row   = 1 + qqq*k0 + k_x;        // Theta for variable k_x
+    phi_start   = 2 + (qqq+1)*k0;          // first Phi row
+
+    // Response matrix: (H+1) x ss
+    // Row 1 = h=0 (pre-shock baseline = 0 by construction)
+    irf_mat = zeros(H+1, ss);
+
+    for jj(1, ss, 1);
+
+        // Extract coefficients for quantile jj
+        // Theta (x-level coefficient for variable k_x)
+        theta = qaOut.bt[theta_row, jj];
+
+        // Gamma: qqq coefficients for variable k_x at this quantile
+        // gamma_col[lag+1] = coefficient on Dx_{k_x, t-lag}, lag = 0,...,qqq-1
+        gamma_col = qaOut.bt[gamma_start + (k_x-1)*qqq : gamma_start + k_x*qqq - 1, jj];
+
+        // Phi: ppp AR coefficients
+        phi_vec = qaOut.bt[phi_start : phi_start + ppp - 1, jj];
+
+        // y_hist: circular buffer of past y values, y_hist[1] = y_{t-1}, ..., y_hist[p] = y_{t-p}
+        // Initialise to zero (pre-shock)
+        y_hist = zeros(ppp, 1);
+
+        // Simulate forward for h = 1,...,H
+        // (h=0 row stays 0)
+        for hh(1, H, 1);
+
+            // x and Dx at this horizon
+            // Permanent shock: x_h = 1 for h>=1, Dx = 1 at h=1, 0 after
+            // Temporary shock: x_h = 0 after h=1, Dx = 1 at h=1, -1 at h=2, 0 after
+            local x_h, dx_h;
+            if permanent;
+                x_h  = 1;
+                dx_h = (hh == 1);
+            else;
+                x_h  = (hh == 1);
+                dx_h = (hh == 1) - (hh == 2);
+            endif;
+
+            // y_h = theta * x_h
+            //       + sum_{lag=0}^{qqq-1} gamma[lag+1] * Dx_{h-lag}
+            //       + sum_{j=1}^{ppp} phi[j] * y_{h-j}
+            // (intercept suppressed)
+
+            y_h = theta * x_h;
+
+            // Gamma contribution: need Dx at horizons h, h-1, ..., h-qqq+1
+            // dx at horizon hh-lag: permanent => 1 if hh-lag==1; temp => as above
+            ll = 0;
+            do until ll > qqq-1;
+                local dx_lagged;
+                local h_lag;
+                h_lag = hh - ll;
+                if h_lag >= 1;
+                    if permanent;
+                        dx_lagged = (h_lag == 1);
+                    else;
+                        dx_lagged = (h_lag == 1) - (h_lag == 2);
+                    endif;
+                else;
+                    dx_lagged = 0;
+                endif;
+                y_h = y_h + gamma_col[ll+1] * dx_lagged;
+                ll = ll + 1;
+            endo;
+
+            // AR contribution from y history
+            contrib = sumc(phi_vec .* y_hist);
+            y_h = y_h + contrib;
+
+            // Store response
+            irf_mat[hh+1, jj] = y_h;
+
+            // Update history: shift y_hist and prepend y_h
+            if ppp > 1;
+                y_hist = y_h | y_hist[1:ppp-1, .];
+            else;
+                y_hist[1] = y_h;
+            endif;
+
+        endfor;
+
+    endfor;
+
+    qOut.irf       = irf_mat;
+    qOut.tau       = tau;
+    qOut.H         = H;
+    qOut.k_x       = k_x;
+    qOut.permanent = permanent;
+
+    retp(qOut);
+endp;
+
+
+/*
+**> plotQIRF
+**
+**  Purpose:    Plot quantile impulse response functions from a qirfOut struct.
+**              One panel per quantile, showing the response path over horizons
+**              0,...,H with a horizontal zero reference line.
+**
+**  Format:     plotQIRF(qirfOut);
+**
+**  Input:      qirfOut     struct qirfOut returned by qirf().
+**
+**  Developed:  April 2026
+*/
+proc (0) = plotQIRF(struct qirfOut qOut);
+    local ss, jj, H, horizons, shock_lbl;
+    struct plotControl myPlot;
+
+    ss      = rows(qOut.tau);
+    H       = qOut.H;
+    horizons = seqa(0, 1, H+1);
+
+    if qOut.permanent;
+        shock_lbl = "Permanent";
+    else;
+        shock_lbl = "Temporary";
+    endif;
+
+    myPlot = plotGetDefaults("xy");
+    plotSetTitle(&myPlot, "", "Arial", 16);
+    plotSetTextInterpreter(&myPlot, "LaTex", "all");
+    plotSetXLabel(&myPlot, "Horizon", "Arial", 14);
+    plotSetYLabel(&myPlot, "Response", "Arial", 14);
+    plotSetTicLabelFont(&myPlot, "Arial", 12);
+    plotSetYTicCount(&myPlot, 5);
+
+    for jj(1, ss, 1);
+        plotLayout(1, ss, jj);
+        plotSetTitle(&myPlot, shock_lbl $+ " QIRF  \\tau=" $+ ntos(qOut.tau[jj]));
+
+        // Plot response path and zero line together
+        plotXY(myPlot, horizons, qOut.irf[., jj]~zeros(H+1, 1));
+    endfor;
+
+    plotClearLayout();
+endp;

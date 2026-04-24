@@ -1,386 +1,579 @@
-# gauss-qardl-library
- This repository houses the materials to install and use the [GAUSS quantile cointegration code by Jin Seo Cho](https://web.yonsei.ac.kr/jinseocho/qardl.htm).
+# GAUSS QARDL Library
+
+A [GAUSS](https://www.aptech.com) application package implementing the **Quantile Autoregressive Distributed Lag (QARDL)** model from Cho, Kim & Shin (2015). QARDL extends standard ARDL cointegration to allow long-run and short-run parameters to vary across quantiles of the conditional distribution of `y_t`, enabling tests for asymmetric cointegration and heterogeneous adjustment speeds.
+
+> This library is based on original GAUSS code by [Jin Seo Cho](https://web.yonsei.ac.kr/jinseocho/qardl.htm), updated to use GAUSS structures, the built-in `quantileFit` procedure, and modern language features.
+
+---
+
+## Contents
+
+- [What is GAUSS?](#what-is-gauss)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Formula String Support](#formula-string-support)
+- [The QARDL Model](#the-qardl-model)
+- [Procedures](#procedures)
+  - [Integrated Workflow](#integrated-workflow)
+  - [Lag Order Selection](#lag-order-selection)
+  - [QARDL Levels Estimation](#qardl-levels-estimation)
+  - [QARDL-ECM Estimation](#qardl-ecm-estimation)
+  - [Inference](#inference)
+  - [Rolling Estimation](#rolling-estimation)
+  - [Bootstrap Confidence Intervals](#bootstrap-confidence-intervals)
+  - [Quantile Impulse Responses](#quantile-impulse-responses)
+  - [Plotting](#plotting)
+  - [Export](#export)
+- [Output Structures](#output-structures)
+- [Wald Tests](#wald-tests)
+- [ARDL Bounds Test](#ardl-bounds-test)
+- [Examples](#examples)
+- [Reference](#reference)
+
+---
 
 ## What is GAUSS?
- [**GAUSS**](www.aptech.com) is an easy-to-use data analysis, mathematical and statistical environment based on the powerful, fast and efficient **GAUSS Matrix Programming Language**. [**GAUSS**](www.aptech.com) is a complete analysis environment with the built-in tools you need for estimation, forecasting, simulation, visualization and more.
 
- ## What is the GAUSS QARDL library?
- The [**GAUSS**](www.aptech.com) **QARDL** library is a collection of [**GAUSS**](www.aptech.com) codes developed by [Jin Seo Cho](https://web.yonsei.ac.kr/jinseocho/qardl.htm). The [raw codes](https://web.yonsei.ac.kr/jinseocho/qardl.htm) provided by Jin Seo Jo have been modified to:
-1. Make use of [**GAUSS**](www.aptech.com) structures.
-2. Use the internal [quantileFit](https://docs.aptech.com/gauss/CR-quantilefit.html) procedure.
-3. Include new comments and explanations in the example files.
-4. Use up-to-date graphing tools in the example.
+[**GAUSS**](https://www.aptech.com) is a fast, matrix-based environment for statistical computing, estimation, simulation, and visualization. The QARDL library loads via `library qardl;` and requires only GAUSS's built-in `quantileFit` — no additional libraries needed.
 
->Note: The **QARDL** library no longer requires the QREG library. It uses the internal [quantileFit](https://docs.aptech.com/gauss/CR-quantilefit.html) procedure instead.
+---
 
- ## Getting Started
- ### Installing
- **GAUSS 20+**
- The GAUSS QARDL library can be installed and updated directly in GAUSS using the [GAUSS package manager](https://www.aptech.com/blog/gauss-package-manager-basics/).
+## Installation
 
- **GAUSS 19+**
- The GAUSS QARDL library can be easily installed using the [**GAUSS Application Installer**](https://www.aptech.com/support/installation/using-the-applications-installer-wizard/), as shown below:
+**GAUSS 20+ (Package Manager)**
 
- 1. Download the zipped folder `qardl_1.0.0.zip` from the [QARDL Library Release page](https://github.com/aptech/gauss-qardl/releases).
- 2. Select **Tools > Install Application** from the main **GAUSS** menu.  
- ![install wizard](images/install_application.png)  
+Install and update directly from within GAUSS using the [GAUSS Package Manager](https://www.aptech.com/blog/gauss-package-manager-basics/).
 
- 3. Follow the installer prompts, making sure to navigate to the downloaded `qardl_1.0.0.zip`.
- 4. Before using the functions created by `qardl` you will need to load the newly created `qardl` library. This can be done in a number of ways:
-   *   Navigate to the **Library Tool Window** and click the small wrench located next to the `qardl` library. Select `Load Library`.  
-   ![load library](images/load_carrionlib.jpg)
-   *  Enter `library qardl` in the **Program Input/output Window**.
-   *  Put the line `library qardl;` at the beginning of your program files.
+**GAUSS 19+**
 
- >Note: I have provided the individual files found in `qardl_1.0.0.zip` for examination and review. However, installation should always be done using the [`qardl_1.0.0.zip` from the release page](https://github.com/aptech/gauss-qardl/releases) and the [**GAUSS Application Installer**](https://www.aptech.com/support/installation/using-the-applications-installer-wizard/).
-
-## Recent Updates (March 2026)
-
-### New: `qardlECM` — Two-Step QARDL-ECM Estimator
-The library now includes `qardlECM`, which implements the QARDL error-correction model form described in Cho, Kim & Shin (2015). The two-step procedure is:
-
-1. **Step 1 (OLS baseline):** Estimate the ARDL model by OLS to obtain consistent long-run coefficient estimates (`beta_lr`) and the OLS speed of adjustment (`rho_ols`).
-2. **Step 2 (Quantile regression):** Form the error correction term `EC_{t-1} = y_{t-1} - beta_lr'*x_{t-1}` and estimate the ECM by quantile regression, directly yielding `rho(tau)` — the speed of adjustment at each quantile.
-
-This approach avoids nonlinear quantile regression by using OLS for the long-run relationship and is the recommended approach per the Aptech GAUSS forum.
+1. Download `qardl_2.1.0.zip` from the [Releases page](https://github.com/aptech/gauss-qardl/releases).
+2. In GAUSS, select **Tools > Install Application** and follow the prompts.
+3. Load the library in your program:
 
 ```gauss
-struct qardlECMOut qECMOut;
-qECMOut = qardlECM(data, ppp, qqq, tau);
-
-// OLS long-run coefficients used to form the EC term
-print qECMOut.beta_lr;
-
-// Speed of adjustment at each quantile (directly estimated)
-print qECMOut.rho;
-
-// Covariance of rho across quantiles
-print qECMOut.rho_cov;
+library qardl;
 ```
 
-### New: `alpha` and `rho` in `qardlOut`
-The `qardlOut` structure returned by `qardl()` now includes two additional members derived algebraically from the levels-form estimates:
+---
 
-| Member | Description |
-|:-------|:------------|
-|`qaOut.alpha`| `(s x 1)` intercept &alpha;(&tau;) at each quantile. |
-|`qaOut.rho`| `(s x 1)` ECM adjustment coefficient &rho;(&tau;) = &minus;(1 &minus; &sum;&phi;<sub>j</sub>(&tau;)) at each quantile. |
+## Quick Start
 
-### Fixed: `qardl_pval`
-The `qardl_pval` function has been corrected and completed. It now:
-- Returns three outputs: p-values for &beta;, &phi;, and &gamma;.
-- Uses the asymptotically correct standard normal distribution (appropriate for quantile regression).
+```gauss
+library qardl;
+
+// Load data: column 1 = y, remaining columns = x
+data = loadd("mydata.csv");
+
+// One-call workflow: lag selection + bounds test + QARDL + ECM
+qfOut = qardlFull(data, 8, 8);
+
+// Or step by step:
+{ pst, qst } = pqorder(data);
+qaOut = qardl(data, pst, qst);
+printQARDL(qaOut);
+plotQARDL(qaOut);
+```
+
+---
+
+## Formula String Support
+
+The library supports Wilkinson formula strings (`"y ~ x1 + x2"`) for working with named-column dataframes without manually reordering columns.
+
+**Preprocessing with `applyQARDLFormula`** (works with all procedures):
+
+```gauss
+data = loadd("macro.csv");  // columns: date, gdp, consumption, income, wealth
+
+// Preprocess once, then use with any procedure
+data = applyQARDLFormula(data, "consumption ~ income + wealth");
+{ pst, qst } = pqorder(data);
+qaOut = qardl(data, pst, qst);
+```
+
+**Integrated formula in `qardlFull`** (formula applied internally):
+
+```gauss
+data = loadd("macro.csv");
+qfOut = qardlFull(data, 8, 8, formula = "consumption ~ income + wealth");
+```
+
+The formula syntax is `"y ~ x1 + x2 + ..."`. Variable names are matched case-insensitively against dataframe column names.
+
+---
+
+## The QARDL Model
+
+**Levels form** estimated by `qardl()`:
+
+```
+y_t = α(τ) + γ_0(τ)Δx_t + ... + γ_{q-1}(τ)Δx_{t-q+1}
+          + θ(τ)x_t + φ_1(τ)y_{t-1} + ... + φ_p(τ)y_{t-p} + u_t(τ)
+```
+
+Derived ECM parameters returned alongside the levels estimates:
+
+| Symbol | Formula | Description |
+|--------|---------|-------------|
+| β(τ) | θ(τ) / (1 − Σφ_j(τ)) | Long-run coefficient |
+| ρ(τ) | −(1 − Σφ_j(τ)) | Speed of adjustment |
+| α(τ) | bt[1, τ] | Intercept |
+
+**ECM form** directly estimated by `qardlECM()` (two-step):
+
+```
+Δy_t = α(τ) + ρ(τ)·EC_{t-1} + Σψ_j(τ)Δy_{t-j} + Σδ_j(τ)Δx_{t-j} + u_t(τ)
+```
+
+where `EC_{t-1} = y_{t-1} − β_OLS'·x_{t-1}`.
+
+---
+
+## Procedures
+
+### Integrated Workflow
+
+#### `qardlFull`
+
+Runs the complete QARDL pipeline in a single call: BIC lag selection → ARDL bounds test → levels estimation → ECM estimation. Results are printed automatically.
+
+```gauss
+qfOut = qardlFull(data, pend, qend);
+qfOut = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 }, formula = "");
+```
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `data` | — | `(T × (1+k))` matrix or dataframe |
+| `pend` | — | Maximum AR lag to search |
+| `qend` | — | Maximum DL lag to search |
+| `tau` | `{ 0.25, 0.5, 0.75 }` | Quantile vector |
+| `formula` | `""` | Wilkinson formula string |
+
+Returns a `qardlFullOut` structure (see [Output Structures](#output-structures)).
+
+---
+
+### Lag Order Selection
+
+#### `pqorder`
+
+BIC-based selection of ARDL lag orders.
+
+```gauss
+{ pst, qst } = pqorder(data);
+{ pst, qst } = pqorder(data, pend = 8, qend = 8);
+```
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `data` | — | `(n × (1+k))` matrix, y in column 1 |
+| `pend` | `8` | Maximum AR lag to search |
+| `qend` | `8` | Maximum distributed lag to search |
+
+---
+
+### QARDL Levels Estimation
+
+#### `qardl`
+
+```gauss
+qaOut = qardl(data, ppp, qqq);
+qaOut = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
+```
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `data` | — | `(n × (1+k))` matrix |
+| `ppp` | — | AR lag order p ≥ 1 |
+| `qqq` | — | Distributed-lag order q ≥ 1 |
+| `tau` | `{ 0.25, 0.5, 0.75 }` | `(s × 1)` quantile vector |
+
+Returns a `qardlOut` structure.
+
+---
+
+### QARDL-ECM Estimation
+
+#### `qardlECM`
+
+Two-step estimator: OLS long-run relationship → quantile ECM.
+
+```gauss
+qECMOut = qardlECM(data, ppp, qqq);
+qECMOut = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
+```
+
+Returns a `qardlECMOut` structure.
+
+```gauss
+print qECMOut.beta_lr;            // OLS long-run coefficients
+print qECMOut.rho;                // speed of adjustment at each quantile
+print sqrt(diag(qECMOut.rho_cov)); // standard errors of rho
+```
+
+---
+
+### Inference
+
+#### `qardl_pval` — individual z-test p-values
 
 ```gauss
 { p_beta, p_phi, p_gamma } = qardl_pval(qaOut);
 ```
 
----
+Uses asymptotic standard normal. Do **not** use t-distribution; QR asymptotics are normal.
 
-## The qardl Procedure Returns
-### Estimated P and Q Orders
-These are the obtained QARDL orders obtained by the information criterion.
-
-* The `demo.e` program estimates a `p` order of 2 and a `q` order of 1.
-
-~~~
-Estimated p order
-=========================================================
-       2.0000000
-=========================================================
-Estimated q order
-=========================================================
-       1.0000000
-~~~
-
-### Long-run parameter estimate (&beta;)
-*  These are the long-run parameters given from the lowest percentile. In the `demo.e` program there are two explanatory variables and three quantiles: 0.25, 0.50 and 0.75. The following results are printed for &beta;.
-
-*  These are stored in the `qardlOut` structure in the `qardlOut.bigBt` element.
-
-~~~
-=========================================================
-Long-run parameter estimate (Beta)
-=========================================================
-
-       6.6645846
-       6.6668972
-       6.6659552
-       6.6666716
-       6.6652370
-       6.6663398
-~~~
-
-*  The first two values, 6.6645846 and 6.6668972, are the long-run parameters of the first and second parameters, respectively, at the 0.25 percentile.
-*  The next two estimates, 6.6659552 and 6.6666716, are the long-run parameters of the first and second parameters, respectively, at the 0.50 percentile.
-*  The final two estimates, 6.6652370 and 6.6663398, are the long-run parameters of the first and second parameters, respectively, at the 0.75 percentile.
-
-### Covariance matrix estimate of long-run parameter (&beta;):
-*  This is the estimated covariance of the long-run parameters.
-*  These are stored in the `qardlOut` structure in the `qardlOut.bigbt_cov` element.
-
-The `demo.e` program prints the following 6x6 covariance matrix:
-~~~
-=========================================================
-Covariance matrix estimate of long-run parameter (Beta)
-=========================================================
-
-   107.147    -17.451     58.427     -9.516     39.498     -6.433
-   -17.451     15.212     -9.516      8.295     -6.433      5.608
-    58.427     -9.516     95.579    -15.567     64.614    -10.524
-    -9.516      8.295    -15.567     13.570    -10.524      9.174
-    39.498     -6.433     64.614    -10.524    101.923    -16.601
-    -6.433      5.608    -10.524      9.174    -16.601     14.471
-~~~
-
-### Short-run parameter estimate (&Phi;)
-* These are the short-run parameters given from the lowest percentile first.
-* These are stored in the `qardlOut` structure in the `qardlOut.phi` element.
-
-*  The `demo.e` program estimates an autoregressive order (p) of 2 and has three percentiles (0.25, 0.50, and 0.75). This results in 6 short-run parameter estimates. It prints the following results:
-~~~
-=========================================================
-Short-run parameter estimate (Phi)
-=========================================================
-
-      0.25537159
-   -0.0043015969
-      0.26163588
-   -0.0069863046
-      0.26073101
-   -0.0063757138
-~~~
-
-* The first two values (0.25537159 and -0.0043015969) are the
-short-run parameters of the first and second lagged dependent variables, respectively at the percentile of 0.25.
-* The next two estimates (0.26163588 and -0.0069863046) are the short-run parameters of the first and second lagged dependent variables, respectively at the percentile of 0.50.
-*  The final two estimates (0.26073101 and -0.0063757138) are the short-run parameters of the first and second lagged dependent variables, respectively at the percentile of 0.75.
-
-### Covariance matrix estimate of short-run parameter (&Phi;)
-*  This is the estimated covariance of the short-run parameters.
-* These are stored in the `qardlOut` structure in the `qardlOut.phi_cov` element.
-
-*  The `demo.e` program estimates the following covariance for &Phi; :
-~~~
-=========================================================
-Covariance matrix estimate of short-run parameter (Phi)
-=========================================================
-
-     0.238     -0.130      0.129     -0.070      0.087     -0.047
-    -0.130      0.083     -0.070      0.045     -0.047      0.030
-     0.129     -0.070      0.211     -0.115      0.142     -0.077
-    -0.070      0.045     -0.115      0.074     -0.077      0.050
-     0.087     -0.047      0.142     -0.077      0.225     -0.122
-    -0.047      0.030     -0.077      0.050     -0.122      0.079
-~~~
-
-### Short-run parameter estimate (&gamma;)
-*  These are the short-run parameters given from the lowest percentile.
-*  These are stored in the `qardlOut` structure in the `qardlOut.gamma` element.
-
-*  The `demo.e` program has 2 variables and three percentiles (0.25, 0.50, and 0.75). This results in 6 short-run parameter estimates. It prints the following results:
-
-~~~
-=========================================================
-Short-run parameter estimate (Gamma)
-=========================================================
-
-     4.991
-     4.993
-     4.968
-     4.969
-     4.972
-     4.973
-~~~
-
-*  The first two values (4.9913074 and 4.9930394) are the short-run parameters of the first and second variables, respectively at the percentile of 0.25.
-*  The next two estimates (4.9684725 and 4.9690065) are the short-run parameters of the first and second explanatory variables, respectively at the percentile of 0.50.
-*  The final two estimates (4.9698987 and 4.9707210) are the short-run parameters of the first and second explanatory variables, respectively at the percentile of 0.75.
-
-### Covariance matrix estimate of short-run parameter (&gamma;)
-* This is the estimated covariance of the short-run &gamma; estimates.
-* This is stored in the `qardlOut` structure in the `qardlOut.gamma_cov` element.
-
-*  The `demo.e` program estimates the following covariance for &gamma;:
-~~~
-=========================================================
-Covariance matrix estimate of short-run parameter (Gamma)
-=========================================================
-
-     2.774      2.775      1.506      1.506      1.017      1.017
-     2.775      2.776      1.506      1.506      1.017      1.017
-     1.506      1.506      2.454      2.454      1.659      1.659
-     1.506      1.506      2.454      2.455      1.659      1.659
-     1.017      1.017      1.659      1.659      2.618      2.619
-     1.017      1.017      1.659      1.659      2.619      2.619
-~~~
-
-### Intercept (&alpha;) and ECM adjustment coefficient (&rho;)
-
-Two new members are returned by `qardl()` alongside the existing parameters.
-
-**`qardlOut.alpha`** — intercept &alpha;(&tau;) at each quantile (`s x 1` vector):
-
-```
-qaOut.alpha[1]  // alpha at tau = 0.25
-qaOut.alpha[2]  // alpha at tau = 0.50
-qaOut.alpha[3]  // alpha at tau = 0.75
-```
-
-**`qardlOut.rho`** — ECM speed of adjustment &rho;(&tau;) = &minus;(1 &minus; &sum;<sub>j</sub>&phi;<sub>j</sub>(&tau;)) at each quantile (`s x 1` vector). A value near &minus;1 indicates fast mean reversion; a value near 0 indicates slow adjustment:
-
-```
-qaOut.rho[1]    // rho at tau = 0.25
-qaOut.rho[2]    // rho at tau = 0.50
-qaOut.rho[3]    // rho at tau = 0.75
-```
-
-For directly estimated &rho;(&tau;) via the two-step ECM approach, use `qardlECM` instead.
-
-## Wald Testing
-The QARDl library provides the functions for performing Wald tests. The `wtestlrb`, `wtestlrp`, and `wtestlrg` procedures. The procedures perform Wald tests for &beta;, &phi;, and &gamma;, respectively. Each test returns the test statistic and it's corresponding p-value.
-
-### Setting up the hypothesis tests
-Each Wald test procedure requires 5 inputs to summarize the estimated parameters, the desired tests, and the data.
-
-|Input|Description|
-|:----|:----------|
-|coeff|The &beta;, &phi; or &gamma; parameter estimates stored in `qardlOut.beta`, `qardlOut.phi`, or `qardlOut.gamma` elements, respectively.|
-|cov|The estimated parameter covariance, stored in `qardlOut.beta_cov`, `qardlOut.phi_cov`, or `qardlOut.gamma_cov`, respectively.|
-|bigR| The R restriction matrix in the null hypothesis.|
-|smlr| The r restriction matrix in the null hypthesis.|
-|data| The dataset used to estimate the coefficients.|
-
-### Constructing the restriction matrices
-The Wald tests in the QARDL library test the null hypothesis:
-
-$`H_0 : R \beta = r`$
-
-against the alternative  
-
-$`H_A : R \beta \neq r`$
-
-### Example
-As an example, consider the Wald test of &beta; that is performed in the `demo.e` program. This test looks at the null hypothesis:
-
-$`H_0 : \beta_1(0.25) = \beta_1(0.50) = \beta_1(0.75)`$
-
-To do this we set :
-
-```
-bigR = { 1 0 -1 0 0 0, 0 0 1 0 -1 0};
-smlr = {0, 0};
-```
-
-### Wald test results
-The `demo.e` program prints the following results for the Wald tests:
-~~~
-=========================================================
- Wald test (Beta) and its p-value
-=========================================================
-     2.220      0.330
-=========================================================
- Wald test (Phi) and its p-value
-=========================================================
-     2.061      0.357
-=========================================================
- Wald test (Gamma) and its p-value
-=========================================================
-     2.356      0.308
-=========================================================
-~~~
-
-These p-values suggest that we cannot reject the null hypothesis and there is not evidence for asymmetries in &beta;<sub>1</sub>.
-
-## QARDL-ECM Estimation
-
-The `qardlECM` procedure estimates the error-correction form of the QARDL model. It requires cointegration between `y_t` and `x_t`.
-
-### `qardlECM` inputs
-
-| Input | Description |
-|:------|:------------|
-|`data`| `(n x (1+k))` matrix. Column 1 is the dependent variable; columns 2:(1+k) are regressors. |
-|`ppp`| Scalar, AR lag order p &ge; 1. |
-|`qqq`| Scalar, distributed-lag order q &ge; 1. |
-|`tau`| `(s x 1)` vector of quantile levels. |
-
-### `qardlECMOut` output structure
-
-| Member | Description |
-|:-------|:------------|
-|`qECMOut.beta_lr`| `(k x 1)` OLS long-run coefficients used to construct the error correction term. |
-|`qECMOut.rho_ols`| Scalar (1&times;1 matrix), OLS speed of adjustment &rho;<sub>OLS</sub>. |
-|`qECMOut.alpha`| `(s x 1)` ECM intercept &alpha;(&tau;) at each quantile. |
-|`qECMOut.rho`| `(s x 1)` speed of adjustment &rho;(&tau;) directly estimated at each quantile. |
-|`qECMOut.rho_cov`| `(s x s)` asymptotic covariance of &rho; across quantiles. |
-
-### Example
+#### `qardl_pval_ecm` — ECM p-values
 
 ```gauss
-library qardl;
-
-tau = { 0.25, 0.5, 0.75 };
-
-struct qardlECMOut qECMOut;
-qECMOut = qardlECM(data, 1, 2, tau);
-
-// OLS long-run relationship (used for EC term)
-print "OLS long-run beta:";
-print qECMOut.beta_lr;
-
-// Speed of adjustment at each quantile
-print "rho(tau):";
-print qECMOut.rho;
-
-// Standard errors of rho
-print "SE of rho(tau):";
-print sqrt(diag(qECMOut.rho_cov));
+{ p_alpha, p_rho } = qardl_pval_ecm(qECMOut);
 ```
 
-## Rolling QARDL Testing
-The `rollingQARDL` procedure computes the QARDL regression for a for a rolling fixed window. The window is fixed at 10% of the time series length.  
+#### `printQARDL` — formatted levels results table
 
-### The `rollingQARDL` inputs
-The `rollingQARDL` procedure requires the same inputs as the `qardl` procedure and one additional input, the `waldTestRestrictions` structure. The `waldTestRestrictions` structure contains 6 members:
+```gauss
+printQARDL(qaOut);
+printQARDL(qaOut, tau = { 0.25, 0.5, 0.75 });
+```
 
-|Member|Description|
-|:----|:----------|
-|waldR.bigR_gamma|Matrix, R restriction matrix in the null hypothesis for the test for &gamma;.|
-|waldR.smlr_gamma|Matrix, r restriction matrix in the null hypothesis for the test for &gamma;.|
-|waldR.bigR_phi| The R matrix in the null hypothesis for the test for &phi;.|
-|waldR.smlr_phi| The r restriction matrix in the null hypothesis for the test for &phi;.|
-|waldR.bigR_beta| The R matrix in the null hypothesis for the test for &beta;.|
-|waldR.smlr_beta| The r restriction matrix in the null hypothesis for the test for &beta;.|
+#### `printQARDLECM` — formatted ECM results table
 
-### The `rollingQARDL` outputs
-The `rollingQARDL` procedure has one output, the `rollingQARDLOut` output structure. The `rollingqardlOut` structure has 6 elements. In each element, the estimates for separate quantiles (&tau;) are stored in individual columns, while each row corresponds to the separate estimation window.
+Prints OLS long-run coefficients plus quantile-varying α(τ) and ρ(τ) with SE, z-stat, and p-value.
 
-|Member|Description|
-|:----|:----------|
-|rqaOut.bigbt| An array of beta estimates which contains the estimates for each of the independent variables on a separate plane. |
-|rqaOut.bigbt_se| An array of standard error estimates which contains the se estimates for each of the independent variables on a separate plane. .|
-|rqaOut.phi| An array of phi estimates which contains the estimates for each lagged independent variable on a separate plane. |
-|rqaOut.phi_se| An array of standard error estimates which contains the se estimates for each lagged independent variable on a separate plane. |
-|rqaOut.gamma|  An array of gamma estimates which contains the estimates for each of the independent variables on a separate plane. |
-|rqaOut.gamma_se|  An array of standard error estimates which contains the se estimates for each of the independent variables on a separate plane. |
+```gauss
+printQARDLECM(qECMOut);
+printQARDLECM(qECMOut, tau = { 0.25, 0.5, 0.75 });
+```
 
-More about the GAUSS QARDL library can be found in the blog, [The Quantile Autoregressive-Distributed Lag Parameter Estimation and Interpretation in GAUSS](https://www.aptech.com/blog/the-quantile-autoregressive-distributed-lag-parameter-estimation-and-interpretation-in-gauss/).
+---
+
+### Rolling Estimation
+
+#### `rollingQardl`
+
+Rolling-window QARDL with Wald tests. Window size is fixed at 10% of the series length.
+
+```gauss
+struct waldTestRestrictions waldR;
+waldR.bigR_beta  = ...;   waldR.smlr_beta  = ...;
+waldR.bigR_phi   = ...;   waldR.smlr_phi   = ...;
+waldR.bigR_gamma = ...;   waldR.smlr_gamma = ...;
+
+rqaOut = rollingQardl(data, pend, qend, tau, waldR);
+rqaOut = rollingQardl(data, pend, qend, tau, waldR, formula = "");
+```
+
+Returns a `rollingQardlOut` structure.
+
+#### `rollingQardlECM`
+
+Rolling-window QARDL-ECM.
+
+```gauss
+rECMOut = rollingQardlECM(data, ppp, qqq);
+rECMOut = rollingQardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
+```
+
+Returns a `rollingQardlECMOut` structure.
+
+---
+
+### Bootstrap Confidence Intervals
+
+#### `blockBootstrapQARDL`
+
+Moving-block bootstrap (Künsch 1989) CIs for β, γ, and φ.
+
+```gauss
+{ ci_beta, ci_gamma, ci_phi } = blockBootstrapQARDL(data, ppp, qqq);
+{ ci_beta, ci_gamma, ci_phi } = blockBootstrapQARDL(data, ppp, qqq,
+    tau = { 0.25, 0.5, 0.75 }, B = 999, blk_len = 0, alpha = 0.05);
+```
+
+Each output is a `(dim × 2)` matrix of `[lower, upper]` bounds.
+
+#### `blockBootstrapQARDLECM`
+
+Moving-block bootstrap CIs for the ECM speed-of-adjustment ρ(τ) and intercept α(τ).
+
+```gauss
+{ ci_rho, ci_alpha } = blockBootstrapQARDLECM(data, ppp, qqq);
+{ ci_rho, ci_alpha } = blockBootstrapQARDLECM(data, ppp, qqq,
+    tau = { 0.25, 0.5, 0.75 }, B = 999, blk_len = 0, alpha = 0.05);
+```
+
+Each output is an `(ss × 2)` matrix of `[lower, upper]` bounds.
+
+---
+
+### Quantile Impulse Responses
+
+#### `qirf`
+
+Computes quantile impulse response functions from a fitted QARDL model. Uses all coefficient information stored in `qaOut.bt` to trace the dynamic response of y to a unit shock in x variable `k_x`.
+
+```gauss
+qirfOut = qirf(qaOut, ppp, qqq, H);
+qirfOut = qirf(qaOut, ppp, qqq, H,
+    tau = { 0.25, 0.5, 0.75 }, k_x = 1, permanent = 1);
+```
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `qaOut` | — | `qardlOut` from `qardl()` |
+| `ppp` | — | AR lag order used in estimation |
+| `qqq` | — | DL lag order used in estimation |
+| `H` | — | Maximum horizon |
+| `tau` | `{ 0.25, 0.5, 0.75 }` | Quantile vector |
+| `k_x` | `1` | Index of shocked x variable (1-based) |
+| `permanent` | `1` | `1` = permanent shock; `0` = temporary (one-period) shock |
+
+Returns a `qirfOut` structure. The long-run response converges to β(τ) for a permanent shock when |Σφ_j| < 1.
+
+#### `plotQIRF`
+
+```gauss
+plotQIRF(qirfOut);
+```
+
+Produces one panel per quantile, showing the response path over horizons 0,...,H.
+
+---
+
+### Plotting
+
+#### `plotQARDL` — quantile process plots
+
+```gauss
+plotQARDL(qaOut);
+plotQARDL(qaOut, tau = { 0.25, 0.5, 0.75 });
+```
+
+Produces a 4-row layout: β, γ, φ, and α/ρ vs. τ.
+
+#### `plotQARDLbands` — plots with ±1.96·SE bands
+
+```gauss
+plotQARDLbands(qaOut);
+plotQARDLbands(qaOut, tau = { 0.25, 0.5, 0.75 });
+```
+
+3-row layout (β, γ, φ) with dashed 95% pointwise confidence bands.
+
+#### `plotRollingQARDLECM` — rolling ECM parameter plot
+
+```gauss
+plotRollingQARDLECM(rECMOut);
+plotRollingQARDLECM(rECMOut, tau = { 0.25, 0.5, 0.75 }, dates = 0);
+```
+
+2-row layout: ρ(τ,t) (top) and α(τ,t) (bottom), one panel per quantile, with ±1.96·SE bands. Pass a `(num_est × 1)` date vector for the x-axis, or `0` (default) to use window indices.
+
+#### `plotRollingQARDL` — rolling long-run beta plot
+
+```gauss
+plotRollingQARDL(rqaOut);
+plotRollingQARDL(rqaOut, tau = { 0.25, 0.5, 0.75 }, dates = 0);
+```
+
+Grid with ss rows (quantiles) × k columns (x variables), showing rolling β(τ,t) with ±1.96·SE bands.
+
+---
+
+### Export
+
+#### `saveQARDLResults`
+
+Writes β, γ, φ, and ECM parameters to CSV files.
+
+```gauss
+saveQARDLResults(qaOut);
+saveQARDLResults(qaOut, tau, outdir = "results/");
+```
+
+Output files: `qardl_beta.csv`, `qardl_gamma.csv`, `qardl_phi.csv`, `qardl_ecm.csv`.
+
+#### `saveQARDLECMResults`
+
+Writes OLS long-run coefficients and quantile ECM parameters to CSV files.
+
+```gauss
+saveQARDLECMResults(qECMOut);
+saveQARDLECMResults(qECMOut, tau, outdir = "results/");
+```
+
+Output files: `qardl_ecm_lr.csv` (OLS β), `qardl_ecm_qr.csv` (QR α and ρ with SE, z, p-value).
+
+---
+
+## Output Structures
+
+### `qardlOut`
+
+Returned by `qardl()`.
+
+| Member | Dimensions | Description |
+|--------|-----------|-------------|
+| `bigbt` | `(k·s) × 1` | Long-run β, stacked by quantile |
+| `bigbt_cov` | `(k·s) × (k·s)` | Asymptotic covariance of β |
+| `phi` | `(p·s) × 1` | Short-run φ, stacked by quantile |
+| `phi_cov` | `(p·s) × (p·s)` | Asymptotic covariance of φ |
+| `gamma` | `(k·s) × 1` | Short-run γ (x-level θ), stacked by quantile |
+| `gamma_cov` | `(k·s) × (k·s)` | Asymptotic covariance of γ |
+| `alpha` | `s × 1` | Intercept α(τ) at each quantile |
+| `rho` | `s × 1` | Adjustment speed ρ(τ) at each quantile |
+| `bt` | `(1+q·k+k+p) × s` | Full quantileFit coefficient matrix (used by `qirf`) |
+
+Parameters are stacked quantile-first: all k variables at τ₁, then τ₂, etc.
+
+### `qardlECMOut`
+
+Returned by `qardlECM()`.
+
+| Member | Dimensions | Description |
+|--------|-----------|-------------|
+| `beta_lr` | `k × 1` | OLS long-run coefficients (Step 1) |
+| `rho_ols` | `1 × 1` | OLS speed of adjustment |
+| `alpha` | `s × 1` | ECM intercept α(τ) |
+| `rho` | `s × 1` | Speed of adjustment ρ(τ) |
+| `rho_cov` | `s × s` | Asymptotic covariance of ρ |
+| `alpha_cov` | `s × s` | Asymptotic covariance of α |
+
+### `qardlFullOut`
+
+Returned by `qardlFull()`.
+
+| Member | Type | Description |
+|--------|------|-------------|
+| `pst` | scalar | BIC-selected AR lag order |
+| `qst` | scalar | BIC-selected DL lag order |
+| `ardl_fstat` | scalar | ARDL bounds test F-statistic |
+| `ardl_cv` | `3 × 2` | I(0)/I(1) critical values at 10%, 5%, 1% |
+| `qa` | `qardlOut` | QARDL levels estimates |
+| `ecm` | `qardlECMOut` | QARDL-ECM two-step estimates |
+
+### `qirfOut`
+
+Returned by `qirf()`.
+
+| Member | Type | Description |
+|--------|------|-------------|
+| `irf` | `(H+1) × s` | Response at each horizon (row 1 = h=0 baseline) |
+| `tau` | `s × 1` | Quantile vector |
+| `H` | scalar | Maximum horizon |
+| `k_x` | scalar | Shocked variable index |
+| `permanent` | scalar | 1 = permanent shock; 0 = temporary |
+
+### `rollingQardlECMOut`
+
+Returned by `rollingQardlECM()`. Each row is one estimation window.
+
+| Member | Dimensions | Description |
+|--------|-----------|-------------|
+| `alpha` | `num_est × s` | Rolling α(τ) |
+| `rho` | `num_est × s` | Rolling ρ(τ) |
+| `alpha_se` | `num_est × s` | SE of α |
+| `rho_se` | `num_est × s` | SE of ρ |
+| `beta_lr` | `num_est × k` | Rolling OLS β |
+| `rho_ols` | `num_est × 1` | Rolling OLS ρ |
+
+---
+
+## Wald Tests
+
+Five Wald test procedures are available for joint hypotheses.
+
+| Procedure | Tests | Scaling |
+|-----------|-------|---------|
+| `wtestlrb(beta, cov, R, r, data)` | Long-run β | (n−1)² |
+| `wtestsrp(phi, cov, R, r, data)` | Short-run φ | (n−1) |
+| `wtestsrg(gamma, cov, R, r, data)` | Short-run γ | (n−1) |
+| `wtestsym(qaOut, tau, data)` | Symmetry: θ(τ) = θ(1−τ) | (n−1)² / (n−1) |
+| `wtestconst(qaOut, tau, data)` | Constancy: θ(τ₁) = ... = θ(τₛ) | (n−1)² / (n−1) |
+
+All return `{ wt, pv }` — test statistic and chi-squared p-value (except `wtestsym` and `wtestconst` which return 6 values: `{ wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi }`).
+
+### Constancy test
+
+`wtestconst` tests whether parameters are constant across **all** supplied quantiles simultaneously. Rejection means quantile-varying parameters are statistically significant — i.e., QARDL adds value over OLS ARDL.
+
+```gauss
+{ wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi } = wtestconst(qaOut, tau, data);
+```
+
+### Symmetry test
+
+`wtestsym` tests θ(τ) = θ(1−τ) for all symmetric pairs in the tau grid:
+
+```gauss
+tau = { 0.25, 0.5, 0.75 };
+{ wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi } = wtestsym(qaOut, tau, data);
+```
+
+### Setting up custom restriction matrices
+
+Parameters are stored quantile-first. For `k=2` variables and `tau = {0.25, 0.5, 0.75}`, the column order of β is:
+
+```
+β₁(0.25)  β₂(0.25)  β₁(0.50)  β₂(0.50)  β₁(0.75)  β₂(0.75)
+```
+
+To test H₀: β₁(0.25) = β₁(0.50) = β₁(0.75):
+
+```gauss
+bigR = { 1 0 -1 0  0 0,
+         0 0  1 0 -1 0 };
+smlr = { 0, 0 };
+
+{ wt, pv } = wtestlrb(qaOut.bigbt, qaOut.bigbt_cov, bigR, smlr, data);
+```
+
+---
+
+## ARDL Bounds Test
+
+`ardlbounds` implements the Pesaran, Shin & Smith (2001) F-test for the existence of a long-run levels relationship.
+
+```gauss
+{ Fstat, cv } = ardlbounds(data, ppp, qqq);
+ardlbounds_print(Fstat, cv, k);
+```
+
+`cv` is a `(3 × 2)` matrix of I(0)/I(1) critical value bounds at 10%, 5%, and 1% for up to k=10 regressors (Case III: unrestricted intercept, no trend).
+
+---
+
+## Examples
+
+The `examples/` directory contains the following worked programs:
+
+| File | Description |
+|------|-------------|
+| `demo.e` | Main worked example with `qardl_data.dat` |
+| `qardlestimation.e` | Monte Carlo simulation of QARDL estimation |
+| `qardl_est_tests.e` | Estimation with Wald tests |
+| `wald_tests_sim.e` | Wald test size simulation |
+| `rolling_qardl.e` | Rolling QARDL example |
+| `sp500.e` | S&P 500 application using Shiller data |
+
+More discussion of the model and results can be found in the blog post [The Quantile Autoregressive-Distributed Lag Parameter Estimation and Interpretation in GAUSS](https://www.aptech.com/blog/the-quantile-autoregressive-distributed-lag-parameter-estimation-and-interpretation-in-gauss/).
+
+---
+
+## Reference
+
+- Cho, J.S., Kim, T-H., Shin, Y. (2015). Quantile cointegration in the autoregressive distributed-lag modeling framework. *Journal of Econometrics*, 188(1), 281–300.
+- Pesaran, M.H., Shin, Y. & Smith, R.J. (2001). Bounds testing approaches to the analysis of level relationships. *Journal of Applied Econometrics*, 16(3), 289–326.
+- Künsch, H.R. (1989). The jackknife and the bootstrap for general stationary observations. *Annals of Statistics*, 17(3), 1217–1241.
+- Original author's page: https://web.yonsei.ac.kr/jinseocho/qardl.htm
+
+---
 
 ## Authors
- [Eric Clower](mailto:eric@aptech.com)  
- [Aptech Systems, Inc](https://www.aptech.com/)  
- [![alt text][1.1]][1]
- [![alt text][2.1]][2]
- [![alt text][3.1]][3]
 
- <!-- links to social media icons -->
- [1.1]: https://www.aptech.com/wp-content/uploads/2019/02/fb.png (Visit Aptech Facebook)
- [2.1]: https://www.aptech.com/wp-content/uploads/2019/02/gh.png (Aptech Github)
- [3.1]: https://www.aptech.com/wp-content/uploads/2019/02/li.png (Find us on LinkedIn)
+[Eric Clower](mailto:eric@aptech.com) — [Aptech Systems, Inc](https://www.aptech.com/)
 
- <!-- links to your social media accounts -->
- [1]: https://www.facebook.com/GAUSSAptech/
- [2]: https://github.com/aptech
- [3]: https://linkedin.com/in/ericaclower
- <!-- Please don't remove this: Grab your social icons from https://github.com/carlsednaoui/gitsocial -->
+[![Facebook](https://www.aptech.com/wp-content/uploads/2019/02/fb.png)](https://www.facebook.com/GAUSSAptech/)
+[![GitHub](https://www.aptech.com/wp-content/uploads/2019/02/gh.png)](https://github.com/aptech)
+[![LinkedIn](https://www.aptech.com/wp-content/uploads/2019/02/li.png)](https://linkedin.com/in/ericaclower)

@@ -23,6 +23,12 @@ struct qardlOut {
 
     // ECM speed of adjustment rho(tau) = -(1 - sum_j phi_j(tau)) at each quantile (ss x 1)
     matrix rho;
+
+    // Full coefficient matrix from quantileFit: ((1+q*k+k+p) x ss)
+    // Row 1: intercept; rows 2:1+q*k: delta-x (gamma) coefficients;
+    // rows 2+q*k:1+(q+1)*k: x-level (theta) coefficients;
+    // rows 2+(q+1)*k:1+(q+1)*k+p: phi (lagged-y) coefficients
+    matrix bt;
 };
 
 struct qardlECMOut {
@@ -120,6 +126,49 @@ struct rollingQardlOut {
     
     // Ward test results
     struct rollingWaldTests rWaldOut;
+};
+
+
+/*
+** qardlFullOut -- returned by qardlFull().
+** Bundles lag-order selection, bounds test, and both estimators.
+*/
+struct qardlFullOut {
+    // Lag orders selected by BIC
+    scalar pst;
+    scalar qst;
+
+    // ARDL bounds test (Pesaran, Shin & Smith 2001)
+    scalar ardl_fstat;
+    matrix ardl_cv;   // (3 x 2) I(0)/I(1) critical values at 10%, 5%, 1%
+
+    // QARDL levels estimates
+    struct qardlOut qa;
+
+    // QARDL-ECM two-step estimates
+    struct qardlECMOut ecm;
+};
+
+
+/*
+** qirfOut -- returned by qirf().
+** Holds quantile impulse responses across horizons and quantiles.
+*/
+struct qirfOut {
+    // (H+1 x ss) matrix: row h+1 = response at horizon h (h=0 is impact)
+    matrix irf;
+
+    // (ss x 1) quantile vector
+    matrix tau;
+
+    // Maximum horizon
+    scalar H;
+
+    // Index of the shocked x variable (1-based)
+    scalar k_x;
+
+    // 1 = permanent unit shock; 0 = temporary (one-period) unit shock
+    scalar permanent;
 };
 
 

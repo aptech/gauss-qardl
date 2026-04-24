@@ -1,0 +1,132 @@
+#include qardl.sdf
+
+/*
+**> wtestconst
+**
+**  Purpose:    Wald test for cross-quantile parameter constancy.
+**              Tests H0: theta(tau_1) = theta(tau_2) = ... = theta(tau_s)
+**              for all k variables jointly, applied separately to beta, gamma,
+**              and phi.  This tests whether the QARDL adds value over a
+**              constant-parameter OLS ARDL: rejection means parameters
+**              genuinely vary across quantiles.
+**
+**  Format:     { wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi }
+**                  = wtestconst(qaOut, tau, data);
+**
+**  Input:      qaOut   struct qardlOut returned by qardl().
+**
+**              tau     (ss x 1) vector of quantile indices.
+**
+**              data    matrix, dataset passed to qardl() (used only for n).
+**
+**  Output:     wt_beta     scalar, Wald statistic for long-run beta.
+**              pv_beta     scalar, chi-squared p-value for wt_beta.
+**              wt_gamma    scalar, Wald statistic for short-run gamma.
+**              pv_gamma    scalar, chi-squared p-value for wt_gamma.
+**              wt_phi      scalar, Wald statistic for short-run phi.
+**              pv_phi      scalar, chi-squared p-value for wt_phi.
+**
+**  Remarks:    The restriction matrix R is constructed automatically from k
+**              and ss.  For ss quantiles and k parameters per quantile,
+**              there are k*(ss-1) restrictions testing consecutive quantile
+**              equality: theta(tau_j) = theta(tau_{j+1}) for j = 1,...,ss-1.
+**
+**              Scaling follows wtestlrb for beta ((n-1)^2) and wtestsrp/g
+**              for phi/gamma ((n-1)).
+**
+**              If ss == 1 there is nothing to test; all outputs are returned
+**              as missing values.
+**
+**  Developed:  April 2026
+*/
+
+proc (6) = wtestconst(struct qardlOut qaOut, tau, data);
+    local ss, k, p, nn;
+    local jj, mm;
+    local R_beta, R_gamma, R_phi;
+    local rnk_beta, rnk_gamma, rnk_phi;
+    local wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi;
+    local rb_beta, rb_gamma, rb_phi;
+
+    ss = rows(tau);
+    nn = rows(data);
+    k  = rows(qaOut.bigbt) / ss;
+    p  = rows(qaOut.phi)   / ss;
+
+    if ss == 1;
+        print "WARNING (wtestconst): only one quantile supplied — nothing to test.";
+        print "                      Returning missing values.";
+        wt_beta  = error(0);
+        pv_beta  = error(0);
+        wt_gamma = error(0);
+        pv_gamma = error(0);
+        wt_phi   = error(0);
+        pv_phi   = error(0);
+        retp(wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi);
+    endif;
+
+    /*
+    ** Build restriction matrices.
+    ** For beta and gamma: k parameters per quantile, k*(ss-1) restrictions.
+    ** For phi: p parameters per quantile, p*(ss-1) restrictions.
+    ** Each row tests theta(tau_j) = theta(tau_{j+1}) for one parameter.
+    ** Parameterisation: bigbt is (k*ss x 1) stacked as
+    **   [param_1(tau_1),...,param_k(tau_1), param_1(tau_2),...,param_k(tau_ss)]
+    */
+
+    R_beta  = zeros(k*(ss-1), k*ss);
+    R_gamma = zeros(k*(ss-1), k*ss);
+    R_phi   = zeros(p*(ss-1), p*ss);
+
+    // Beta / gamma: consecutive-quantile equality per variable
+    jj = 1;
+    do until jj > ss-1;
+        mm = 1;
+        do until mm > k;
+            local row_idx;
+            row_idx = (jj-1)*k + mm;
+            R_beta[row_idx, (jj-1)*k + mm]  =  1;
+            R_beta[row_idx,    jj*k  + mm]  = -1;
+            R_gamma[row_idx, (jj-1)*k + mm] =  1;
+            R_gamma[row_idx,    jj*k  + mm] = -1;
+            mm = mm + 1;
+        endo;
+        jj = jj + 1;
+    endo;
+
+    // Phi: consecutive-quantile equality per lag
+    jj = 1;
+    do until jj > ss-1;
+        mm = 1;
+        do until mm > p;
+            local row_phi;
+            row_phi = (jj-1)*p + mm;
+            R_phi[row_phi, (jj-1)*p + mm] =  1;
+            R_phi[row_phi,    jj*p  + mm] = -1;
+            mm = mm + 1;
+        endo;
+        jj = jj + 1;
+    endo;
+
+    rnk_beta  = rows(R_beta);
+    rnk_gamma = rows(R_gamma);
+    rnk_phi   = rows(R_phi);
+
+    rb_beta  = R_beta  * qaOut.bigbt;
+    rb_gamma = R_gamma * qaOut.gamma;
+    rb_phi   = R_phi   * qaOut.phi;
+
+    // Long-run beta: scaled (n-1)^2 (same as wtestlrb)
+    wt_beta  = ((nn-1)^2) * rb_beta'  * inv(R_beta  * qaOut.bigbt_cov  * R_beta')  * rb_beta;
+    pv_beta  = cdfchic(wt_beta, rnk_beta);
+
+    // Short-run gamma: scaled (n-1) (same as wtestsrg)
+    wt_gamma = (nn-1) * rb_gamma' * inv(R_gamma * qaOut.gamma_cov  * R_gamma') * rb_gamma;
+    pv_gamma = cdfchic(wt_gamma, rnk_gamma);
+
+    // Short-run phi: scaled (n-1) (same as wtestsrp)
+    wt_phi   = (nn-1) * rb_phi'   * inv(R_phi   * qaOut.phi_cov    * R_phi')   * rb_phi;
+    pv_phi   = cdfchic(wt_phi, rnk_phi);
+
+    retp(wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi);
+endp;
