@@ -986,6 +986,7 @@ proc (struct rollingQardlOut) = rollingQardl(data, pend, qend, tau, struct waldT
         { wald_beta[st], pv_beta[st] } = wtestlrb(qaOut.bigbt, qaOut.bigbt_cov, wCtl.bigR_beta, wCtl.smlr_beta, data_subset);
         
         // Short-run parameter (phi) testing
+        bigR_phi_test = wCtl.bigR_phi;
         if pst < pend;
             c_indx = seqa(pst*rows(tau)+1, 1, cols(wCtl.bigR_phi)-(pst*rows(tau)));
             bigR_phi_test = delcols(wCtl.bigR_phi, c_indx);
@@ -1698,7 +1699,7 @@ endp;
 */
 proc (3) = blockBootstrapQARDL(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, B = 999, blk_len = 0, alpha = 0.05);
     local T, k0, ss, jj, ii, bbb;
-    local n_blks, starts, idx, boot_data;
+    local n_blks, starts, idx, boot_data, idx_first, idx_last;
     local dim_beta, dim_phi, dim_gamma;
     local boot_beta, boot_gamma, boot_phi;
     local ci_beta, ci_gamma, ci_phi;
@@ -1738,10 +1739,12 @@ proc (3) = blockBootstrapQARDL(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, B = 99
         starts = ceil(rndu(n_blks, 1) * (T - blk_len + 1));
 
         // Build pseudo-sample by concatenating blocks, then trim to T
-        idx = zeros(0, 1);
+        idx = zeros(n_blks*blk_len, 1);
         jj = 1;
         do until jj > n_blks;
-            idx = idx | seqa(starts[jj], 1, blk_len);
+            idx_first = (jj-1)*blk_len + 1;
+            idx_last  = jj*blk_len;
+            idx[idx_first:idx_last] = seqa(starts[jj], 1, blk_len);
             jj = jj + 1;
         endo;
         idx = idx[1:T, .];
@@ -1817,7 +1820,7 @@ endp;
 */
 proc (2) = blockBootstrapQARDLECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, B = 999, blk_len = 0, alpha = 0.05);
     local T, ss, jj, bbb;
-    local n_blks, starts, idx, boot_data;
+    local n_blks, starts, idx, boot_data, idx_first, idx_last;
     local boot_rho, boot_alpha;
     local ci_rho, ci_alpha;
     local q_lo, q_hi;
@@ -1844,10 +1847,12 @@ proc (2) = blockBootstrapQARDLECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, B =
 
         starts = ceil(rndu(n_blks, 1) * (T - blk_len + 1));
 
-        idx = zeros(0, 1);
+        idx = zeros(n_blks*blk_len, 1);
         jj = 1;
         do until jj > n_blks;
-            idx = idx | seqa(starts[jj], 1, blk_len);
+            idx_first = (jj-1)*blk_len + 1;
+            idx_last  = jj*blk_len;
+            idx[idx_first:idx_last] = seqa(starts[jj], 1, blk_len);
             jj = jj + 1;
         endo;
         idx = idx[1:T, .];
@@ -2019,8 +2024,18 @@ proc (1) = _applyFormula(data, formula);
 
     // Case-insensitive column index lookup
     colnames = lower(getcolnames(data));
-    y_idx    = indcv(lower(lhs),   colnames);
-    x_idx    = indcv(lower(xvars), colnames);
+    y_idx    = indsav(lower(lhs),   colnames);
+    x_idx    = indsav(lower(xvars), colnames);
+
+    if rows(y_idx) == 0;
+        errorlog "applyQARDLFormula: dependent variable not found: " $+ lhs;
+        end;
+    endif;
+
+    if rows(x_idx) /= n_x;
+        errorlog "applyQARDLFormula: one or more RHS variables were not found";
+        end;
+    endif;
 
     data = data[., y_idx | x_idx];
 

@@ -36,7 +36,12 @@ examples/
   wald_tests_sim.e   # Wald test size simulation
   rolling_qardl.e    # Rolling QARDL example
   sp500.e            # S&P 500 application
+tests/
+  smoke_public_api.e # GAUSS 26 source-tree smoke test for public procedures
+  smoke_workflow_api.e # GAUSS 26 source-tree smoke test for qardlFull/formula workflow
+  package_public_api.e # Installed-package release gate using `library qardl`
 package.json         # GAUSS package manifest (name: qardl, version: 2.1.0)
+GOLD_STANDARD_TODO.md # Release-readiness inventory and improvement backlog
 ```
 
 ## The QARDL model
@@ -106,7 +111,7 @@ where `EC_{t-1} = y_{t-1} − β_OLS'·x_{t-1}` uses OLS β from Step 1.
 | `saveQARDLECMResults(qECMOut, tau, outdir)` | qardl.src | Export ECM α, ρ to CSV |
 | `plotRollingQARDLECM(rECMOut, tau, dates)` | qardl.src | Plot rolling ρ(τ,t) and α(τ,t) with SE bands |
 | `plotRollingQARDL(rqaOut, tau, dates)` | qardl.src | Plot rolling β(τ,t) with SE bands (ss×k grid) |
-| `blockBootstrapQARDLECM(data, p, q, tau, B, blk_len, alpha, formula)` | qardl.src | Moving-block bootstrap CIs for ECM ρ and α |
+| `blockBootstrapQARDLECM(data, p, q, tau, B, blk_len, alpha)` | qardl.src | Moving-block bootstrap CIs for ECM ρ and α |
 | `wtestconst(qaOut, tau, data)` | wtestconst.src | Wald test H₀: θ(τ₁)=…=θ(τₛ) for all quantiles simultaneously |
 | `qirf(qaOut, p, q, H, tau, k_x, permanent)` | qirf.src | Quantile impulse response functions using qaOut.bt |
 | `plotQIRF(qirfOut)` | qirf.src | Plot QIRF paths, one panel per quantile |
@@ -230,6 +235,23 @@ Long-run β uses rows `2+qqq*k0 : 1+(qqq+1)*k0` divided by `(1 − sumc(φ rows)
 ## Package manifest
 
 `package.json` lists all src files loaded by `library qardl`. Current version: **2.1.0**. All `.src` files in `src/` are registered, including `wtestconst.src` and `qirf.src`. If you add a new `.src` file, add it to the `"src"` array and bump the patch version.
+
+## Source testing
+
+Run the source-tree smoke test from GAUSS 26 before release work:
+
+```gauss
+test_dir = "path/to/gauss-qardl/tests";
+chdir ^test_dir;
+run smoke_public_api.e;
+run smoke_workflow_api.e;
+```
+
+The test includes local `src/` files directly rather than relying on `library qardl`, so it catches source regressions even when the installed package catalog is stale. After rebuilding/installing a package, separately verify that `library qardl;` exposes the same public procedures.
+
+```gauss
+run package_public_api.e;
+```
 
 ## Reference
 

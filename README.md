@@ -28,23 +28,24 @@ A [GAUSS](https://www.aptech.com) application package implementing the **Quantil
 - [Wald Tests](#wald-tests)
 - [ARDL Bounds Test](#ardl-bounds-test)
 - [Examples](#examples)
+- [Development and Tests](#development-and-tests)
 - [Reference](#reference)
 
 ---
 
 ## What is GAUSS?
 
-[**GAUSS**](https://www.aptech.com) is a fast, matrix-based environment for statistical computing, estimation, simulation, and visualization. The QARDL library loads via `library qardl;` and requires only GAUSS's built-in `quantileFit` — no additional libraries needed.
+[**GAUSS**](https://www.aptech.com) is a fast, matrix-based environment for statistical computing, estimation, simulation, and visualization. The QARDL library loads via `library qardl;`, requires **GAUSS 26 or later**, and depends only on GAUSS's built-in `quantileFit` — no additional libraries needed.
 
 ---
 
 ## Installation
 
-**GAUSS 20+ (Package Manager)**
+**GAUSS 26+ (Package Manager)**
 
 Install and update directly from within GAUSS using the [GAUSS Package Manager](https://www.aptech.com/blog/gauss-package-manager-basics/).
 
-**GAUSS 19+**
+**Manual installation**
 
 1. Download `qardl_2.1.0.zip` from the [Releases page](https://github.com/aptech/gauss-qardl/releases).
 2. In GAUSS, select **Tools > Install Application** and follow the prompts.
@@ -261,7 +262,6 @@ waldR.bigR_phi   = ...;   waldR.smlr_phi   = ...;
 waldR.bigR_gamma = ...;   waldR.smlr_gamma = ...;
 
 rqaOut = rollingQardl(data, pend, qend, tau, waldR);
-rqaOut = rollingQardl(data, pend, qend, tau, waldR, formula = "");
 ```
 
 Returns a `rollingQardlOut` structure.
@@ -558,6 +558,32 @@ The `examples/` directory contains the following worked programs:
 | `sp500.e` | S&P 500 application using Shiller data |
 
 More discussion of the model and results can be found in the blog post [The Quantile Autoregressive-Distributed Lag Parameter Estimation and Interpretation in GAUSS](https://www.aptech.com/blog/the-quantile-autoregressive-distributed-lag-parameter-estimation-and-interpretation-in-gauss/).
+
+---
+
+## Development and Tests
+
+The `tests/` directory contains GAUSS 26 smoke tests for the source tree and installed package. See `GOLD_STANDARD_TODO.md` for the current release-readiness checklist.
+
+From the GAUSS command line or terminal, run from the `tests` directory:
+
+```gauss
+run smoke_public_api.e;
+run smoke_workflow_api.e;
+```
+
+From Windows PowerShell, one equivalent batch command is:
+
+```powershell
+& 'C:\gauss26\tgauss.exe' -nb -b -x -e 'd="C:\\path\\to\\gauss-qardl\\tests"; chdir ^d; run smoke_public_api.e;'
+& 'C:\gauss26\tgauss.exe' -nb -b -x -e 'd="C:\\path\\to\\gauss-qardl\\tests"; chdir ^d; run smoke_workflow_api.e;'
+```
+
+Before publishing a release, reinstall the package and verify that `library qardl;` exposes every procedure listed in `package.json`, especially newer files such as `wtestconst.src` and `qirf.src`.
+
+```gauss
+run package_public_api.e;
+```
 
 ---
 

@@ -42,7 +42,7 @@
 
 proc (6) = wtestconst(struct qardlOut qaOut, tau, data);
     local ss, k, p, nn;
-    local jj, mm;
+    local jj, mm, row_idx, row_phi;
     local R_beta, R_gamma, R_phi;
     local rnk_beta, rnk_gamma, rnk_phi;
     local wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi;
@@ -83,7 +83,6 @@ proc (6) = wtestconst(struct qardlOut qaOut, tau, data);
     do until jj > ss-1;
         mm = 1;
         do until mm > k;
-            local row_idx;
             row_idx = (jj-1)*k + mm;
             R_beta[row_idx, (jj-1)*k + mm]  =  1;
             R_beta[row_idx,    jj*k  + mm]  = -1;
@@ -99,7 +98,6 @@ proc (6) = wtestconst(struct qardlOut qaOut, tau, data);
     do until jj > ss-1;
         mm = 1;
         do until mm > p;
-            local row_phi;
             row_phi = (jj-1)*p + mm;
             R_phi[row_phi, (jj-1)*p + mm] =  1;
             R_phi[row_phi,    jj*p  + mm] = -1;

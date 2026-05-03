@@ -65,10 +65,10 @@
 */
 proc (struct qirfOut) = qirf(struct qardlOut qaOut, ppp, qqq, H, tau = { 0.25, 0.5, 0.75 }, k_x = 1, permanent = 1);
     local ss, k0, jj, hh, ll;
-    local theta_row, gamma_start, phi_start;
+    local theta_row, gamma_start, gamma_first, gamma_last, phi_start, phi_last;
     local theta, gamma_col, phi_vec;
     local y_hist, dx_hist, x_hist;
-    local y_h, contrib;
+    local y_h, contrib, x_h, dx_h, dx_lagged, h_lag;
     local irf_mat;
 
     struct qirfOut qOut;
@@ -80,6 +80,9 @@ proc (struct qirfOut) = qirf(struct qardlOut qaOut, ppp, qqq, H, tau = { 0.25, 0
     gamma_start = 2;                        // first Gamma row
     theta_row   = 1 + qqq*k0 + k_x;        // Theta for variable k_x
     phi_start   = 2 + (qqq+1)*k0;          // first Phi row
+    gamma_first = gamma_start + (k_x-1)*qqq;
+    gamma_last  = gamma_start + k_x*qqq - 1;
+    phi_last    = phi_start + ppp - 1;
 
     // Response matrix: (H+1) x ss
     // Row 1 = h=0 (pre-shock baseline = 0 by construction)
@@ -93,10 +96,10 @@ proc (struct qirfOut) = qirf(struct qardlOut qaOut, ppp, qqq, H, tau = { 0.25, 0
 
         // Gamma: qqq coefficients for variable k_x at this quantile
         // gamma_col[lag+1] = coefficient on Dx_{k_x, t-lag}, lag = 0,...,qqq-1
-        gamma_col = qaOut.bt[gamma_start + (k_x-1)*qqq : gamma_start + k_x*qqq - 1, jj];
+        gamma_col = qaOut.bt[gamma_first:gamma_last, jj];
 
         // Phi: ppp AR coefficients
-        phi_vec = qaOut.bt[phi_start : phi_start + ppp - 1, jj];
+        phi_vec = qaOut.bt[phi_start:phi_last, jj];
 
         // y_hist: circular buffer of past y values, y_hist[1] = y_{t-1}, ..., y_hist[p] = y_{t-p}
         // Initialise to zero (pre-shock)
@@ -109,7 +112,6 @@ proc (struct qirfOut) = qirf(struct qardlOut qaOut, ppp, qqq, H, tau = { 0.25, 0
             // x and Dx at this horizon
             // Permanent shock: x_h = 1 for h>=1, Dx = 1 at h=1, 0 after
             // Temporary shock: x_h = 0 after h=1, Dx = 1 at h=1, -1 at h=2, 0 after
-            local x_h, dx_h;
             if permanent;
                 x_h  = 1;
                 dx_h = (hh == 1);
@@ -129,8 +131,6 @@ proc (struct qirfOut) = qirf(struct qardlOut qaOut, ppp, qqq, H, tau = { 0.25, 0
             // dx at horizon hh-lag: permanent => 1 if hh-lag==1; temp => as above
             ll = 0;
             do until ll > qqq-1;
-                local dx_lagged;
-                local h_lag;
                 h_lag = hh - ll;
                 if h_lag >= 1;
                     if permanent;

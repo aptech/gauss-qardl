@@ -87,28 +87,32 @@ proc (2) = ardlbounds(data, ppp, qqq);
     N = rows(y_lag);
 
     // Dy_{t-j} lags for j = 1,...,ppp-1
-    dy_lags = zeros(N, 0);
     if ppp > 1;
+        dy_lags = zeros(N, ppp-1);
         jj = 1;
         do until jj > ppp-1;
             // dy_{t-j}: index in dy array is (T0+1-j):(nn-j)
             // adjusted to length N: start row T0-j+1 (1-based) in dy
-            dy_lags = dy_lags~dy[(T0-jj):(nn-1-jj)];
+            dy_lags[., jj] = dy[(T0-jj):(nn-1-jj)];
             jj = jj + 1;
         endo;
     endif;
 
     // Dx_{t-j} for j = 0,...,qqq-1  (contemporaneous Dx_t included)
-    dx = zeros(N, 0);
+    dx = zeros(N, qqq*k0);
     jj = 0;
     do until jj > qqq-1;
         // ee is first-diff of x, index (T0+1-j):(nn-j) -> aligned to N rows
-        dx = dx~ee[(T0+1-jj):(nn-jj), .];
+        dx[., (jj*k0+1):((jj+1)*k0)] = ee[(T0+1-jj):(nn-jj), .];
         jj = jj + 1;
     endo;
 
     // Assemble regressor matrix
-    ONEX = ones(N, 1)~y_lag~x_lag~dy_lags~dx;
+    ONEX = ones(N, 1)~y_lag~x_lag;
+    if ppp > 1;
+        ONEX = ONEX~dy_lags;
+    endif;
+    ONEX = ONEX~dx;
 
     // Dependent variable aligned to same rows
     Y = dy[T0:(nn-1)];
@@ -215,12 +219,12 @@ proc (0) = ardlbounds_print(Fstat, cv, k);
     print "=================================================================";
     print "  Number of regressors k = " $+ ftos(k, "%g", 1, 0);
     print "";
-    print "  F-statistic:  " $+ ftos(Fstat, "%.4f", 1, 0);
+    print "  F-statistic:  " $+ ftos(Fstat, "%*.*lf", 1, 4);
     print "";
     print "  Critical value bounds (I(0) lower / I(1) upper):";
-    print "    10%: " $+ ftos(cv[1,1], "%.2f", 1, 0) $+ " / " $+ ftos(cv[1,2], "%.2f", 1, 0);
-    print "     5%: " $+ ftos(cv[2,1], "%.2f", 1, 0) $+ " / " $+ ftos(cv[2,2], "%.2f", 1, 0);
-    print "     1%: " $+ ftos(cv[3,1], "%.2f", 1, 0) $+ " / " $+ ftos(cv[3,2], "%.2f", 1, 0);
+    print "    10%: " $+ ftos(cv[1,1], "%*.*lf", 1, 2) $+ " / " $+ ftos(cv[1,2], "%*.*lf", 1, 2);
+    print "     5%: " $+ ftos(cv[2,1], "%*.*lf", 1, 2) $+ " / " $+ ftos(cv[2,2], "%*.*lf", 1, 2);
+    print "     1%: " $+ ftos(cv[3,1], "%*.*lf", 1, 2) $+ " / " $+ ftos(cv[3,2], "%*.*lf", 1, 2);
     print "";
     if Fstat > cv[2, 2];
         print "  Result: REJECT H0 at 5% (F > I(1) upper bound) => cointegration";

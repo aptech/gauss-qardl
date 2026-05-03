@@ -6,10 +6,16 @@
     "dlib": [
     ],
     "keywords": [
+        "qardl",
+        "ardl",
+        "quantile regression",
+        "cointegration",
+        "econometrics",
+        "time series"
     ],
     "license": "MIT",
     "name": "qardl",
-    "repo": "",
+    "repo": "https://github.com/aptech/gauss-qardl",
     "src": [
         "qardl.sdf",
         "qardl.src",

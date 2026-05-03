@@ -46,10 +46,12 @@
 
 proc (6) = wtestsym(struct qardlOut qaOut, tau, data);
     local ss, k, p, nn;
-    local pair_j, pair_m, n_pairs, tol;
-    local jj, mm, idx;
+    local pair_j, pair_m, n_pairs, max_pairs, tol;
+    local jj, mm, idx, j_q, m_q;
     local R_beta, R_gamma, R_phi;
     local wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi;
+    local rb_beta, rb_gamma, rb_phi;
+    local rnk_beta, rnk_gamma, rnk_phi;
 
     ss = rows(tau);
     nn = rows(data);
@@ -58,23 +60,24 @@ proc (6) = wtestsym(struct qardlOut qaOut, tau, data);
 
     // --- Find symmetric quantile pairs (tau[j] + tau[m] = 1, j < m) ---
     tol = 1e-10;
-    pair_j = zeros(0, 1);
-    pair_m = zeros(0, 1);
+    max_pairs = maxc(1|ss*(ss-1)/2);
+    pair_j = zeros(max_pairs, 1);
+    pair_m = zeros(max_pairs, 1);
+    n_pairs = 0;
 
     jj = 1;
     do until jj > ss;
         mm = jj + 1;
         do until mm > ss;
             if abs(tau[jj] + tau[mm] - 1) < tol;
-                pair_j = pair_j | jj;
-                pair_m = pair_m | mm;
+                n_pairs = n_pairs + 1;
+                pair_j[n_pairs] = jj;
+                pair_m[n_pairs] = mm;
             endif;
             mm = mm + 1;
         endo;
         jj = jj + 1;
     endo;
-
-    n_pairs = rows(pair_j);
 
     if n_pairs == 0;
         print "WARNING (wtestsym): no symmetric quantile pairs found in tau grid.";
@@ -99,7 +102,6 @@ proc (6) = wtestsym(struct qardlOut qaOut, tau, data);
     idx = 1;
     jj = 1;
     do until jj > n_pairs;
-        local j_q, m_q;
         j_q = pair_j[jj];
         m_q = pair_m[jj];
 
@@ -134,9 +136,6 @@ proc (6) = wtestsym(struct qardlOut qaOut, tau, data);
     endo;
 
     // --- Wald statistics: W = (n-1)^2 * (Rb)' * inv(R*V*R') * (Rb) ---
-    local rb_beta, rb_gamma, rb_phi;
-    local rnk_beta, rnk_gamma, rnk_phi;
-
     rb_beta  = R_beta  * qaOut.bigbt;
     rb_gamma = R_gamma * qaOut.gamma;
     rb_phi   = R_phi   * qaOut.phi;
