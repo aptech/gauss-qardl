@@ -1,5 +1,3 @@
-#include qardl.sdf
-
 /*
 **> qirf
 **
@@ -73,8 +71,32 @@ proc (struct qirfOut) = qirf(struct qardlOut qaOut, ppp, qqq, H, tau = { 0.25, 0
 
     struct qirfOut qOut;
 
+    call _qardlValidateLagScalar(ppp, "qirf: p");
+    call _qardlValidateLagScalar(qqq, "qirf: q");
+    call _qardlValidateTau(tau, "qirf");
+
+    if rows(H) * cols(H) /= 1 or H < 1 or round(H) /= H;
+        errorlog "qirf: H must be a positive integer";
+        end;
+    endif;
+
+    if rows(k_x) * cols(k_x) /= 1 or k_x < 1 or round(k_x) /= k_x;
+        errorlog "qirf: k_x must be a positive integer";
+        end;
+    endif;
+
+    if rows(permanent) * cols(permanent) /= 1 or (permanent /= 0 and permanent /= 1);
+        errorlog "qirf: permanent must be 0 or 1";
+        end;
+    endif;
+
     ss = rows(tau);
     k0 = rows(qaOut.bigbt) / ss;
+
+    if round(k0) /= k0 or k_x > k0;
+        errorlog "qirf: k_x exceeds the number of regressors in qaOut";
+        end;
+    endif;
 
     // bt row-index bases (1-indexed)
     gamma_start = 2;                        // first Gamma row

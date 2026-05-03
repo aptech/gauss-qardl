@@ -58,6 +58,8 @@ proc (2) = ardlbounds(data, ppp, qqq);
     local cv, cv_table;
     local k_idx;
 
+    call _qardlValidateEstimatorInputs(data, ppp, qqq, { 0.5 }, "ardlbounds");
+
     nn = rows(data);
     k0 = cols(data) - 1;
 

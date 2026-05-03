@@ -6,6 +6,7 @@ new;
 ** stale installed GAUSS package catalog.
 */
 
+#include ../src/qardl.sdf
 #include ../src/qardl.src
 #include ../src/wtestlrb.src
 #include ../src/wtestsrp.src
@@ -51,6 +52,8 @@ expected_beta = { 6.6645846,
                   6.6663398 };
 
 call assert_close(qaOut.bigbt, expected_beta, 1e-4, "qardl beta estimates changed");
+call assert_true(qaOut.p == 2 and qaOut.q == 1 and qaOut.k == 2, "qardl metadata changed");
+call assert_true(rows(qaOut.tau) == rows(tau) and qaOut.nobs > 0, "qardl tau/nobs metadata invalid");
 call assert_true(rows(qaOut.alpha) == rows(tau), "qardl alpha has wrong row count");
 call assert_true(rows(qaOut.rho) == rows(tau), "qardl rho has wrong row count");
 call assert_true(rows(qaOut.bt) == 7 and cols(qaOut.bt) == rows(tau), "qardl bt has wrong shape");
@@ -64,6 +67,8 @@ call assert_true(rows(p_gamma) == rows(qaOut.gamma), "qardl_pval gamma p-values 
 // Two-step ECM estimator and p-values.
 struct qardlECMOut qECMOut;
 qECMOut = qardlECM(data, 2, 1, tau);
+call assert_true(qECMOut.p == 2 and qECMOut.q == 1 and qECMOut.k == 2, "qardlECM metadata changed");
+call assert_true(rows(qECMOut.tau) == rows(tau) and qECMOut.nobs > 0, "qardlECM tau/nobs metadata invalid");
 call assert_true(rows(qECMOut.rho) == rows(tau), "qardlECM rho has wrong row count");
 call assert_true(rows(qECMOut.rho_cov) == rows(tau), "qardlECM rho covariance has wrong row count");
 

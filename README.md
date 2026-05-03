@@ -47,7 +47,7 @@ Install and update directly from within GAUSS using the [GAUSS Package Manager](
 
 **Manual installation**
 
-1. Download `qardl_2.1.0.zip` from the [Releases page](https://github.com/aptech/gauss-qardl/releases).
+1. Download `qardl_3.0.0.zip` from the [Releases page](https://github.com/aptech/gauss-qardl/releases).
 2. In GAUSS, select **Tools > Install Application** and follow the prompts.
 3. Load the library in your program:
 
@@ -140,7 +140,7 @@ Runs the complete QARDL pipeline in a single call: BIC lag selection → ARDL bo
 
 ```gauss
 qfOut = qardlFull(data, pend, qend);
-qfOut = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 }, formula = "");
+qfOut = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 }, formula = "", verbose = 1);
 ```
 
 | Argument | Default | Description |
@@ -150,6 +150,7 @@ qfOut = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 }, formula = "");
 | `qend` | — | Maximum DL lag to search |
 | `tau` | `{ 0.25, 0.5, 0.75 }` | Quantile vector |
 | `formula` | `""` | Wilkinson formula string |
+| `verbose` | `1` | `1` prints workflow summaries; `0` computes silently |
 
 Returns a `qardlFullOut` structure (see [Output Structures](#output-structures)).
 
@@ -415,6 +416,11 @@ Returned by `qardl()`.
 
 | Member | Dimensions | Description |
 |--------|-----------|-------------|
+| `tau` | `s × 1` | Quantile vector used in estimation |
+| `p` | scalar | AR lag order used in estimation |
+| `q` | scalar | Distributed-lag order used in estimation |
+| `nobs` | scalar | Effective estimation sample size after lag alignment |
+| `k` | scalar | Number of regressors |
 | `bigbt` | `(k·s) × 1` | Long-run β, stacked by quantile |
 | `bigbt_cov` | `(k·s) × (k·s)` | Asymptotic covariance of β |
 | `phi` | `(p·s) × 1` | Short-run φ, stacked by quantile |
@@ -433,6 +439,11 @@ Returned by `qardlECM()`.
 
 | Member | Dimensions | Description |
 |--------|-----------|-------------|
+| `tau` | `s × 1` | Quantile vector used in estimation |
+| `p` | scalar | AR lag order used in estimation |
+| `q` | scalar | Distributed-lag order used in estimation |
+| `nobs` | scalar | Effective ECM sample size after lag alignment |
+| `k` | scalar | Number of regressors |
 | `beta_lr` | `k × 1` | OLS long-run coefficients (Step 1) |
 | `rho_ols` | `1 × 1` | OLS speed of adjustment |
 | `alpha` | `s × 1` | ECM intercept α(τ) |
@@ -448,6 +459,8 @@ Returned by `qardlFull()`.
 |--------|------|-------------|
 | `pst` | scalar | BIC-selected AR lag order |
 | `qst` | scalar | BIC-selected DL lag order |
+| `tau` | `s × 1` | Quantile vector used in estimation |
+| `nobs` | scalar | Number of observations in the input sample |
 | `ardl_fstat` | scalar | ARDL bounds test F-statistic |
 | `ardl_cv` | `3 × 2` | I(0)/I(1) critical values at 10%, 5%, 1% |
 | `qa` | `qardlOut` | QARDL levels estimates |
@@ -563,7 +576,7 @@ More discussion of the model and results can be found in the blog post [The Quan
 
 ## Development and Tests
 
-The `tests/` directory contains GAUSS 26 smoke tests for the source tree and installed package. See `GOLD_STANDARD_TODO.md` for the current release-readiness checklist.
+The `tests/` directory contains GAUSS 26 smoke tests for the source tree and installed package. See `GOLD_STANDARD_TODO.md` for the current release-readiness backlog and `RELEASE_CHECKLIST.md` for release steps.
 
 From the GAUSS command line or terminal, run from the `tests` directory:
 
@@ -577,6 +590,12 @@ From Windows PowerShell, one equivalent batch command is:
 ```powershell
 & 'C:\gauss26\tgauss.exe' -nb -b -x -e 'd="C:\\path\\to\\gauss-qardl\\tests"; chdir ^d; run smoke_public_api.e;'
 & 'C:\gauss26\tgauss.exe' -nb -b -x -e 'd="C:\\path\\to\\gauss-qardl\\tests"; chdir ^d; run smoke_workflow_api.e;'
+```
+
+Package manifest consistency can be checked with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tests\verify_package_manifest.ps1
 ```
 
 Before publishing a release, reinstall the package and verify that `library qardl;` exposes every procedure listed in `package.json`, especially newer files such as `wtestconst.src` and `qirf.src`.

@@ -1,5 +1,3 @@
-#include qardl.sdf
-
 /*
 **> qardl
 **
@@ -40,6 +38,7 @@
 **                  Jin Seo Cho
 */
 
+#include qardl.sdf
 
 proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
 
@@ -48,6 +47,8 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
         bbt, cc, bigpi, bigphi, midphi, jj, bigam, bilam, k0, ss, hb, hs,
         bt, fh, uu, midgam, bigff, bigbtmm, barw, mtau, mbb, mfh;
     
+    call _qardlValidateEstimatorInputs(data, ppp, qqq, tau, "qardl");
+
     // Number of observations
     nn = rows(data);
     
@@ -321,6 +322,11 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
     
     struct qardlOut qaOut;
     
+    qaOut.tau = tau;
+    qaOut.p = ppp;
+    qaOut.q = qqq;
+    qaOut.nobs = rows(Y);
+    qaOut.k = k0;
     qaOut.bigbt = bigbt;
     qaOut.bigbt_cov = bigbtmm;
     qaOut.phi = bigphi;
@@ -402,6 +408,8 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
     local bt_ecm, fh_ecm, uu_ecm, hb;
     local za, cc, mfh, mtau, psu;
     local D_ecm, D_inv_ecm, rho_cov, alpha_cov;
+
+    call _qardlValidateEstimatorInputs(data, ppp, qqq, tau, "qardlECM");
 
     nn = rows(data);
     k0 = cols(data) - 1;
@@ -540,6 +548,11 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
 
     // ---- Package results ----
     struct qardlECMOut qECMOut;
+    qECMOut.tau       = tau;
+    qECMOut.p         = ppp;
+    qECMOut.q         = qqq;
+    qECMOut.nobs      = N_ecm;
+    qECMOut.k         = k0;
     qECMOut.beta_lr   = beta_lr_ols;
     qECMOut.rho_ols   = rho_ols;
     qECMOut.alpha     = bt_ecm[1, .]';
@@ -1708,6 +1721,23 @@ proc (3) = blockBootstrapQARDL(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, B = 99
     // Struct declared once at proc scope (not inside the loop)
     struct qardlOut qa_b;
 
+    call _qardlValidateEstimatorInputs(data, ppp, qqq, tau, "blockBootstrapQARDL");
+
+    if rows(B) * cols(B) /= 1 or B < 1 or round(B) /= B;
+        errorlog "blockBootstrapQARDL: B must be a positive integer";
+        end;
+    endif;
+
+    if rows(blk_len) * cols(blk_len) /= 1 or blk_len < 0 or round(blk_len) /= blk_len;
+        errorlog "blockBootstrapQARDL: blk_len must be a non-negative integer";
+        end;
+    endif;
+
+    if rows(alpha) * cols(alpha) /= 1 or alpha <= 0 or alpha >= 1;
+        errorlog "blockBootstrapQARDL: alpha must be a scalar in (0, 1)";
+        end;
+    endif;
+
     T   = rows(data);
     k0  = cols(data) - 1;
     ss  = rows(tau);
@@ -1827,6 +1857,23 @@ proc (2) = blockBootstrapQARDLECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, B =
 
     struct qardlECMOut qecm_b;
 
+    call _qardlValidateEstimatorInputs(data, ppp, qqq, tau, "blockBootstrapQARDLECM");
+
+    if rows(B) * cols(B) /= 1 or B < 1 or round(B) /= B;
+        errorlog "blockBootstrapQARDLECM: B must be a positive integer";
+        end;
+    endif;
+
+    if rows(blk_len) * cols(blk_len) /= 1 or blk_len < 0 or round(blk_len) /= blk_len;
+        errorlog "blockBootstrapQARDLECM: blk_len must be a non-negative integer";
+        end;
+    endif;
+
+    if rows(alpha) * cols(alpha) /= 1 or alpha <= 0 or alpha >= 1;
+        errorlog "blockBootstrapQARDLECM: alpha must be a scalar in (0, 1)";
+        end;
+    endif;
+
     T  = rows(data);
     ss = rows(tau);
 
@@ -1886,6 +1933,90 @@ proc (2) = blockBootstrapQARDLECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, B =
 endp;
 
 /*
+** Internal validation helpers for public QARDL APIs.
+*/
+proc (0) = _qardlValidateEstimatorInputs(data, ppp, qqq, tau, caller);
+    local nn, k0, max_lag, n_eff, n_param;
+
+    if rows(data) < 1 or cols(data) < 2;
+        errorlog caller $+ ": data must have at least one dependent variable and one regressor column";
+        end;
+    endif;
+
+    if ismiss(data);
+        errorlog caller $+ ": data contains missing values; clean or align the sample before estimation";
+        end;
+    endif;
+
+    call _qardlValidateLagScalar(ppp, caller $+ ": p");
+    call _qardlValidateLagScalar(qqq, caller $+ ": q");
+    call _qardlValidateTau(tau, caller);
+
+    nn      = rows(data);
+    k0      = cols(data) - 1;
+    max_lag = maxc(ppp|qqq);
+    n_eff   = nn - max_lag;
+    n_param = 1 + qqq*k0 + k0 + ppp;
+
+    if n_eff <= n_param;
+        errorlog caller $+ ": not enough observations for the requested lag orders";
+        end;
+    endif;
+endp;
+
+proc (0) = _qardlValidateSearchInputs(data, pend, qend, tau, caller);
+    if rows(data) < 1 or cols(data) < 2;
+        errorlog caller $+ ": data must have at least one dependent variable and one regressor column";
+        end;
+    endif;
+
+    if ismiss(data);
+        errorlog caller $+ ": data contains missing values; clean or align the sample before estimation";
+        end;
+    endif;
+
+    call _qardlValidateLagScalar(pend, caller $+ ": pend");
+    call _qardlValidateLagScalar(qend, caller $+ ": qend");
+    call _qardlValidateTau(tau, caller);
+
+    call _qardlValidateEstimatorInputs(data, pend, qend, tau, caller);
+endp;
+
+proc (0) = _qardlValidateLagScalar(lag, label);
+    if rows(lag) * cols(lag) /= 1 or lag < 1 or round(lag) /= lag;
+        errorlog label $+ " must be a positive integer";
+        end;
+    endif;
+endp;
+
+proc (0) = _qardlValidateTau(tau, caller);
+    local tau_sorted;
+
+    if rows(tau) < 1 or cols(tau) /= 1;
+        errorlog caller $+ ": tau must be a non-empty column vector";
+        end;
+    endif;
+
+    if ismiss(tau);
+        errorlog caller $+ ": tau contains missing values";
+        end;
+    endif;
+
+    if minc(tau) <= 0 or maxc(tau) >= 1;
+        errorlog caller $+ ": tau values must lie strictly between 0 and 1";
+        end;
+    endif;
+
+    if rows(tau) > 1;
+        tau_sorted = sortc(tau, 1);
+        if minc(tau_sorted[2:rows(tau_sorted)] - tau_sorted[1:rows(tau_sorted)-1]) == 0;
+            errorlog caller $+ ": tau values must be unique";
+            end;
+        endif;
+    endif;
+endp;
+
+/*
 **> qardlFull
 **
 **  Purpose:    Integrated QARDL workflow: lag selection, ARDL bounds test,
@@ -1894,13 +2025,15 @@ endp;
 **
 **  Format:     qfOut = qardlFull(data, pend, qend);
 **              qfOut = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 },
-**                                formula = "");
+**                                formula = "", verbose = 1);
 **
 **  Input:      data    (T x (1+k)) matrix (or dataframe with formula).
 **              pend    scalar, maximum AR lag to search.
 **              qend    scalar, maximum DL lag to search.
 **              tau     (ss x 1) quantile vector.
 **              formula string, Wilkinson formula for column selection.
+**
+**              verbose scalar, 1 = print summaries, 0 = compute silently.
 **
 **  Output:     qfOut   struct qardlFullOut:
 **                  .pst        Selected AR lag order (BIC).
@@ -1912,37 +2045,61 @@ endp;
 **
 **  Developed:  April 2026
 */
-proc (struct qardlFullOut) = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 }, formula = "");
+proc (struct qardlFullOut) = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 }, formula = "", verbose = 1);
     local pst, qst, fstat, cv;
 
     struct qardlFullOut qfOut;
     struct qardlOut qa;
     struct qardlECMOut ecm;
 
+    if rows(verbose) * cols(verbose) /= 1 or (verbose /= 0 and verbose /= 1);
+        errorlog "qardlFull: verbose must be 0 or 1";
+        end;
+    endif;
+
     data = _applyFormula(data, formula);
+    call _qardlValidateSearchInputs(data, pend, qend, tau, "qardlFull");
 
     // Step 1: BIC lag order selection
-    print "qardlFull: selecting lag orders (BIC) ...";
+    if verbose;
+        print "qardlFull: selecting lag orders (BIC) ...";
+    endif;
     { pst, qst } = pqorder(data, pend, qend);
-    sprintf("  BIC-selected: p = %d, q = %d", pst, qst);
+    if verbose;
+        sprintf("  BIC-selected: p = %d, q = %d", pst, qst);
+    endif;
 
     // Step 2: ARDL bounds test
-    print "qardlFull: running ARDL bounds test ...";
+    if verbose;
+        print "qardlFull: running ARDL bounds test ...";
+    endif;
     { fstat, cv } = ardlbounds(data, pst, qst);
-    ardlbounds_print(fstat, cv, cols(data) - 1);
+    if verbose;
+        ardlbounds_print(fstat, cv, cols(data) - 1);
+    endif;
 
     // Step 3: QARDL levels estimation
-    print "qardlFull: estimating QARDL (levels form) ...";
+    if verbose;
+        print "qardlFull: estimating QARDL (levels form) ...";
+    endif;
     qa = qardl(data, pst, qst, tau);
-    printQARDL(qa, tau);
+    if verbose;
+        printQARDL(qa, tau);
+    endif;
 
     // Step 4: QARDL-ECM two-step estimation
-    print "qardlFull: estimating QARDL-ECM (two-step) ...";
+    if verbose;
+        print "qardlFull: estimating QARDL-ECM (two-step) ...";
+    endif;
     ecm = qardlECM(data, pst, qst, tau);
-    printQARDLECM(ecm, tau);
+    if verbose;
+        printQARDLECM(ecm, tau);
+    endif;
 
     qfOut.pst        = pst;
     qfOut.qst        = qst;
+    qfOut.tau        = tau;
+    qfOut.nobs       = rows(data);
     qfOut.ardl_fstat = fstat;
     qfOut.ardl_cv    = cv;
     qfOut.qa         = qa;

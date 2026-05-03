@@ -1,4 +1,16 @@
 struct qardlOut {
+    // Quantile vector used in estimation
+    matrix tau;
+
+    // Lag orders used in estimation
+    scalar p;
+    scalar q;
+
+    // Effective estimation sample size after lag alignment
+    scalar nobs;
+
+    // Number of regressors
+    scalar k;
 
     // Long-run parameter
     matrix bigbt;
@@ -32,6 +44,18 @@ struct qardlOut {
 };
 
 struct qardlECMOut {
+    // Quantile vector used in estimation
+    matrix tau;
+
+    // Lag orders used in estimation
+    scalar p;
+    scalar q;
+
+    // Effective ECM sample size after lag alignment
+    scalar nobs;
+
+    // Number of regressors
+    scalar k;
 
     // OLS long-run coefficients used to construct the error correction term (k x 1)
     matrix beta_lr;
@@ -137,6 +161,12 @@ struct qardlFullOut {
     // Lag orders selected by BIC
     scalar pst;
     scalar qst;
+
+    // Quantile vector used in estimation
+    matrix tau;
+
+    // Number of observations in the input sample
+    scalar nobs;
 
     // ARDL bounds test (Pesaran, Shin & Smith 2001)
     scalar ardl_fstat;

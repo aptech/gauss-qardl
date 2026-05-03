@@ -6,7 +6,7 @@ Context file for Claude Code sessions working on this repository.
 
 Implements the **Quantile Autoregressive Distributed Lag (QARDL)** model from Cho, Kim & Shin (2015), which extends ARDL cointegration to allow long-run and short-run parameters to vary across quantiles of the conditional distribution of `y_t`. Use cases: testing for asymmetric cointegration, studying heterogeneous adjustment speeds.
 
-The library is a **GAUSS application package** (version 2.1.0). It loads via `library qardl;` and depends only on GAUSS's built-in `quantileFit` (no external library required).
+The library is a **GAUSS application package** (version 3.0.0). It loads via `library qardl;` and depends only on GAUSS's built-in `quantileFit` (no external library required).
 
 ## Repository layout
 
@@ -40,8 +40,11 @@ tests/
   smoke_public_api.e # GAUSS 26 source-tree smoke test for public procedures
   smoke_workflow_api.e # GAUSS 26 source-tree smoke test for qardlFull/formula workflow
   package_public_api.e # Installed-package release gate using `library qardl`
-package.json         # GAUSS package manifest (name: qardl, version: 2.1.0)
+  verify_package_manifest.ps1 # package.json/src consistency check
+package.json         # GAUSS package manifest (name: qardl, version: 3.0.0)
 GOLD_STANDARD_TODO.md # Release-readiness inventory and improvement backlog
+CHANGELOG.md         # Release notes
+RELEASE_CHECKLIST.md # Release validation steps
 ```
 
 ## The QARDL model
@@ -70,6 +73,11 @@ where `EC_{t-1} = y_{t-1} − β_OLS'·x_{t-1}` uses OLS β from Step 1.
 
 | Field | Dimensions | Description |
 |-------|-----------|-------------|
+| `tau` | `s x 1` | Quantile vector used in estimation |
+| `p` | scalar | AR lag order used in estimation |
+| `q` | scalar | Distributed-lag order used in estimation |
+| `nobs` | scalar | Effective estimation sample size after lag alignment |
+| `k` | scalar | Number of regressors |
 | `bigbt` | `(k·s) x 1` | Long-run β, stacked: all k vars at τ_1, then τ_2, ... |
 | `bigbt_cov` | `(k·s) x (k·s)` | Asymptotic covariance of bigbt |
 | `phi` | `(p·s) x 1` | Short-run φ lags, stacked by quantile |
@@ -84,6 +92,11 @@ where `EC_{t-1} = y_{t-1} − β_OLS'·x_{t-1}` uses OLS β from Step 1.
 
 | Field | Dimensions | Description |
 |-------|-----------|-------------|
+| `tau` | `s x 1` | Quantile vector used in estimation |
+| `p` | scalar | AR lag order used in estimation |
+| `q` | scalar | Distributed-lag order used in estimation |
+| `nobs` | scalar | Effective ECM sample size after lag alignment |
+| `k` | scalar | Number of regressors |
 | `beta_lr` | `k x 1` | OLS long-run coefficients (used for EC term) |
 | `rho_ols` | `1 x 1` | OLS speed of adjustment |
 | `alpha` | `s x 1` | ECM intercept at each quantile |
@@ -170,7 +183,7 @@ Named args are only added to **trailing** parameters to preserve positional comp
 |------|---------------|
 | `qardl` | `tau = { 0.25, 0.5, 0.75 }` |
 | `qardlECM` | `tau = { 0.25, 0.5, 0.75 }` |
-| `qardlFull` | `tau = { 0.25, 0.5, 0.75 }`, `formula = ""` |
+| `qardlFull` | `tau = { 0.25, 0.5, 0.75 }`, `formula = ""`, `verbose = 1` |
 | `rollingQardlECM` | `tau = { 0.25, 0.5, 0.75 }` |
 | `plotQARDL` | `tau = { 0.25, 0.5, 0.75 }` |
 | `plotQARDLbands` | `tau = { 0.25, 0.5, 0.75 }` |
@@ -234,7 +247,7 @@ Long-run β uses rows `2+qqq*k0 : 1+(qqq+1)*k0` divided by `(1 − sumc(φ rows)
 
 ## Package manifest
 
-`package.json` lists all src files loaded by `library qardl`. Current version: **2.1.0**. All `.src` files in `src/` are registered, including `wtestconst.src` and `qirf.src`. If you add a new `.src` file, add it to the `"src"` array and bump the patch version.
+`package.json` lists all src files loaded by `library qardl`. Current version: **3.0.0**. All `.src` files in `src/` are registered, including `wtestconst.src` and `qirf.src`. If you add a new `.src` file, add it to the `"src"` array and bump the patch version.
 
 ## Source testing
 

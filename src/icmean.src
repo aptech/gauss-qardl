@@ -1,5 +1,7 @@
 proc icmean(data, ppp, qqq);
     local yy, xx, ee, nn, eei, xxi, yyi, ii, jj, X, onex, Y, bt, uu, rh, bic;
+
+    call _qardlValidateEstimatorInputs(data, ppp, qqq, { 0.5 }, "icmean");
     
     nn = rows(data);
     yy = data[., 1];
@@ -48,6 +50,8 @@ endp;
 proc (2) = pqorder(data, pend = 8, qend = 8);
 
     local icb, jj1, jj2, lst, pst, qst;
+
+    call _qardlValidateSearchInputs(data, pend, qend, { 0.5 }, "pqorder");
 
     /* bic computation */
     icb = zeros(pend*qend,1);

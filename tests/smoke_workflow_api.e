@@ -5,6 +5,7 @@ new;
 ** include local source files instead of loading `library qardl`.
 */
 
+#include ../src/qardl.sdf
 #include ../src/qardl.src
 #include ../src/wtestlrb.src
 #include ../src/wtestsrp.src
@@ -46,9 +47,10 @@ data = loadd(__FILE_DIR $+ "../examples/qardl_data.dat");
 data = data[1:350, 1:3];
 
 struct qardlFullOut qfOut;
-qfOut = qardlFull(data, 2, 2, tau);
+qfOut = qardlFull(data, 2, 2, tau, "", 0);
 
 call assert_true(qfOut.pst >= 1 and qfOut.qst >= 1, "qardlFull returned invalid lag orders");
+call assert_true(rows(qfOut.tau) == rows(tau) and qfOut.nobs == rows(data), "qardlFull metadata invalid");
 call assert_true(qfOut.ardl_fstat > 0, "qardlFull ARDL F-statistic should be positive");
 call assert_true(rows(qfOut.ardl_cv) == 3 and cols(qfOut.ardl_cv) == 2, "qardlFull critical values shape changed");
 call assert_true(rows(qfOut.qa.bigbt) == 2*rows(tau), "qardlFull levels beta shape changed");

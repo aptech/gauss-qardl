@@ -17,8 +17,6 @@
     "name": "qardl",
     "repo": "https://github.com/aptech/gauss-qardl",
     "src": [
-        "ardlbounds.src",
-        "icmean.src",
         "qardl.sdf",
         "qardl.src",
         "wtestlrb.src",
@@ -28,7 +26,8 @@
         "p_values_qardl.src",
         "wtestsym.src",
         "wtestconst.src",
+        "ardlbounds.src",
         "qirf.src"
     ],
-    "version": "2.1.0"
+    "version": "3.0.0"
 }
