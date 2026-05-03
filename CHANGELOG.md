@@ -4,8 +4,10 @@
 
 ### Added
 - GAUSS 26 source smoke tests for public APIs and workflow APIs.
+- GAUSS 26 source smoke tests for CSV export helpers.
 - Installed-package release gate for `library qardl`.
 - Package manifest verifier for `package.json`/`src` consistency.
+- One-command source and example smoke-test runners.
 - `qardlFull(..., verbose = 1)` option; pass `0` to compute silently.
 - Metadata fields on `qardlOut`, `qardlECMOut`, and `qardlFullOut`.
 - `GOLD_STANDARD_TODO.md` release-readiness inventory and improvement backlog.
@@ -18,6 +20,7 @@
 - Formula lookup in `applyQARDLFormula`.
 - GAUSS-compatible number formatting in `ardlbounds_print`.
 - Package manifest ordering and duplicate source entries.
+- CSV writer console noise and export failure handling.
 
 ### Changed
 - Minimum supported GAUSS version is GAUSS 26.

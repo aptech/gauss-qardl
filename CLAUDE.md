@@ -39,8 +39,11 @@ examples/
 tests/
   smoke_public_api.e # GAUSS 26 source-tree smoke test for public procedures
   smoke_workflow_api.e # GAUSS 26 source-tree smoke test for qardlFull/formula workflow
+  smoke_export_api.e # GAUSS 26 source-tree smoke test for CSV export helpers
   package_public_api.e # Installed-package release gate using `library qardl`
   verify_package_manifest.ps1 # package.json/src consistency check
+  run_source_tests.ps1 # manifest + source GAUSS smoke tests
+  run_examples_smoke.ps1 # modern examples smoke runner
 package.json         # GAUSS package manifest (name: qardl, version: 3.0.0)
 GOLD_STANDARD_TODO.md # Release-readiness inventory and improvement backlog
 CHANGELOG.md         # Release notes
@@ -258,6 +261,7 @@ test_dir = "path/to/gauss-qardl/tests";
 chdir ^test_dir;
 run smoke_public_api.e;
 run smoke_workflow_api.e;
+run smoke_export_api.e;
 ```
 
 The test includes local `src/` files directly rather than relying on `library qardl`, so it catches source regressions even when the installed package catalog is stale. After rebuilding/installing a package, separately verify that `library qardl;` exposes the same public procedures.

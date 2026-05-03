@@ -3,17 +3,16 @@
 Use this checklist before publishing a GAUSS QARDL release.
 
 1. Confirm `package.json` version matches the intended release artifact.
-2. Verify the package manifest:
+2. Run the source-tree release gate:
 
    ```powershell
-   powershell -ExecutionPolicy Bypass -File tests\verify_package_manifest.ps1
+   powershell -ExecutionPolicy Bypass -File tests\run_source_tests.ps1
    ```
 
-3. Run source-tree GAUSS tests:
+3. Run the modern example smoke suite:
 
    ```powershell
-   & 'C:\gauss26\tgauss.exe' -nb -b -x -e 'd="C:\\path\\to\\gauss-qardl\\tests"; chdir ^d; run smoke_public_api.e;'
-   & 'C:\gauss26\tgauss.exe' -nb -b -x -e 'd="C:\\path\\to\\gauss-qardl\\tests"; chdir ^d; run smoke_workflow_api.e;'
+   powershell -ExecutionPolicy Bypass -File tests\run_examples_smoke.ps1
    ```
 
 4. Build/reinstall the GAUSS application package.

@@ -1448,8 +1448,15 @@ proc (0) = saveQARDLECMResults(struct qardlECMOut qECMOut, tau = { 0.25, 0.5, 0.
     local se_alpha, se_rho, z_alpha, z_rho, pv_alpha, pv_rho;
     local out_lr, out_qr;
 
+    call _qardlValidateTau(tau, "saveQARDLECMResults");
+
     ss = rows(tau);
     k  = rows(qECMOut.beta_lr);
+
+    if rows(qECMOut.alpha) /= ss or rows(qECMOut.rho) /= ss;
+        errorlog "saveQARDLECMResults: tau length does not match qECMOut";
+        end;
+    endif;
 
     // Ensure outdir ends with separator
     if strsect(outdir, strlen(outdir), 1) $/= "/";
@@ -1512,6 +1519,8 @@ proc (0) = saveQARDLResults(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 }, ou
     local jj, ii, row;
     local fpath, sep;
 
+    call _qardlValidateTau(tau, "saveQARDLResults");
+
     ss = rows(tau);
 
     _beta  = qaOut.bigbt;
@@ -1520,6 +1529,11 @@ proc (0) = saveQARDLResults(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 }, ou
 
     k = rows(_beta) / ss;
     p = rows(_phi)  / ss;
+
+    if round(k) /= k or round(p) /= p;
+        errorlog "saveQARDLResults: tau length does not match qaOut";
+        end;
+    endif;
 
     // Reshape to (ss x param)
     _beta  = reshape(_beta,  ss, k);
@@ -1623,17 +1637,17 @@ endp;
 
 // Helper: write numeric matrix with header line to a CSV file
 proc (0) = _saveCSV(mat, header, fpath);
-    local fid, nr, nc, jj, ii, csv_row;
+    local fid, nr, nc, jj, ii, csv_row, ret;
 
     fid = fopen(fpath, "w");
 
     if fid == -1;
-        print "saveQARDLResults: ERROR - could not open " $+ fpath;
-        retp;
+        errorlog "saveQARDLResults: could not open " $+ fpath;
+        end;
     endif;
 
     // Write header
-    fputs(fid, header $+ "\n");
+    ret = fputs(fid, header $+ "\n");
 
     // Write data rows
     nr = rows(mat);
@@ -1649,11 +1663,11 @@ proc (0) = _saveCSV(mat, header, fpath);
             csv_row = csv_row $+ ftos(mat[jj, ii], "%g", 1, 0);
             ii = ii + 1;
         endo;
-        fputs(fid, csv_row $+ "\n");
+        ret = fputs(fid, csv_row $+ "\n");
         jj = jj + 1;
     endo;
 
-    fid = close(fid);
+    ret = close(fid);
 endp;
 
 /*

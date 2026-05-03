@@ -583,19 +583,19 @@ From the GAUSS command line or terminal, run from the `tests` directory:
 ```gauss
 run smoke_public_api.e;
 run smoke_workflow_api.e;
+run smoke_export_api.e;
 ```
 
 From Windows PowerShell, one equivalent batch command is:
 
 ```powershell
-& 'C:\gauss26\tgauss.exe' -nb -b -x -e 'd="C:\\path\\to\\gauss-qardl\\tests"; chdir ^d; run smoke_public_api.e;'
-& 'C:\gauss26\tgauss.exe' -nb -b -x -e 'd="C:\\path\\to\\gauss-qardl\\tests"; chdir ^d; run smoke_workflow_api.e;'
+powershell -ExecutionPolicy Bypass -File tests\run_source_tests.ps1
 ```
 
-Package manifest consistency can be checked with:
+The modern examples can be smoke-tested with:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tests\verify_package_manifest.ps1
+powershell -ExecutionPolicy Bypass -File tests\run_examples_smoke.ps1
 ```
 
 Before publishing a release, reinstall the package and verify that `library qardl;` exposes every procedure listed in `package.json`, especially newer files such as `wtestconst.src` and `qirf.src`.

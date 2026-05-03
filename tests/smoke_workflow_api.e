@@ -31,13 +31,20 @@ tau = { 0.25, 0.5, 0.75 };
 ** the requested y, x ordering for downstream matrix-based procedures.
 */
 shiller = loadd(__FILE_DIR $+ "../examples/shiller_stocks_qt.csv",
-                "date($date) + real_dividend + real_earnings");
+                "date($date) + real_price + real_dividend + real_earnings");
 formula_data = applyQARDLFormula(shiller, "real_dividend ~ real_earnings");
 call assert_true(cols(formula_data) == 2, "applyQARDLFormula did not select two columns");
 call assert_true(maxc(abs(formula_data[., 1] - shiller[., "real_dividend"])) < 1e-12,
                  "applyQARDLFormula did not place y in column 1");
 call assert_true(maxc(abs(formula_data[., 2] - shiller[., "real_earnings"])) < 1e-12,
                  "applyQARDLFormula did not place x in column 2");
+
+formula_data = applyQARDLFormula(shiller, " REAL_DIVIDEND ~ real_earnings + REAL_PRICE ");
+call assert_true(cols(formula_data) == 3, "applyQARDLFormula did not handle multiple RHS variables");
+call assert_true(maxc(abs(formula_data[., 2] - shiller[., "real_earnings"])) < 1e-12,
+                 "applyQARDLFormula did not preserve first RHS variable");
+call assert_true(maxc(abs(formula_data[., 3] - shiller[., "real_price"])) < 1e-12,
+                 "applyQARDLFormula did not preserve second RHS variable");
 
 /*
 ** Integrated workflow: keep the search small for a fast release gate, but
