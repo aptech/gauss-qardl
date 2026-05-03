@@ -30,12 +30,12 @@ src/
   ardlbounds.src     # ardlbounds(), ardlbounds_print() — PSS (2001) bounds F-test
   qirf.src           # qirf(), plotQIRF() — quantile impulse response functions
 examples/
-  demo.e             # Main worked example
-  qardlestimation.e  # Monte Carlo simulation of QARDL estimation
-  qardl_est_tests.e  # Estimation with Wald tests
+  demo.e             # Modern end-to-end workflow example
+  qardlestimation.e  # Simulated-data workflow with modern API helpers
+  qardl_est_tests.e  # Modern estimation/inference with automatic and custom Wald tests
   wald_tests_sim.e   # Wald test size simulation
-  rolling_qardl.e    # Rolling QARDL example
-  sp500.e            # S&P 500 application
+  rolling_qardl.e    # Rolling QARDL/ECM with modern plot helpers
+  sp500.e            # S&P 500 application with formula support
 tests/
   smoke_public_api.e # GAUSS 26 source-tree smoke test for public procedures
   smoke_workflow_api.e # GAUSS 26 source-tree smoke test for qardlFull/formula workflow

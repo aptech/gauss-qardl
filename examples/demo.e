@@ -2,224 +2,77 @@ new;
 library qardl;
 cls;
 
-// Maximum value of p orders
-pend = 7; 
+/*
+** Modern QARDL workflow example.
+**
+** This example uses the higher-level API added in the GAUSS 26 version of the
+** library: qardlFull(), output metadata, formatted print helpers, automatic
+** Wald tests, QIRF, and bootstrap confidence intervals.
+*/
 
-// Maximum value of q orders
-qend = 7;                   
-
-// Quantile levels
-tau = { 0.25, 0.5, 0.75 }; 
-
-// Load data
 data = loadd(__FILE_DIR $+ "qardl_data.dat");
+data = data[., 1:3];
 
-/*
-** This is for demonstration. This step needs 
-** to be done to:
-** 1) Make sure the data is the correct order, with
-**    the dependent variable first.
-** 2) Extract the subsets of independent variables
-*/
+// qardlFull does lag selection, ARDL bounds testing, QARDL levels estimation,
+// and QARDL-ECM estimation in one call.
+tau = { 0.25, 0.5, 0.75 };
+qfOut = qardlFull(data, 7, 7, tau);
 
-// Specify dependent variable here
-yyy = data[., 1];
+print;
+print "Selected model metadata";
+print "-----------------------";
+print "p     = " qfOut.qa.p;
+print "q     = " qfOut.qa.q;
+print "k     = " qfOut.qa.k;
+print "nobs  = " qfOut.qa.nobs;
+print "tau   = ";
+print qfOut.qa.tau;
 
-// Specify independent variables here
-xxx = data[., 2:3];  
+// Individual parameter p-values are available without manually computing
+// standard errors.
+{ p_beta, p_phi, p_gamma } = qardl_pval(qfOut.qa);
 
-// Data used in qardl should have
-// dependent variable in first column
-// independent variable in remaining k 
-// cols
-data_test = yyy~xxx;                         
+print;
+print "First few long-run beta p-values";
+print p_beta[1:minc(6|rows(p_beta))];
 
-// The pqorder procedure estimates the
-// optimal order to be used in the 
-// the qardl procedure
-// pst = lags for dependent var
-// qst = lags for independent vars
-{ pst, qst } = pqorder(data_test, pend, qend);   
+// Automatic cross-quantile tests are usually easier than hand-building
+// restriction matrices.
+{ wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi } =
+    wtestconst(qfOut.qa, tau, data);
 
-/*
-** Parameter estimations
-*/
+print;
+print "Constancy tests across quantiles: statistic | p-value";
+print "beta  " wt_beta~pv_beta;
+print "gamma " wt_gamma~pv_gamma;
+print "phi   " wt_phi~pv_phi;
 
-/*
-** The output structure qardlOut
-** contains the following members:
-**
-** q_out.bigbt          Matrix, long-run parameter.
-** q_out.bigbt_cov      Matrix, covariance of the long-run parameter.
-** q_out.phi            Matrix, short-run parameter for the autoregressive 
-**                      terms of the dependent variable.
-** q_out.phi_cov        Matrix, covariance of the short-run parameter for 
-**                      the autoregressive terms of the dependent variable.
-** q_out.gamma          Matrix, short-run parameter for the distributed lag 
-**                      terms of the independent variables.
-** q_out.gamma_cov      Matrix, covariance of the short-run parameter for 
-**                      the distributed lag terms of the independent variables.
-*/
+{ wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi } =
+    wtestsym(qfOut.qa, tau, data);
 
-// Declare output structure
-struct qardlOut qaOut;
+print;
+print "Symmetry tests across quantiles: statistic | p-value";
+print "beta  " wt_beta~pv_beta;
+print "gamma " wt_gamma~pv_gamma;
+print "phi   " wt_phi~pv_phi;
 
-// Call QARDL procedure
-qaOut = qardl(data_test, pst, qst, tau); 
+// Quantile impulse response functions use the full coefficient matrix stored
+// in qfOut.qa.bt.
+qirfOut = qirf(qfOut.qa, qfOut.qa.p, qfOut.qa.q, 12, tau, 1, 1);
 
-/*
-** The hypotheses tests must be
-** constructed before calling the 
-** Wald tests procedures.
-**
-**   The Wald statistics test the following hypotheses:
-**
-**                 i)    Wald test (beta) : ca1 * beta  = sm1;
-**                ii)    Wald test (phi)  : ca2 * phi   = sm2;
-**               iii)    Wald test (gamma): ca3 * gamma = sm3.
-*/
+print;
+print "Permanent-shock QIRF for regressor 1";
+print qirfOut.irf;
 
-/* Construct test matrices for beta
-** Note that parameters are stored in order by tau. 
-** This implies that the columns in ca1 correspond to the following parameters:
-**
-**  Beta_1(0.25)  Beta_2(0.25)  Beta_1(0.5)  Beta_2(0.5)  Beta_1(0.75)  Beta_2(0.75)
-**
-** We set
-**   
-** ca1 = { 1  0 -1  0  0  0,
-**         0  0  1  0 -1  0 }
-** and
-**
-** sm1 = { 0,
-**         0 }
-**
-** To test the hypothesis that
-**  Beta_1(tau = 0.25) - Beta_1(tau = 0.5)  = 0
-**  Beta_1(tau = 0.5)  - Beta_1(tau = 0.75) = 0
-*/
-            
-ca1 = { 1 0 -1 0 0 0,
-        0 0 1 0 -1 0 };
+// Small bootstrap example. Use a larger B, e.g. 999, in applied work.
+{ ci_beta, ci_gamma, ci_phi } =
+    blockBootstrapQARDL(data[1:350, .], qfOut.qa.p, qfOut.qa.q, tau, 25, 10, 0.05);
 
-sm1 = {0,
-       0};
+print;
+print "Bootstrap beta confidence intervals from first 350 observations";
+print ci_beta;
 
-/*  Construct test matrices for phi 
-** ( the autoregressive term for the dependent variable)
-**  Note that parameters are stored in order by tau, then lag.
-**  Our optimal lags for the dependent variable, qst, is equal to 2.
-** 
-**  This implies that the columns in ca2 correspond to the following parameters:
-**
-**   phi_{t-1}(0.25)  phi_{t-2}(0.25)  phi_{t-1}(0.5)  phi_{t-2}(0.5)  phi_{t-1}(0.75)  phi_{t-2}(0.75)
-**
-** We set
-**
-** ca2 = { 1  0 -1  0  0  0,
-**         0  0  1  0 -1  0 }
-** and
-**
-** sm2 = { 0,
-**         0 }
-**
-** To test the hypothesis that
-**  phi_{t-1}(tau = 0.25) - phi_{t-1}(tau = 0.50) = 0
-**  phi_{t-1}(tau = 0.50) - phi_{t-1}(tau = 0.75) = 0
-** 
-*/
-ca2 = { 1 0 -1 0 0 0,
-        0 0 1 0 -1 0 };
-        
-sm2 = {0,
-       0};
-
-/*  Construct test matrices for gamma
-** ( the autoregressive term for the independent variables)
-**  
-**  Note that parameters are stored in order by tau and that they represent the cumulative
-**  short-run impact of the independent variables. This means there is one parameter for each
-**  independent variable at each level of tau.
-**
-**  Our optimal lags for the dependent variable, qst, is equal to 2.
-** 
-**  This implies that the columns in ca3 correspond to the following parameters:
-**
-**   gamma_1(0.25)  gamma_2(0.25)  gamma_1(0.5)  gamma_2(0.5)  gamma_1(0.75)  gamma_2(0.75)
-**
-** We set
-**
-** ca3 = { 1  0 -1  0  0  0,
-**         0  0  1  0 -1  0 }
-** and
-**
-** sm3= { 0,
-**        0 }
-**
-** To test the hypothesis that
-**  gamma_1(tau = 0.25) - gamma_1(tau = 0.50) = 0
-**  gamma_1(tau = 0.50) - gamma_1(tau = 0.75) = 0
-** 
-*/
-ca3 = { 1 0 -1 0 0 0,
-        0 0 1 0 -1 0 };
-        
-sm3 = {0,
-       0};
-
-// Long-run parameter (beta) testing 
-{ wtlrb1, pvlrb1 } = wtestlrb(qaOut.bigbt, qaOut.bigbt_cov, ca1, sm1, data_test);
-
-// Short-run parameter (phi) testing 
-{ wtsrp1, pvsrp1 } = wtestsrp(qaOut.phi, qaOut.phi_cov, ca2, sm2, data_test);
-
-// Short-run parameter (gamma) testing 
-{ wtsrg1, pvsrg1 } = wtestsrg(qaOut.gamma, qaOut.gamma_cov, ca3, sm3, data_test);
-    
-print "=========================================================";    
-print "Estimated p order ";
-print "=========================================================";    
-print pst;
-print "=========================================================";    
-print "Estimated q order ";
-print "=========================================================";    
-print qst;
-print "=========================================================";    
-print "Long-run parameter estimate (Beta)";
-print "=========================================================";    
-print qaOut.bigbt;
-print "=========================================================";    
-print "Covariance matrix estimate of long-run parameter (Beta)";
-print "=========================================================";    
-print qaOut.bigbt_cov;
-print "=========================================================";    
-print "Short-run parameter estimate (Phi)";
-print "=========================================================";    
-print qaOut.phi;
-print "=========================================================";    
-print "Covariance matrix estimate of short-run parameter (Phi)";
-print "=========================================================";    
-print qaOut.phi_cov;
-print "=========================================================";    
-print "Short-run parameter estimate (Gamma)";
-print "=========================================================";    
-print qaOut.gamma;
-print "=========================================================";    
-print "Covariance matrix estimate of short-run parameter (Gamma)";
-print "=========================================================";    
-print qaOut.gamma_cov;
-print "=========================================================";    
-print " Wald test (Beta) and its p-value";
-print "=========================================================";    
-print wtlrb1~pvlrb1;
-print "=========================================================";    
-print " Wald test (Phi) and its p-value";
-print "=========================================================";    
-print wtsrp1~pvsrp1;
-print "=========================================================";    
-print " Wald test (Gamma) and its p-value";
-print "=========================================================";    
-print wtsrg1~pvsrg1;
-print "=========================================================";    
-
-plotQARDl(qaOut, tau);
+// Plot helpers remain separate from estimation, so batch workflows can skip
+// them and interactive workflows can opt in.
+plotQARDLbands(qfOut.qa, tau);
+plotQIRF(qirfOut);

@@ -2,116 +2,76 @@ new;
 library qardl;
 cls;
 
-// Number of iterations
-nnn = 5000;    
-kkk = 2000;
-
-// Quantile levels
-tau = { 0.25, 0.5, 0.7 }; 
+/*
+** Simulated-data QARDL estimation with the modern API.
+**
+** This keeps the original DGP idea, but uses the newer workflow objects,
+** metadata fields, print helpers, QIRF, and bootstrap helpers.
+*/
 
 // DGP parameters
+nnn = 3000;
 alp = 1;
 phi = 0.25;
-rho = 0.5;
-the0= 2;
-the1= 3;
-gam = the0+the1;
-bes = gam/(1-phi);
+the0 = 2;
+the1 = 3;
+true_beta = (the0 + the1) / (1 - phi);
 
-// Restriction matrices
-ca1 = zeros(2, 6);
-ca1[1, 1] = 1; 
-ca1[2, 2] = 1;
-sm1 = zeros(2, 1);
-sm1[1, 1] = 6+2/3;
-sm1[2, 1] = 6+2/3;
+// Generate two integrated regressors and a dependent variable.
+eee1 = rndn(nnn+1, 1);
+eee2 = rndn(nnn, 1);
+xxx = cumsumc(eee1[1:nnn])~cumsumc(eee2);
+uuu = rndn(nnn, 1);
+yyy = zeros(nnn, 1);
 
-ca2 = zeros(1, 3);
-ca2[1, 1] = 1; 
-ca2[1, 2] = -1; 
-sm2 = 0.0;
-
-ca3 = zeros(1,6);
-ca3[1, 1] = 1; 
-ca3[1, 3] = -1;
-sm3 = zeros(1, 1);
-
-// Storage matrix
-www = zeros(kkk, 14);
-iii = 1;
-do until iii > kkk;
-
-    // DGP
-    eee1 = rndn(nnn+1, 1);
-    eee  = rho*eee1[1:nnn] + (1-rho^2)* eee1[2:(nnn+1)];
-    eee2 = rndn(nnn, 1);
-    eee3 = rndn(nnn, 1);
-    xxx  = cumsumc(eee)~cumsumc(eee2);
-    uuu  = rndn(nnn, 1);
-    yyy  = zeros(nnn, 1);
-     
-    jjj  = 2;
-    do until jjj > nnn;
-        yyy[jjj] = alp + phi*yyy[jjj-1] + the0*xxx[jjj, 1] + the1*xxx[jjj-1, 1] 
-                       + the0*xxx[jjj, 2] + the1*xxx[jjj-1, 2] + uuu[jjj-1];
-        jjj = jjj + 1;
-    endo;
-
-    data = yyy~xxx;
-
-    // Parameter estimation
-    struct qardlOut qaOut;
-    qaOut = qardl(data, 1, 2, tau); 
-
-    // Long-run parameter (beta) testing 
-    { wtlrb1, pvlrb1 } = wtestlrb(qaOut.bigbt, qaOut.bigbt_cov, ca1, sm1, data);
-
-    // Short-run parameter (phi) testing 
-    { wtsrp1, pvsrp1 } = wtestsrp(qaOut.phi, qaOut.phi_cov, ca2, sm2, data);
-
-    // Short-run parameter (gamma) testing 
-    { wtsrg1, pvsrg1 } = wtestsrg(qaOut.gamma, qaOut.gamma_cov, ca3, sm3, data);
-
-    www[iii, 1] = pvlrb1;
-    www[iii, 2] = pvsrp1;
-    www[iii, 3] = pvsrg1;
-    www[iii, 4] = iii/kkk;
-    www[iii, 5] = rndu(1, 1);
-    www[iii, 6] = wtlrb1;
-    www[iii, 7] = wtsrp1;
-    www[iii, 8] = wtsrg1;
-    www[iii, 9] = iii/kkk;
-    www[iii, 10]= rndn(1, 1)^2;
-    www[iii, 11]= rndn(1, 1)^2 + rndn(1, 1)^2;
-
-    print /flush iii;
-
-    iii = iii + 1;
-endo;
-
-jjj = 1;
-do until jjj > 11;
-    www[., jjj] = sortc(www[., jjj],1);
+jjj = 2;
+do until jjj > nnn;
+    yyy[jjj] = alp + phi*yyy[jjj-1]
+                    + the0*xxx[jjj, 1] + the1*xxx[jjj-1, 1]
+                    + the0*xxx[jjj, 2] + the1*xxx[jjj-1, 2]
+                    + uuu[jjj];
     jjj = jjj + 1;
 endo;
 
-plotOpenWindow();
-plotXY(www[., 1]~www[., 4],www[., 4]);
+data = yyy~xxx;
+tau = { 0.25, 0.5, 0.75 };
 
-plotOpenWindow();
-plotXY(www[., 2]~www[., 4],www[., 4]);
+// Silent integrated workflow. Set the last argument to 1 for printed output.
+qfOut = qardlFull(data, 4, 4, tau, "", 0);
 
-plotOpenWindow();
-plotXY(www[., 3]~www[., 4],www[., 4]);
+print;
+print "Simulated-data QARDL";
+print "--------------------";
+print "True long-run beta: " true_beta;
+print "Selected p, q:      " qfOut.pst~qfOut.qst;
+print "Bounds F-stat:      " qfOut.ardl_fstat;
+print "Metadata p q k nobs:" qfOut.qa.p~qfOut.qa.q~qfOut.qa.k~qfOut.qa.nobs;
 
-plotOpenWindow();
-plotXY(www[., 6]~www[., 11],www[., 9]);
+printQARDL(qfOut.qa, tau);
 
-plotOpenWindow();
-plotXY(www[., 7]~www[., 10],www[., 9]);
+{ p_beta, p_phi, p_gamma } = qardl_pval(qfOut.qa);
+print;
+print "Long-run beta estimates and p-values";
+print qfOut.qa.bigbt~p_beta;
 
-plotOpenWindow();
-plotXY(www[., 8]~www[., 10],www[., 9]);
+{ wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi } =
+    wtestconst(qfOut.qa, tau, data);
 
+print;
+print "Constancy tests: statistic | p-value";
+print "beta  " wt_beta~pv_beta;
+print "gamma " wt_gamma~pv_gamma;
+print "phi   " wt_phi~pv_phi;
 
+qOut = qirf(qfOut.qa, qfOut.qa.p, qfOut.qa.q, 10, tau);
+print;
+print "Permanent-shock QIRF";
+print qOut.irf;
 
+// Small, fast bootstrap demonstration. Use a larger B in applied work.
+{ ci_rho, ci_alpha } =
+    blockBootstrapQARDLECM(data[1:500, .], qfOut.ecm.p, qfOut.ecm.q, tau, 25, 10, 0.05);
+
+print;
+print "ECM bootstrap rho intervals";
+print ci_rho;

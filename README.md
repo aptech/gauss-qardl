@@ -563,12 +563,12 @@ The `examples/` directory contains the following worked programs:
 
 | File | Description |
 |------|-------------|
-| `demo.e` | Main worked example with `qardl_data.dat` |
-| `qardlestimation.e` | Monte Carlo simulation of QARDL estimation |
-| `qardl_est_tests.e` | Estimation with Wald tests |
-| `wald_tests_sim.e` | Wald test size simulation |
-| `rolling_qardl.e` | Rolling QARDL example |
-| `sp500.e` | S&P 500 application using Shiller data |
+| `demo.e` | Modern end-to-end workflow with `qardlFull`, metadata, automatic tests, QIRF, bootstrap, and plots |
+| `qardlestimation.e` | Simulated-data workflow using `qardlFull(..., verbose = 0)`, p-values, QIRF, and ECM bootstrap |
+| `qardl_est_tests.e` | Estimation and inference with formatted print helpers, automatic tests, and custom Wald restrictions |
+| `rolling_qardl.e` | Rolling QARDL and rolling ECM using metadata and modern plot helpers |
+| `sp500.e` | S&P 500 application using dataframe formula support and the integrated workflow |
+| `wald_tests_sim.e` | Long Monte Carlo simulation for custom Wald-test distributions |
 
 More discussion of the model and results can be found in the blog post [The Quantile Autoregressive-Distributed Lag Parameter Estimation and Interpretation in GAUSS](https://www.aptech.com/blog/the-quantile-autoregressive-distributed-lag-parameter-estimation-and-interpretation-in-gauss/).
 

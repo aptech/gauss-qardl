@@ -1,37 +1,51 @@
+new;
 library qardl;
+cls;
 
-// Load demonstration data
-fname = "shiller_stocks_qt.csv";
-shiller_stocks_qt = loadd(__FILE_DIR $+ fname, "date($date) + real_dividend + real_earnings");
+/*
+** S&P 500 application using dataframe formula support.
+**
+** Formula strings let you keep the original dataframe column order and select
+** the QARDL dependent/regressor variables by name.
+*/
 
-// Plot data
+shiller = loadd(__FILE_DIR $+ "shiller_stocks_qt.csv",
+                "date($date) + real_price + real_dividend + real_earnings");
+
+// Plot the raw dividend and earnings series.
 struct plotControl myPlot;
-myplot = plotGetDefaults("XY");
-
-// Set up legend
+myPlot = plotGetDefaults("XY");
 plotSetLegend(&myPlot, "Dividend"$|"Earnings");
 plotSetLegendFont(&myPlot, "Arial", 12);
-
-// Place first x-tick mark at 1880 month 1
-// draw one every 20 years
-// Note that we pass in the first_labeled date in posix format
 plotSetXTicInterval(&myPlot, 80, dttoposix(1880));
-
-// Display only 4 digit year on x-tick labels
 plotSetXTicLabel(&myPlot, "YYYY");
-plotTSHF(myPlot, shiller_stocks_qt[., 1], "quarters", shiller_stocks_qt[., "real_dividend" "real_earnings"]);
+plotTSHF(myPlot, shiller[., "date"], "quarters",
+         shiller[., "real_dividend" "real_earnings"]);
 
-// Max lags
-pmax = 8;
-qmax = 8;
+tau = { 0.25, 0.5, 0.75 };
 
-// Quantile levels
-tau = {0.25, 0.5, 0.75};
+// Integrated workflow: formula selects [y, x] internally.
+qfOut = qardlFull(shiller, 8, 8, tau, "real_dividend ~ real_earnings", 0);
 
-// Find optimal lags
-{ pst, qst } = pqorder(shiller_stocks_qt[., "real_dividend" "real_earnings"], pmax, qmax);   
+print;
+print "S&P 500 dividend/earnings QARDL";
+print "--------------------------------";
+print "Selected p, q: " qfOut.pst~qfOut.qst;
+print "Bounds-test F-statistic: " qfOut.ardl_fstat;
 
-// Parameter estimation
-struct qardlOut qaOut;
-qaOut = qardl(shiller_stocks_qt[., "real_dividend" "real_earnings"], pst, qst, tau); 
+printQARDL(qfOut.qa, tau);
+printQARDLECM(qfOut.ecm, tau);
 
+{ wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi } =
+    wtestconst(qfOut.qa, tau,
+               applyQARDLFormula(shiller, "real_dividend ~ real_earnings"));
+
+print;
+print "Constancy tests: statistic | p-value";
+print "beta  " wt_beta~pv_beta;
+print "gamma " wt_gamma~pv_gamma;
+print "phi   " wt_phi~pv_phi;
+
+qOut = qirf(qfOut.qa, qfOut.qa.p, qfOut.qa.q, 20, tau);
+plotQARDLbands(qfOut.qa, tau);
+plotQIRF(qOut);

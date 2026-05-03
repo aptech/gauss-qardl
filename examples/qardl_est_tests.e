@@ -2,124 +2,85 @@ new;
 library qardl;
 cls;
 
-// Maximum value of p orders
-pend = 7; 
+/*
+** Estimation and inference with the modern QARDL API.
+**
+** This example keeps the manual Wald-test construction from the original
+** example, but anchors it in the newer output helpers and automatic tests.
+*/
 
-// Maximum value of q orders
-qend = 7;                   
+data = loadd(__FILE_DIR $+ "qardl_data.dat");
+data = data[., 1:3];
+tau = { 0.25, 0.5, 0.75 };
 
-// Quantile levels
-tau = { 0.25, 0.5, 0.7 }; 
+{ pst, qst } = pqorder(data, 7, 7);
+qaOut = qardl(data, pst, qst, tau);
+qECMOut = qardlECM(data, pst, qst, tau);
 
-// DGP parameters
-nnn = 10000;
-alp = 1;
-phi = 0.25;
-rho = 0.5;
-the0= 2;
-the1= 3;
-gam = the0+the1;
-bes = gam/(1-phi);
+printQARDL(qaOut, tau);
+printQARDLECM(qECMOut, tau);
 
-// Generate data
-eee1= rndn(nnn+1, 1);
-eee2 = rndn(nnn, 1);
-eee = eee1[1:nnn];
-xxx = cumsumc(eee)~cumsumc(eee2);
-uuu = rndn(nnn, 1);
-yyy = zeros(nnn, 1);
-jjj = 2;
+print;
+print "Model metadata";
+print "--------------";
+print "levels: p q k nobs = " qaOut.p~qaOut.q~qaOut.k~qaOut.nobs;
+print "ecm:    p q k nobs = " qECMOut.p~qECMOut.q~qECMOut.k~qECMOut.nobs;
 
-do until jjj > nnn;
-    yyy[jjj] = alp + phi*yyy[jjj-1] + the0*xxx[jjj, 1] + the1*xxx[jjj-1, 1] 
-                   + the0*xxx[jjj, 2] + the1*xxx[jjj-1, 2] + uuu[jjj];
-    jjj = jjj + 1;
-endo;
+/*
+** Automatic Wald tests:
+** - wtestconst tests whether parameters are constant across all quantiles.
+** - wtestsym tests tau/(1-tau) symmetry pairs.
+*/
+{ wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi } =
+    wtestconst(qaOut, tau, data);
 
-// Data used in qardl should have
-// dependent variable in first column
-// independent variable in remaining k 
-// cols
-data = yyy~xxx;                         
+print;
+print "Constancy tests: statistic | p-value";
+print "beta  " wt_beta~pv_beta;
+print "gamma " wt_gamma~pv_gamma;
+print "phi   " wt_phi~pv_phi;
 
-// qardl order estimation 
-{ pst, qst } = pqorder(data, pend, qend);   
+{ wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi } =
+    wtestsym(qaOut, tau, data);
 
-// Parameter estimation
-struct qardlOut qaOut;
-qaOut = qardl(data, pst, qst, tau); 
+print;
+print "Symmetry tests: statistic | p-value";
+print "beta  " wt_beta~pv_beta;
+print "gamma " wt_gamma~pv_gamma;
+print "phi   " wt_phi~pv_phi;
 
-// Constructing hypotheses
-ca1 = zeros(2, cols(xxx)*rows(tau));
-ca1[1, 1] = 1; 
-ca1[1, cols(xxx)+1] = -1;
-ca1[2, cols(xxx)+1] = 1; 
-ca1[2,2*cols(xxx)+1] = -1;
+/*
+** Manual restriction matrices are still supported for custom hypotheses.
+** The output metadata makes the dimensions explicit.
+*/
+k = qaOut.k;
+s = rows(qaOut.tau);
 
-sm1 = zeros(2, 1);
+ca_beta = zeros(2, k*s);
+ca_beta[1, 1] = 1;
+ca_beta[1, k+1] = -1;
+ca_beta[2, k+1] = 1;
+ca_beta[2, 2*k+1] = -1;
+sm_beta = zeros(2, 1);
 
-ca2 = zeros(2,pst*rows(tau));
-ca2[1, 1] = 1; 
-ca2[1, pst+1] = -1;
-ca2[2, pst+1] = 1; 
-ca2[2, 2*pst+1] = -1;
-sm2 = sm1;
+ca_phi = zeros(2, qaOut.p*s);
+ca_phi[1, 1] = 1;
+ca_phi[1, qaOut.p+1] = -1;
+ca_phi[2, qaOut.p+1] = 1;
+ca_phi[2, 2*qaOut.p+1] = -1;
+sm_phi = zeros(2, 1);
 
-ca3 = ca1;
-sm3 = sm1;
+ca_gamma = ca_beta;
+sm_gamma = sm_beta;
 
-// Long-run parameter (beta) testing 
-{ wtlrb1, pvlrb1 } = wtestlrb(qaOut.bigbt, qaOut.bigbt_cov, ca1, sm1, data);
+{ wt_beta, pv_beta } = wtestlrb(qaOut.bigbt, qaOut.bigbt_cov, ca_beta, sm_beta, data);
+{ wt_phi, pv_phi } = wtestsrp(qaOut.phi, qaOut.phi_cov, ca_phi, sm_phi, data);
+{ wt_gamma, pv_gamma } = wtestsrg(qaOut.gamma, qaOut.gamma_cov, ca_gamma, sm_gamma, data);
 
-// Short-run parameter (phi) testing 
-{ wtsrp1, pvsrp1 } = wtestsrp(qaOut.phi, qaOut.phi_cov, ca2, sm2, data);
+print;
+print "Custom Wald tests: statistic | p-value";
+print "beta  " wt_beta~pv_beta;
+print "gamma " wt_gamma~pv_gamma;
+print "phi   " wt_phi~pv_phi;
 
-// Short-run parameter (gamma) testing 
-{ wtsrg1, pvsrg1 } = wtestsrg(qaOut.gamma, qaOut.gamma_cov, ca3, sm3, data);
-    
-    
-print "=========================================================";    
-print "Estimated p order ";
-print "=========================================================";    
-print pst;
-print "=========================================================";    
-print "Estimated q order ";
-print "=========================================================";    
-print qst;
-print "=========================================================";    
-print "Long-run parameter estimate (Beta)";
-print "=========================================================";    
-print qaOut.bigbt;
-print "=========================================================";    
-print "Covariance matrix estimate of long-run parameter (Beta)";
-print "=========================================================";    
-print qaOut.bigbt_cov;
-print "=========================================================";    
-print "Short-run parameter estimate (Phi)";
-print "=========================================================";    
-print qaOut.phi;
-print "=========================================================";    
-print "Covariance matrix estimate of short-run parameter (Phi)";
-print "=========================================================";    
-print qaOut.phi_cov;
-print "=========================================================";    
-print "Short-run parameter estimate (Gamma)";
-print "=========================================================";    
-print qaOut.gamma;
-print "=========================================================";    
-print "Covariance matrix estimate of short-run parameter (Gamma)";
-print "=========================================================";    
-print qaOut.gamma_cov;
-print "=========================================================";    
-print " Wald test (Beta) and its p-value";
-print "=========================================================";    
-print wtlrb1~pvlrb1;
-print "=========================================================";    
-print " Wald test (Phi) and its p-value";
-print "=========================================================";    
-print wtsrp1~pvsrp1;
-print "=========================================================";    
-print " Wald test (Gamma) and its p-value";
-print "=========================================================";    
-print wtsrg1~pvsrg1;
-print "=========================================================";  
+plotQARDL(qaOut, tau);

@@ -23,4 +23,6 @@
 - Minimum supported GAUSS version is GAUSS 26.
 - Source tests explicitly include local `qardl.sdf` so stale installed structs
   cannot mask source-tree changes.
-
+- Main examples now demonstrate the modern API: `qardlFull`, formula support,
+  metadata fields, formatted print helpers, automatic Wald tests, QIRF,
+  rolling plot helpers, and bootstrap confidence intervals.
