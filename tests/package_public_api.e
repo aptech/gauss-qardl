@@ -70,6 +70,8 @@ call assert_true(pv_phi >= 0 and pv_phi <= 1, "wtestconst phi p-value invalid");
 
 { fstat, cv } = ardlbounds(data, pst, qst);
 call assert_true(fstat > 0 and rows(cv) == 3 and cols(cv) == 2, "ardlbounds output invalid");
+{ fstat_case, tstat_case, cv_case, case_id, q_restrict } = ardlboundsCase(data, pst, qst, 3);
+call assert_true(fstat_case > 0 and tstat_case < 0 and case_id == 3, "ardlboundsCase output invalid");
 
 struct qirfOut qiOut;
 qiOut = qirf(qaOut, pst, qst, 4, tau);

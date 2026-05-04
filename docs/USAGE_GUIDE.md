@@ -188,6 +188,24 @@ plotQIRF(qOut);
 For a permanent shock, the response should approach the long-run beta when the
 estimated AR dynamics are stable. For a temporary shock, set `permanent = 0`.
 
+## ARDL Bounds Cases
+
+`ardlbounds(data, p, q)` remains the Case III compatibility wrapper. Use
+`ardlboundsCase` when you need a different deterministic specification or the
+lagged-dependent-level t-statistic:
+
+```gauss
+{ Fstat, tstat, cv, case_id, q_restrict } = ardlboundsCase(data, 2, 1, 5);
+ardlboundsCase_print(Fstat, tstat, cv, cols(data)-1, case_id);
+```
+
+Cases follow the Pesaran, Shin & Smith convention: I no intercept/no trend, II
+restricted intercept/no trend, III unrestricted intercept/no trend, IV
+unrestricted intercept/restricted trend, and V unrestricted
+intercept/unrestricted trend. This package currently ships Case III critical
+values; other cases return missing critical values but still report the F and t
+statistics.
+
 ## Limitations
 
 - Individual p-values use asymptotic normal approximations.
@@ -197,8 +215,9 @@ estimated AR dynamics are stable. For a temporary shock, set `permanent = 0`.
   covariance and two-step ECM alpha/rho covariance. The default estimators
   preserve the original covariance formulas unless an alternate covariance type
   is requested.
-- `ardlbounds` currently implements PSS Case III tabulated critical values for
-  up to 10 regressors.
+- `ardlboundsCase` computes deterministic Cases I-V and the bounds t-statistic,
+  but tabulated critical values are currently bundled only for Case III with up
+  to 10 regressors.
 - Rolling window length is fixed internally at 10 percent of the sample.
 - Bootstrap defaults are convenient starting points; applied work should
   report the chosen number of replications, block length, and seed.

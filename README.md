@@ -599,9 +599,15 @@ smlr = { 0, 0 };
 ```gauss
 { Fstat, cv } = ardlbounds(data, ppp, qqq);
 ardlbounds_print(Fstat, cv, k);
+{ Fstat, tstat, cv, case_id, q_restrict } = ardlboundsCase(data, ppp, qqq, 5);
+ardlboundsCase_print(Fstat, tstat, cv, k, case_id);
 ```
 
 `cv` is a `(3 × 2)` matrix of I(0)/I(1) critical value bounds at 10%, 5%, and 1% for up to k=10 regressors (Case III: unrestricted intercept, no trend).
+`ardlboundsCase` supports PSS deterministic Cases I-V and also returns the
+t-statistic for the lagged dependent level. Case III critical values are
+tabulated in this package; other cases currently return missing critical values
+while still reporting the model-specific F and t statistics.
 
 ---
 

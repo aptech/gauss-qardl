@@ -135,6 +135,12 @@ call assert_true(rows(p_rho) == rows(tau), "qardl_pval_ecm rho p-values have wro
 { fstat, cv } = ardlbounds(data, 2, 1);
 call assert_true(rows(cv) == 3 and cols(cv) == 2, "ardlbounds critical-value shape changed");
 call assert_true(fstat > 0, "ardlbounds F-statistic should be positive");
+{ fstat_case, tstat_case, cv_case, case_id, q_restrict } = ardlboundsCase(data, 2, 1, 3);
+call assert_close(fstat_case, fstat, 1e-8, "ardlboundsCase Case III changed F-statistic");
+call assert_true(tstat_case < 0 and case_id == 3 and q_restrict == 3, "ardlboundsCase Case III output invalid");
+{ fstat_case, tstat_case, cv_case, case_id, q_restrict } = ardlboundsCase(data, 2, 1, 5);
+call assert_true(fstat_case > 0 and tstat_case < 0 and case_id == 5 and rows(cv_case) == 3,
+                 "ardlboundsCase Case V output invalid");
 
 { wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi } = wtestconst(qaOut, tau, data);
 call assert_true(wt_beta >= 0 and pv_beta >= 0 and pv_beta <= 1, "wtestconst beta output invalid");

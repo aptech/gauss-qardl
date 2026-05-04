@@ -29,6 +29,7 @@
   in the integrated workflow.
 - `blockBootstrapQARDLMethod` and `blockBootstrapQARDLECMMethod` with
   `"moving"`, `"circular"`, and `"stationary"` resampling choices.
+- `ardlboundsCase` for PSS deterministic Cases I-V plus the bounds t-statistic.
 - `qardlFull(..., verbose = 1)` option; pass `0` to compute silently.
 - Metadata fields on `qardlOut`, `qardlECMOut`, and `qardlFullOut`.
 - `GOLD_STANDARD_TODO.md` release-readiness inventory and improvement backlog.

@@ -2,63 +2,56 @@
 **> ardlbounds
 **
 **  Purpose:    Pesaran, Shin & Smith (2001) ARDL bounds cointegration test.
-**              Tests H0: no long-run levels relationship between y and x,
-**              i.e., rho = 0 AND theta = 0 in the ECM-ARDL representation
-**                Dy_t = alpha + rho*y_{t-1} + theta'*x_{t-1}
-**                       + sum_j phi_j * Dy_{t-j}
-**                       + sum_j gamma_j' * Dx_{t-j}  + eps_t
+**              Compatibility wrapper for Case III: unrestricted intercept,
+**              no trend.
 **
 **  Format:     { Fstat, cv } = ardlbounds(data, ppp, qqq);
-**
-**  Input:      data    (n x (1+k)) matrix.  Column 1 is the dependent
-**                      variable; columns 2:(1+k) are the k regressors.
-**
-**              ppp     scalar, AR lag order p >= 1.
-**
-**              qqq     scalar, distributed-lag order q >= 1.
-**
-**  Output:     Fstat   scalar, OLS F-statistic for H0: rho = 0, theta = 0
-**                      (levels terms jointly zero).  Distributed between
-**                      the I(0) and I(1) bounds under H0.
-**
-**              cv      (3 x 2) matrix of PSS (2001) Table CI (Case III:
-**                      unrestricted intercept, no trend) critical values
-**                      for k regressors.
-**                      Rows: 10%, 5%, 1% significance.
-**                      Columns: I(0) lower bound, I(1) upper bound.
-**                      If k > 10 critical values are set to missing.
-**
-**  Remarks:    The test statistic is the standard OLS F-statistic from the
-**              unrestricted ECM-ARDL model for the joint hypothesis that
-**              the k+1 levels coefficients (rho, theta_1, ..., theta_k) are
-**              all zero.  Critical value bounds are from Pesaran, Shin &
-**              Smith (2001), Table CI, Case III.
-**
-**              Decision rule:
-**                  Fstat < lower I(0) bound => fail to reject H0
-**                  Fstat > upper I(1) bound => reject H0 (cointegration)
-**                  Between bounds          => inconclusive
-**
-**  Reference:  Pesaran, M.H., Shin, Y. & Smith, R.J. (2001). Bounds testing
-**              approaches to the analysis of level relationships. Journal of
-**              Applied Econometrics, 16(3), 289-326.
-**
-**  Developed:  March 2026
 */
-
 proc (2) = ardlbounds(data, ppp, qqq);
-    local nn, k0, jj, ii;
-    local yy, xx, ee;
-    local eei, yyi;
-    local N_aligned, T0;
-    local dy, y_lag, x_lag, dy_lags, dx, ONEX, Y, bt_ols;
-    local N, K_total, q_restrict;
-    local RSS_U, RSS_R, Fstat;
-    local R, r_vec, b_levels;
-    local cv, cv_table;
-    local k_idx;
+    local Fstat, tstat, cv, case_id, q_restrict;
 
-    call _qardlValidateEstimatorInputs(data, ppp, qqq, { 0.5 }, "ardlbounds");
+    { Fstat, tstat, cv, case_id, q_restrict } = ardlboundsCase(data, ppp, qqq, 3);
+
+    retp(Fstat, cv);
+endp;
+
+/*
+**> ardlboundsCase
+**
+**  Purpose:    ARDL bounds test with deterministic-case selection and the
+**              associated t-statistic for the lagged dependent level.
+**
+**  Format:     { Fstat, tstat, cv, case_id, q_restrict } =
+**                  ardlboundsCase(data, ppp, qqq, case_id);
+**
+**  Input:      case_id     PSS deterministic case:
+**                          1 = no intercept, no trend.
+**                          2 = restricted intercept, no trend.
+**                          3 = unrestricted intercept, no trend.
+**                          4 = unrestricted intercept, restricted trend.
+**                          5 = unrestricted intercept, unrestricted trend.
+**
+**  Output:     Fstat       OLS F-statistic for the relevant levels restriction.
+**
+**              tstat       t-statistic for the lagged dependent level.
+**
+**              cv          PSS asymptotic F critical values where tabulated in
+**                          this package. Currently populated for Case III and
+**                          missing for other cases.
+**
+**              case_id     Deterministic case used.
+**
+**              q_restrict  Number of restrictions in the F-test.
+*/
+proc (5) = ardlboundsCase(data, ppp, qqq, case_id);
+    local nn, k0, jj, T0, yy, xx, ee, dy;
+    local y_lag, x_lag, dy_lags, dx, trend, ONEX, Y, ONEX_R;
+    local N, K_total, det_cols, level_start, level_end, q_restrict;
+    local bt_ols, cov_ols, sigma2, RSS_U, RSS_R, Fstat, tstat, cv;
+    local keep_cols, drop_start, drop_end, bt_R;
+
+    call _qardlValidateEstimatorInputs(data, ppp, qqq, { 0.5 }, "ardlboundsCase");
+    call _ardlboundsValidateCase(case_id);
 
     nn = rows(data);
     k0 = cols(data) - 1;
@@ -66,128 +59,198 @@ proc (2) = ardlbounds(data, ppp, qqq);
     yy = data[., 1];
     xx = data[., 2:cols(data)];
 
-    // First differences of x
     ee = xx[2:nn, .] - xx[1:(nn-1), .];
     ee = zeros(1, k0)|ee;
 
-    // ---- Build unrestricted ECM-ARDL regressors ----
-    // The regressor matrix includes:
-    //   [1, y_{t-1}, x_{t-1}, Dy_{t-1}, ..., Dy_{t-p+1}, Dx_t, ..., Dx_{t-q+1}]
-    //
-    // Number of lags consumed: max(ppp-1, qqq) rows dropped from start + 1 for
-    // y_{t-1} level.  We align by dropping the first max(ppp,qqq) observations.
-
     T0 = maxc(ppp|qqq);
+    dy = yy[2:nn] - yy[1:(nn-1)];
 
-    // Dependent variable: Dy_t for t = T0+1,...,nn
-    dy = yy[2:nn] - yy[1:(nn-1)];         // length nn-1
-
-    // Levels at t-1
-    y_lag = yy[T0:(nn-1)];                // y_{t-1}
-    x_lag = xx[T0:(nn-1), .];             // x_{t-1}
-
+    y_lag = yy[T0:(nn-1)];
+    x_lag = xx[T0:(nn-1), .];
     N = rows(y_lag);
 
-    // Dy_{t-j} lags for j = 1,...,ppp-1
     if ppp > 1;
         dy_lags = zeros(N, ppp-1);
         jj = 1;
         do until jj > ppp-1;
-            // dy_{t-j}: index in dy array is (T0+1-j):(nn-j)
-            // adjusted to length N: start row T0-j+1 (1-based) in dy
             dy_lags[., jj] = dy[(T0-jj):(nn-1-jj)];
             jj = jj + 1;
         endo;
     endif;
 
-    // Dx_{t-j} for j = 0,...,qqq-1  (contemporaneous Dx_t included)
     dx = zeros(N, qqq*k0);
     jj = 0;
     do until jj > qqq-1;
-        // ee is first-diff of x, index (T0+1-j):(nn-j) -> aligned to N rows
         dx[., (jj*k0+1):((jj+1)*k0)] = ee[(T0+1-jj):(nn-jj), .];
         jj = jj + 1;
     endo;
 
-    // Assemble regressor matrix
-    ONEX = ones(N, 1)~y_lag~x_lag;
+    trend = seqa(T0+1, 1, N);
+
+    if case_id == 1;
+        ONEX = y_lag~x_lag;
+        det_cols = 0;
+    elseif case_id == 2 or case_id == 3;
+        ONEX = ones(N, 1)~y_lag~x_lag;
+        det_cols = 1;
+    else;
+        ONEX = ones(N, 1)~trend~y_lag~x_lag;
+        det_cols = 2;
+    endif;
+
     if ppp > 1;
         ONEX = ONEX~dy_lags;
     endif;
     ONEX = ONEX~dx;
 
-    // Dependent variable aligned to same rows
     Y = dy[T0:(nn-1)];
-
     K_total = cols(ONEX);
 
-    // OLS
     bt_ols = inv(ONEX'*ONEX)*ONEX'*Y;
-
-    // Residuals unrestricted model
     RSS_U = sumc((Y - ONEX*bt_ols).^2);
+    sigma2 = RSS_U / (N - K_total);
+    cov_ols = sigma2*inv(ONEX'*ONEX);
 
-    // q = k0 + 1 restrictions (rho and all theta)
-    // Level regressors are columns 2 through 2+k0 (indices 2:k0+2 in 1-based)
-    q_restrict = k0 + 1;
-    b_levels = bt_ols[2:k0+2];
+    level_start = det_cols + 1;
+    level_end = det_cols + k0 + 1;
 
-    // Restricted model: drop levels columns (columns 2 through k0+2)
-    local ONEX_R, bt_R;
-    ONEX_R = ONEX[., 1] ~ ONEX[., k0+3:K_total];
-    bt_R   = inv(ONEX_R'*ONEX_R)*ONEX_R'*Y;
-    RSS_R  = sumc((Y - ONEX_R*bt_R).^2);
+    if case_id == 2;
+        drop_start = 1;
+        drop_end = level_end;
+    elseif case_id == 4;
+        drop_start = 2;
+        drop_end = level_end;
+    else;
+        drop_start = level_start;
+        drop_end = level_end;
+    endif;
 
-    // F-statistic
+    q_restrict = drop_end - drop_start + 1;
+
+    if drop_start == 1;
+        ONEX_R = ONEX[., drop_end+1:K_total];
+    elseif drop_end == K_total;
+        ONEX_R = ONEX[., 1:drop_start-1];
+    else;
+        ONEX_R = ONEX[., 1:drop_start-1]~ONEX[., drop_end+1:K_total];
+    endif;
+
+    bt_R = inv(ONEX_R'*ONEX_R)*ONEX_R'*Y;
+    RSS_R = sumc((Y - ONEX_R*bt_R).^2);
+
     Fstat = ((RSS_R - RSS_U) / q_restrict) / (RSS_U / (N - K_total));
+    tstat = bt_ols[level_start] / sqrt(cov_ols[level_start, level_start]);
 
-    // ---- PSS (2001) Table CI critical values, Case III (no trend) ----
-    // Rows: [10%; 5%; 1%]
-    // Cols: [I(0) lower, I(1) upper]
-    // Tabulated for k = 0,...,10; rows are significance levels 10%/5%/1%
-    // Source: Pesaran, Shin & Smith (2001) Table CI, p. 300
+    cv = _ardlboundsCaseCriticalValues(k0, case_id);
+
+    retp(Fstat, tstat, cv, case_id, q_restrict);
+endp;
+
+/*
+**> ardlbounds_print
+**
+**  Purpose:    Print a formatted summary of ardlbounds() output.
+*/
+proc (0) = ardlbounds_print(Fstat, cv, k);
+    call ardlboundsCase_print(Fstat, error(0), cv, k, 3);
+endp;
+
+/*
+**> ardlboundsCase_print
+**
+**  Purpose:    Print a formatted summary of ardlboundsCase() output.
+*/
+proc (0) = ardlboundsCase_print(Fstat, tstat, cv, k, case_id);
+    print "=================================================================";
+    print "  ARDL Bounds Test (Pesaran, Shin & Smith 2001)";
+    print "=================================================================";
+    print "  Case: " $+ ftos(case_id, "%g", 1, 0) $+ " - " $+ _ardlboundsCaseLabel(case_id);
+    print "  Number of regressors k = " $+ ftos(k, "%g", 1, 0);
+    print "";
+    print "  F-statistic:  " $+ ftos(Fstat, "%*.*lf", 1, 4);
+    if not scalmiss(tstat);
+        print "  t-statistic:  " $+ ftos(tstat, "%*.*lf", 1, 4);
+    endif;
+    print "";
+
+    if scalmiss(cv[1, 1]);
+        print "  Critical value bounds: not tabulated in this package for this case.";
+    else;
+        print "  Critical value bounds (I(0) lower / I(1) upper):";
+        print "    10%: " $+ ftos(cv[1,1], "%*.*lf", 1, 2) $+ " / " $+ ftos(cv[1,2], "%*.*lf", 1, 2);
+        print "     5%: " $+ ftos(cv[2,1], "%*.*lf", 1, 2) $+ " / " $+ ftos(cv[2,2], "%*.*lf", 1, 2);
+        print "     1%: " $+ ftos(cv[3,1], "%*.*lf", 1, 2) $+ " / " $+ ftos(cv[3,2], "%*.*lf", 1, 2);
+        print "";
+        if Fstat > cv[2, 2];
+            print "  Result: REJECT H0 at 5% (F > I(1) upper bound) => cointegration";
+        elseif Fstat < cv[2, 1];
+            print "  Result: FAIL TO REJECT H0 at 5% (F < I(0) lower bound)";
+        else;
+            print "  Result: INCONCLUSIVE at 5% (F between I(0) and I(1) bounds)";
+        endif;
+    endif;
+    print "=================================================================";
+endp;
+
+proc (0) = _ardlboundsValidateCase(case_id);
+    if rows(case_id) * cols(case_id) /= 1 or round(case_id) /= case_id or case_id < 1 or case_id > 5;
+        errorlog "ardlboundsCase: case_id must be an integer from 1 through 5";
+        end;
+    endif;
+endp;
+
+proc (1) = _ardlboundsCaseLabel(case_id);
+    if case_id == 1;
+        retp("no intercept, no trend");
+    elseif case_id == 2;
+        retp("restricted intercept, no trend");
+    elseif case_id == 3;
+        retp("unrestricted intercept, no trend");
+    elseif case_id == 4;
+        retp("unrestricted intercept, restricted trend");
+    else;
+        retp("unrestricted intercept, unrestricted trend");
+    endif;
+endp;
+
+proc (1) = _ardlboundsCaseCriticalValues(k0, case_id);
+    local cv, cv_table, k_idx;
+
+    if case_id /= 3;
+        retp(error(0)*ones(3, 2));
+    endif;
+
     cv_table = reshape(
-        // k=0
         6.58~6.58 |
         8.21~8.21 |
        12.39~12.39 |
-        // k=1
         4.04~4.78 |
         4.94~5.73 |
         7.06~8.06 |
-        // k=2
         3.17~4.14 |
         3.79~4.85 |
         5.15~6.36 |
-        // k=3
         2.72~3.77 |
         3.23~4.35 |
         4.29~5.61 |
-        // k=4
         2.45~3.52 |
         2.86~4.01 |
         3.74~5.06 |
-        // k=5
         2.26~3.35 |
         2.62~3.79 |
         3.41~4.68 |
-        // k=6
         2.12~3.23 |
         2.45~3.61 |
         3.15~4.43 |
-        // k=7
         2.03~3.13 |
         2.32~3.50 |
         2.96~4.26 |
-        // k=8
         1.95~3.06 |
         2.22~3.39 |
         2.79~4.10 |
-        // k=9
         1.88~2.99 |
         2.14~3.30 |
         2.65~3.97 |
-        // k=10
         1.83~2.94 |
         2.06~3.24 |
         2.56~3.86,
@@ -198,42 +261,8 @@ proc (2) = ardlbounds(data, ppp, qqq);
         cv = cv_table[k_idx:k_idx+2, .];
     else;
         cv = error(0)*ones(3, 2);
-        print "ardlbounds: WARNING - k > 10, PSS critical values not tabulated.";
+        print "ardlboundsCase: WARNING - k > 10, PSS critical values not tabulated.";
     endif;
 
-    retp(Fstat, cv);
-endp;
-
-/*
-**> ardlbounds_print
-**
-**  Purpose:    Print a formatted summary of ardlbounds() output.
-**
-**  Format:     ardlbounds_print(Fstat, cv, k);
-**
-**  Input:      Fstat   scalar, F-statistic from ardlbounds().
-**              cv      (3 x 2) critical value matrix from ardlbounds().
-**              k       scalar, number of regressors (k0 = cols(data)-1).
-*/
-proc (0) = ardlbounds_print(Fstat, cv, k);
-    print "=================================================================";
-    print "  ARDL Bounds Test (Pesaran, Shin & Smith 2001, Case III)";
-    print "=================================================================";
-    print "  Number of regressors k = " $+ ftos(k, "%g", 1, 0);
-    print "";
-    print "  F-statistic:  " $+ ftos(Fstat, "%*.*lf", 1, 4);
-    print "";
-    print "  Critical value bounds (I(0) lower / I(1) upper):";
-    print "    10%: " $+ ftos(cv[1,1], "%*.*lf", 1, 2) $+ " / " $+ ftos(cv[1,2], "%*.*lf", 1, 2);
-    print "     5%: " $+ ftos(cv[2,1], "%*.*lf", 1, 2) $+ " / " $+ ftos(cv[2,2], "%*.*lf", 1, 2);
-    print "     1%: " $+ ftos(cv[3,1], "%*.*lf", 1, 2) $+ " / " $+ ftos(cv[3,2], "%*.*lf", 1, 2);
-    print "";
-    if Fstat > cv[2, 2];
-        print "  Result: REJECT H0 at 5% (F > I(1) upper bound) => cointegration";
-    elseif Fstat < cv[2, 1];
-        print "  Result: FAIL TO REJECT H0 at 5% (F < I(0) lower bound)";
-    else;
-        print "  Result: INCONCLUSIVE at 5% (F between I(0) and I(1) bounds)";
-    endif;
-    print "=================================================================";
+    retp(cv);
 endp;
