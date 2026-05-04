@@ -39,6 +39,16 @@ call assert_true(rows(qaOut.bigbt) == 2*rows(tau), "qardl beta shape changed");
 struct qardlECMOut qECMOut;
 qECMOut = qardlECM(data, pst, qst, tau);
 call assert_true(rows(qECMOut.rho) == rows(tau), "qardlECM rho shape changed");
+struct qardlECMOut qECMRobustOut;
+qECMRobustOut = qardlECMRobust(data, pst, qst, tau);
+call assert_true(rows(qECMRobustOut.rho_cov) == rows(tau) and cols(qECMRobustOut.rho_cov) == rows(tau),
+                 "qardlECMRobust rho covariance shape changed");
+struct qardlECMOut qECMHACOut;
+qECMHACOut = qardlECMHAC(data, pst, qst, tau, 2);
+call assert_true(rows(qECMHACOut.rho_cov) == rows(tau) and cols(qECMHACOut.rho_cov) == rows(tau),
+                 "qardlECMHAC rho covariance shape changed");
+qECMHACOut = qardlECM(data, pst, qst, tau, "hac", 2);
+call assert_true(rows(qECMHACOut.rho_cov) == rows(tau), "qardlECM HAC covariance option changed");
 
 { p_beta, p_phi, p_gamma } = qardl_pval(qaOut);
 call assert_true(rows(p_beta) == rows(qaOut.bigbt), "qardl_pval beta p-values shape changed");

@@ -364,7 +364,7 @@ endp;
 **
 **  Format:     qECMOut = qardlECM(data, ppp, qqq);
 **              qECMOut = qardlECM(data, ppp, qqq, tau);
-**              qECMOut = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
+**              qECMOut = qardlECM(data, ppp, qqq, tau, cov_type, hac_lags);
 **
 **  Input:      data        (n x (1+k)) matrix. Column 1 is the dependent variable;
 **                          columns 2:(1+k) are the k regressors.
@@ -374,6 +374,13 @@ endp;
 **              qqq         scalar, distributed-lag order q >= 1.
 **
 **              tau         (s x 1) vector of quantile levels, sorted ascending.
+**
+**              cov_type    string, covariance estimator: "iid" (default),
+**                          "robust", or "hac".
+**
+**              hac_lags    scalar, non-negative HAC lag truncation. If cov_type
+**                          is "hac" and hac_lags = 0, a Newey-West automatic
+**                          bandwidth floor(4*(T/100)^(2/9)) is used.
 **
 **  Output:     qECMOut     instance of qardlECMOut. Members:
 **
@@ -388,8 +395,7 @@ endp;
 **                  qECMOut.rho         (s x 1) speed of adjustment at each quantile.
 **
 **                  qECMOut.rho_cov     (s x s) asymptotic covariance of rho across
-**                                      quantiles, based on stationary-regressor QR
-**                                      sandwich estimator.
+**                                      quantiles.
 **
 **  Notes:      Requires cointegration between y_t and x_t. The two-step
 **              approach avoids nonlinear QR by using OLS for the long-run
@@ -398,7 +404,7 @@ endp;
 **  Developed:  March 2026
 */
 
-proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
+proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_type = "iid", hac_lags = 0);
     local nn, k0, ss, jj, ii, j;
     local yy, xx, ee;
     local eei, xxi, yyi, X_ols, ONEX_ols, Y_ols;
@@ -407,9 +413,12 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
     local ec_lag, dy_lags, dx_ecm, ONEX_ecm, Y_ecm;
     local bt_ecm, fh_ecm, uu_ecm, hb;
     local za, cc, mfh, mtau, psu;
-    local D_ecm, D_inv_ecm, rho_cov, alpha_cov;
+    local D_ecm, D_inv_ecm, rho_cov, alpha_cov, cov_lags;
 
     call _qardlValidateEstimatorInputs(data, ppp, qqq, tau, "qardlECM");
+    cov_type = lower(cov_type);
+    call _qardlValidateECMCovType(cov_type, "qardlECM");
+    call _qardlValidateHACLags(hac_lags, "qardlECM");
 
     nn = rows(data);
     k0 = cols(data) - 1;
@@ -542,9 +551,20 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
     D_ecm = ONEX_ecm'*ONEX_ecm / N_ecm;
     D_inv_ecm = inv(D_ecm);
 
-    // Extract variance contributions: row 1 = alpha, row 2 = rho
-    rho_cov   = cc * D_inv_ecm[2, 2] / N_ecm;
-    alpha_cov = cc * D_inv_ecm[1, 1] / N_ecm;
+    if cov_type $== "iid";
+        // Extract variance contributions: row 1 = alpha, row 2 = rho
+        rho_cov   = cc * D_inv_ecm[2, 2] / N_ecm;
+        alpha_cov = cc * D_inv_ecm[1, 1] / N_ecm;
+    else;
+        cov_lags = hac_lags;
+        if cov_type $== "robust";
+            cov_lags = 0;
+        elseif cov_lags == 0;
+            cov_lags = _qardlAutomaticHACLags(N_ecm);
+        endif;
+        { alpha_cov, rho_cov } = _qardlECMCovSandwich(ONEX_ecm, Y_ecm, bt_ecm, tau,
+                                                      fh_ecm, D_inv_ecm, cov_lags);
+    endif;
 
     // ---- Package results ----
     struct qardlECMOut qECMOut;
@@ -560,6 +580,33 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
     qECMOut.rho_cov   = rho_cov;
     qECMOut.alpha_cov = alpha_cov;
 
+    retp(qECMOut);
+endp;
+
+/*
+**> qardlECMRobust
+**
+**  Purpose:    Two-step QARDL-ECM estimation with heteroskedasticity-robust
+**              quantile-regression sandwich covariance for alpha and rho.
+*/
+proc (struct qardlECMOut) = qardlECMRobust(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
+    struct qardlECMOut qECMOut;
+    qECMOut = qardlECM(data, ppp, qqq, tau, "robust", 0);
+    retp(qECMOut);
+endp;
+
+/*
+**> qardlECMHAC
+**
+**  Purpose:    Two-step QARDL-ECM estimation with Newey-West/Bartlett HAC
+**              quantile-regression sandwich covariance for alpha and rho.
+**
+**  Input:      hac_lags    scalar non-negative lag truncation. Use 0 for the
+**                          automatic Newey-West bandwidth.
+*/
+proc (struct qardlECMOut) = qardlECMHAC(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, hac_lags = 0);
+    struct qardlECMOut qECMOut;
+    qECMOut = qardlECM(data, ppp, qqq, tau, "hac", hac_lags);
     retp(qECMOut);
 endp;
 
@@ -1906,25 +1953,125 @@ endp;
 **  Output:     boot_diag   (1 x 5) matrix:
 **                          [B requested, B completed, B failed, blk_len, seed].
 **
-**  Remarks:    The current GAUSS implementation terminates on estimator errors
-**              inside bootstrap replications, so failed-rep recovery is not yet
-**              available. The failure count is reserved for that future
-**              behavior and is 0 when the procedure returns normally.
+**  Remarks:    Rank-deficient bootstrap resamples are skipped before
+**              estimation and counted as failed replications. The procedure
+**              attempts up to 5*B draws to complete B valid replications.
 */
 proc (4) = blockBootstrapQARDLDiag(data, ppp, qqq, tau, B, blk_len, alpha, seed);
+    local T, k0, ss, jj, bbb, attempts, max_attempts, failed_reps, completed_reps;
+    local n_blks, starts, idx, boot_data, idx_first, idx_last;
+    local dim_beta, dim_phi, dim_gamma;
+    local boot_beta, boot_gamma, boot_phi;
     local ci_beta, ci_gamma, ci_phi, boot_diag, used_blk_len;
+    local q_lo, q_hi;
+
+    struct qardlOut qa_b;
+
+    call _qardlValidateEstimatorInputs(data, ppp, qqq, tau, "blockBootstrapQARDLDiag");
+
+    if rows(B) * cols(B) /= 1 or B < 1 or round(B) /= B;
+        errorlog "blockBootstrapQARDLDiag: B must be a positive integer";
+        end;
+    endif;
+
+    if rows(alpha) * cols(alpha) /= 1 or alpha <= 0 or alpha >= 1;
+        errorlog "blockBootstrapQARDLDiag: alpha must be a scalar in (0, 1)";
+        end;
+    endif;
 
     call _qardlValidateBootstrapSeed(seed, "blockBootstrapQARDLDiag");
 
-    used_blk_len = _qardlResolvedBlockLength(rows(data), blk_len, "blockBootstrapQARDLDiag");
+    T = rows(data);
+    k0 = cols(data) - 1;
+    ss = rows(tau);
+    used_blk_len = _qardlResolvedBlockLength(T, blk_len, "blockBootstrapQARDLDiag");
+    n_blks = ceil(T / used_blk_len);
+
+    dim_beta  = k0 * ss;
+    dim_gamma = k0 * ss;
+    dim_phi   = ppp * ss;
+
+    boot_beta  = zeros(B, dim_beta);
+    boot_gamma = zeros(B, dim_gamma);
+    boot_phi   = zeros(B, dim_phi);
 
     if seed > 0;
         rndseed seed;
     endif;
 
-    { ci_beta, ci_gamma, ci_phi } = blockBootstrapQARDL(data, ppp, qqq, tau, B, used_blk_len, alpha);
+    completed_reps = 0;
+    failed_reps = 0;
+    attempts = 0;
+    max_attempts = 5*B;
 
-    boot_diag = B~B~0~used_blk_len~seed;
+    do until completed_reps >= B or attempts >= max_attempts;
+        attempts = attempts + 1;
+
+        starts = ceil(rndu(n_blks, 1) * (T - used_blk_len + 1));
+
+        idx = zeros(n_blks*used_blk_len, 1);
+        jj = 1;
+        do until jj > n_blks;
+            idx_first = (jj-1)*used_blk_len + 1;
+            idx_last  = jj*used_blk_len;
+            idx[idx_first:idx_last] = seqa(starts[jj], 1, used_blk_len);
+            jj = jj + 1;
+        endo;
+        idx = idx[1:T, .];
+
+        boot_data = data[idx, .];
+
+        if _qardlLevelsDesignOK(boot_data, ppp, qqq);
+            qa_b = qardl(boot_data, ppp, qqq, tau);
+            completed_reps = completed_reps + 1;
+            boot_beta[completed_reps, .]  = qa_b.bigbt';
+            boot_gamma[completed_reps, .] = qa_b.gamma';
+            boot_phi[completed_reps, .]   = qa_b.phi';
+        else;
+            failed_reps = failed_reps + 1;
+        endif;
+    endo;
+
+    if completed_reps < 1;
+        errorlog "blockBootstrapQARDLDiag: no valid bootstrap replications completed";
+        end;
+    endif;
+
+    if completed_reps < B;
+        boot_beta  = boot_beta[1:completed_reps, .];
+        boot_gamma = boot_gamma[1:completed_reps, .];
+        boot_phi   = boot_phi[1:completed_reps, .];
+    endif;
+
+    q_lo = alpha / 2;
+    q_hi = 1 - q_lo;
+
+    ci_beta  = zeros(dim_beta,  2);
+    ci_gamma = zeros(dim_gamma, 2);
+    ci_phi   = zeros(dim_phi,   2);
+
+    jj = 1;
+    do until jj > dim_beta;
+        ci_beta[jj, 1] = quantile(boot_beta[., jj], q_lo);
+        ci_beta[jj, 2] = quantile(boot_beta[., jj], q_hi);
+        jj = jj + 1;
+    endo;
+
+    jj = 1;
+    do until jj > dim_gamma;
+        ci_gamma[jj, 1] = quantile(boot_gamma[., jj], q_lo);
+        ci_gamma[jj, 2] = quantile(boot_gamma[., jj], q_hi);
+        jj = jj + 1;
+    endo;
+
+    jj = 1;
+    do until jj > dim_phi;
+        ci_phi[jj, 1] = quantile(boot_phi[., jj], q_lo);
+        ci_phi[jj, 2] = quantile(boot_phi[., jj], q_hi);
+        jj = jj + 1;
+    endo;
+
+    boot_diag = B~completed_reps~failed_reps~used_blk_len~seed;
 
     retp(ci_beta, ci_gamma, ci_phi, boot_diag);
 endp;
@@ -2052,21 +2199,103 @@ endp;
 **
 **  Output:     boot_diag   (1 x 5) matrix:
 **                          [B requested, B completed, B failed, blk_len, seed].
+**
+**  Remarks:    Rank-deficient bootstrap resamples are skipped before
+**              estimation and counted as failed replications. The procedure
+**              attempts up to 5*B draws to complete B valid replications.
 */
 proc (3) = blockBootstrapQARDLECMDiag(data, ppp, qqq, tau, B, blk_len, alpha, seed);
-    local ci_rho, ci_alpha, boot_diag, used_blk_len;
+    local T, ss, jj, attempts, max_attempts, failed_reps, completed_reps;
+    local n_blks, starts, idx, boot_data, idx_first, idx_last;
+    local boot_rho, boot_alpha, ci_rho, ci_alpha, boot_diag, used_blk_len;
+    local q_lo, q_hi;
+
+    struct qardlECMOut qecm_b;
+
+    call _qardlValidateEstimatorInputs(data, ppp, qqq, tau, "blockBootstrapQARDLECMDiag");
+
+    if rows(B) * cols(B) /= 1 or B < 1 or round(B) /= B;
+        errorlog "blockBootstrapQARDLECMDiag: B must be a positive integer";
+        end;
+    endif;
+
+    if rows(alpha) * cols(alpha) /= 1 or alpha <= 0 or alpha >= 1;
+        errorlog "blockBootstrapQARDLECMDiag: alpha must be a scalar in (0, 1)";
+        end;
+    endif;
 
     call _qardlValidateBootstrapSeed(seed, "blockBootstrapQARDLECMDiag");
 
-    used_blk_len = _qardlResolvedBlockLength(rows(data), blk_len, "blockBootstrapQARDLECMDiag");
+    T = rows(data);
+    ss = rows(tau);
+    used_blk_len = _qardlResolvedBlockLength(T, blk_len, "blockBootstrapQARDLECMDiag");
+    n_blks = ceil(T / used_blk_len);
+
+    boot_rho   = zeros(B, ss);
+    boot_alpha = zeros(B, ss);
 
     if seed > 0;
         rndseed seed;
     endif;
 
-    { ci_rho, ci_alpha } = blockBootstrapQARDLECM(data, ppp, qqq, tau, B, used_blk_len, alpha);
+    completed_reps = 0;
+    failed_reps = 0;
+    attempts = 0;
+    max_attempts = 5*B;
 
-    boot_diag = B~B~0~used_blk_len~seed;
+    do until completed_reps >= B or attempts >= max_attempts;
+        attempts = attempts + 1;
+
+        starts = ceil(rndu(n_blks, 1) * (T - used_blk_len + 1));
+
+        idx = zeros(n_blks*used_blk_len, 1);
+        jj = 1;
+        do until jj > n_blks;
+            idx_first = (jj-1)*used_blk_len + 1;
+            idx_last  = jj*used_blk_len;
+            idx[idx_first:idx_last] = seqa(starts[jj], 1, used_blk_len);
+            jj = jj + 1;
+        endo;
+        idx = idx[1:T, .];
+
+        boot_data = data[idx, .];
+
+        if _qardlECMDesignOK(boot_data, ppp, qqq);
+            qecm_b = qardlECM(boot_data, ppp, qqq, tau);
+            completed_reps = completed_reps + 1;
+            boot_rho[completed_reps, .]   = qecm_b.rho';
+            boot_alpha[completed_reps, .] = qecm_b.alpha';
+        else;
+            failed_reps = failed_reps + 1;
+        endif;
+    endo;
+
+    if completed_reps < 1;
+        errorlog "blockBootstrapQARDLECMDiag: no valid bootstrap replications completed";
+        end;
+    endif;
+
+    if completed_reps < B;
+        boot_rho   = boot_rho[1:completed_reps, .];
+        boot_alpha = boot_alpha[1:completed_reps, .];
+    endif;
+
+    q_lo = alpha / 2;
+    q_hi = 1 - q_lo;
+
+    ci_rho   = zeros(ss, 2);
+    ci_alpha = zeros(ss, 2);
+
+    jj = 1;
+    do until jj > ss;
+        ci_rho[jj, 1]   = quantile(boot_rho[., jj], q_lo);
+        ci_rho[jj, 2]   = quantile(boot_rho[., jj], q_hi);
+        ci_alpha[jj, 1] = quantile(boot_alpha[., jj], q_lo);
+        ci_alpha[jj, 2] = quantile(boot_alpha[., jj], q_hi);
+        jj = jj + 1;
+    endo;
+
+    boot_diag = B~completed_reps~failed_reps~used_blk_len~seed;
 
     retp(ci_rho, ci_alpha, boot_diag);
 endp;
@@ -2155,6 +2384,198 @@ proc (0) = _qardlValidateWaldInputs(param, cov, bigR, smr, data, caller);
 
     if rows(data) < 2;
         errorlog caller $+ ": data must contain at least two observations";
+        end;
+    endif;
+endp;
+
+proc (1) = _qardlLevelsDesignOK(data, ppp, qqq);
+    local yy, xx, ee, nn, k0, jj;
+    local eei, xxi, yyi, X, ONEX;
+
+    nn = rows(data);
+    k0 = cols(data) - 1;
+    yy = data[., 1];
+    xx = data[., 2:cols(data)];
+
+    ee = xx[2:nn, .] - xx[1:(nn-1), .];
+    ee = zeros(1, k0)|ee;
+
+    eei = zeros(nn-qqq, qqq*k0);
+    xxi = xx[qqq+1:nn, .];
+
+    jj = 1;
+    do until jj > k0;
+        eei[., 1+(jj-1)*qqq:(jj-1)*qqq+qqq] = packr(lagn(ee[., jj], seqa(-qqq, 1, qqq)));
+        jj = jj + 1;
+    endo;
+
+    yyi = packr(lagn(yy, seqa(-ppp+1, 1, ppp)));
+    yyi = yyi[1:rows(yyi)-1, .];
+
+    if ppp .> qqq;
+        X = eei[(rows(eei)+1-rows(yyi)):rows(eei), .]~xxi[(rows(xxi)+1-rows(yyi)):rows(xxi), .]~yyi;
+    else;
+        X = eei~xxi~yyi[(rows(yyi)+1-rows(xxi)):rows(yyi), .];
+    endif;
+
+    ONEX = ones(rows(X), 1)~X;
+
+    retp(rank(ONEX) == cols(ONEX));
+endp;
+
+proc (1) = _qardlECMDesignOK(data, ppp, qqq);
+    local yy, xx, ee, nn, k0, jj, j;
+    local eei, xxi, yyi, X_ols, ONEX_ols, bt_ols, beta_lr_ols;
+    local N, T0, N_ecm, Y_ecm, ec_lag, ONEX_ecm, dy_lags, dx_ecm;
+
+    if not _qardlLevelsDesignOK(data, ppp, qqq);
+        retp(0);
+    endif;
+
+    nn = rows(data);
+    k0 = cols(data) - 1;
+    yy = data[., 1];
+    xx = data[., 2:cols(data)];
+
+    ee = xx[2:nn, .] - xx[1:(nn-1), .];
+    ee = zeros(1, k0)|ee;
+
+    eei = zeros(nn-qqq, qqq*k0);
+    xxi = xx[qqq+1:nn, .];
+
+    jj = 1;
+    do until jj > k0;
+        eei[., 1+(jj-1)*qqq:(jj-1)*qqq+qqq] = packr(lagn(ee[., jj], seqa(-qqq, 1, qqq)));
+        jj = jj + 1;
+    endo;
+
+    yyi = packr(lagn(yy, seqa(-ppp+1, 1, ppp)));
+    yyi = yyi[1:rows(yyi)-1, .];
+
+    if ppp .> qqq;
+        X_ols = eei[(rows(eei)+1-rows(yyi)):rows(eei), .]~xxi[(rows(xxi)+1-rows(yyi)):rows(xxi), .]~yyi;
+    else;
+        X_ols = eei~xxi~yyi[(rows(yyi)+1-rows(xxi)):rows(yyi), .];
+    endif;
+
+    ONEX_ols = ones(rows(X_ols), 1)~X_ols;
+    if rank(ONEX_ols) /= cols(ONEX_ols);
+        retp(0);
+    endif;
+
+    bt_ols = inv(ONEX_ols'ONEX_ols)*ONEX_ols'*yy[(nn-rows(X_ols)+1):nn, 1];
+    beta_lr_ols = -bt_ols[(2+qqq*k0):(1+(qqq+1)*k0), 1] /
+                  (sumc(bt_ols[(2+(qqq+1)*k0):(1+(qqq+1)*k0+ppp), 1]) - 1);
+
+    T0 = maxc(ppp|qqq);
+    N = nn - T0;
+    N_ecm = N - 1;
+
+    if N_ecm <= 0;
+        retp(0);
+    endif;
+
+    Y_ecm = yy[(T0+2):nn] - yy[(T0+1):(nn-1)];
+    ec_lag = yy[(T0+1):(nn-1)] - xx[(T0+1):(nn-1), .]*beta_lr_ols;
+    ONEX_ecm = ones(N_ecm, 1)~ec_lag;
+
+    if ppp > 1;
+        dy_lags = zeros(N_ecm, ppp-1);
+        for j(1, ppp-1, 1);
+            dy_lags[., j] = yy[(T0+2-j):(nn-j)] - yy[(T0+1-j):(nn-j-1)];
+        endfor;
+        ONEX_ecm = ONEX_ecm~dy_lags;
+    endif;
+
+    dx_ecm = zeros(N_ecm, qqq*k0);
+    jj = 1;
+    do until jj > k0;
+        for j(0, qqq-1, 1);
+            dx_ecm[., (jj-1)*qqq + j + 1] =
+                xx[(T0+2-j):(nn-j), jj] - xx[(T0+1-j):(nn-j-1), jj];
+        endfor;
+        jj = jj + 1;
+    endo;
+    ONEX_ecm = ONEX_ecm~dx_ecm;
+
+    retp(rank(ONEX_ecm) == cols(ONEX_ecm) and rows(Y_ecm) > cols(ONEX_ecm));
+endp;
+
+proc (2) = _qardlECMCovSandwich(ONEX_ecm, Y_ecm, bt_ecm, tau, fh_ecm, D_inv_ecm, hac_lags);
+    local N_ecm, K_ecm, ss, ii, jj, lag, w;
+    local alpha_cov, rho_cov, resid_i, resid_j, psi_i, psi_j;
+    local scores_i, scores_j, S_ij, cov_block, scale_i, scale_j;
+
+    N_ecm = rows(ONEX_ecm);
+    K_ecm = cols(ONEX_ecm);
+    ss = rows(tau);
+
+    alpha_cov = zeros(ss, ss);
+    rho_cov = zeros(ss, ss);
+
+    jj = 1;
+    do until jj > ss;
+        resid_j = Y_ecm - ONEX_ecm*bt_ecm[., jj];
+        psi_j = tau[jj] - (resid_j .< 0);
+        scores_j = ONEX_ecm .* (psi_j*ones(1, K_ecm));
+
+        ii = 1;
+        do until ii > ss;
+            resid_i = Y_ecm - ONEX_ecm*bt_ecm[., ii];
+            psi_i = tau[ii] - (resid_i .< 0);
+            scores_i = ONEX_ecm .* (psi_i*ones(1, K_ecm));
+
+            S_ij = scores_i'*scores_j / N_ecm;
+
+            lag = 1;
+            do until lag > hac_lags;
+                w = 1 - lag/(hac_lags + 1);
+                S_ij = S_ij
+                     + w*(scores_i[(lag+1):N_ecm, .]'*scores_j[1:(N_ecm-lag), .] / N_ecm)
+                     + w*(scores_i[1:(N_ecm-lag), .]'*scores_j[(lag+1):N_ecm, .] / N_ecm);
+                lag = lag + 1;
+            endo;
+
+            scale_i = fh_ecm[ii];
+            scale_j = fh_ecm[jj];
+            cov_block = D_inv_ecm*S_ij*D_inv_ecm / (scale_i*scale_j*N_ecm);
+
+            alpha_cov[ii, jj] = cov_block[1, 1];
+            rho_cov[ii, jj] = cov_block[2, 2];
+
+            ii = ii + 1;
+        endo;
+
+        jj = jj + 1;
+    endo;
+
+    retp(alpha_cov, rho_cov);
+endp;
+
+proc (1) = _qardlAutomaticHACLags(N_ecm);
+    local hac_lags;
+
+    hac_lags = trunc(4*(N_ecm/100)^(2/9));
+    if hac_lags < 1;
+        hac_lags = 1;
+    endif;
+    if hac_lags > N_ecm - 1;
+        hac_lags = N_ecm - 1;
+    endif;
+
+    retp(hac_lags);
+endp;
+
+proc (0) = _qardlValidateECMCovType(cov_type, caller);
+    if not (cov_type $== "iid" or cov_type $== "robust" or cov_type $== "hac");
+        errorlog caller $+ ": cov_type must be \"iid\", \"robust\", or \"hac\"";
+        end;
+    endif;
+endp;
+
+proc (0) = _qardlValidateHACLags(hac_lags, caller);
+    if rows(hac_lags) * cols(hac_lags) /= 1 or hac_lags < 0 or round(hac_lags) /= hac_lags;
+        errorlog caller $+ ": hac_lags must be a non-negative integer";
         end;
     endif;
 endp;

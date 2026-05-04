@@ -32,6 +32,19 @@ qECMOut = qardlECM(data, 2, 1, tau);
 printQARDLECM(qECMOut, tau);
 ```
 
+For ECM covariance estimates that are robust to heteroskedasticity or serial
+dependence in the quantile score, use the ECM covariance variants:
+
+```gauss
+qECMRobust = qardlECMRobust(data, 2, 1, tau);
+qECMHAC = qardlECMHAC(data, 2, 1, tau, 4);
+qECMAutoHAC = qardlECMHAC(data, 2, 1, tau, 0);
+```
+
+`qardlECMHAC(..., 0)` uses the automatic Newey-West bandwidth
+`floor(4*(T/100)^(2/9))`. The parameter estimates are the same as `qardlECM`;
+only `alpha_cov` and `rho_cov` change.
+
 Use `pqorder` directly when you only need lag selection:
 
 ```gauss
@@ -139,6 +152,9 @@ Set `blk_len = 0` to use the default `floor(T^(1/3))` block length. For
 reproducible intervals, use `blockBootstrapQARDLDiag` or
 `blockBootstrapQARDLECMDiag` with a positive seed. The diagnostic return is
 `[B requested, B completed, B failed, blk_len, seed]`.
+The diagnostic wrappers skip rank-deficient bootstrap resamples and keep
+drawing until they complete the requested number of valid replications or reach
+the internal attempt limit.
 
 ## Quantile Impulse Responses
 
@@ -157,6 +173,10 @@ estimated AR dynamics are stable. For a temporary shock, set `permanent = 0`.
 - Individual p-values use asymptotic normal approximations.
 - Wald tests use chi-squared asymptotics and depend on correctly specified
   restriction matrices.
+- HAC/robust covariance support is currently available for the two-step ECM
+  alpha/rho covariance surface. Levels-form beta/gamma/phi HAC covariance is a
+  separate extension because the long-run parameter transformations require a
+  larger block covariance system.
 - `ardlbounds` currently implements PSS Case III tabulated critical values for
   up to 10 regressors.
 - Rolling window length is fixed internally at 10 percent of the sample.

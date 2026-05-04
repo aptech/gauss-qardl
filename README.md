@@ -216,9 +216,16 @@ Two-step estimator: OLS long-run relationship → quantile ECM.
 ```gauss
 qECMOut = qardlECM(data, ppp, qqq);
 qECMOut = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
+qECMOut = qardlECM(data, ppp, qqq, tau, "hac", 4);
+qECMOut = qardlECMRobust(data, ppp, qqq, tau);
+qECMOut = qardlECMHAC(data, ppp, qqq, tau, 4);
 ```
 
-Returns a `qardlECMOut` structure.
+Returns a `qardlECMOut` structure. The default `qardlECM` covariance is the
+stationary-regressor QR asymptotic covariance. Use `qardlECMRobust` for a
+heteroskedasticity-robust QR sandwich covariance, or `qardlECMHAC` for a
+Newey-West/Bartlett HAC QR sandwich covariance. Passing `hac_lags = 0` to
+`qardlECMHAC` uses the automatic bandwidth `floor(4*(T/100)^(2/9))`.
 
 ```gauss
 print qECMOut.beta_lr;            // OLS long-run coefficients
@@ -309,6 +316,8 @@ Moving-block bootstrap (Künsch 1989) CIs for β, γ, and φ.
 Each CI output is a `(dim × 2)` matrix of `[lower, upper]` bounds. The
 diagnostic variant sets `rndseed` when `seed > 0` and returns diagnostics
 `[B requested, B completed, B failed, blk_len, seed]`.
+Rank-deficient bootstrap resamples are skipped and counted as failed
+replications.
 
 #### `blockBootstrapQARDLECM`
 
@@ -453,7 +462,7 @@ Parameters are stacked quantile-first: all k variables at τ₁, then τ₂, etc
 
 ### `qardlECMOut`
 
-Returned by `qardlECM()`.
+Returned by `qardlECM()`, `qardlECMRobust()`, and `qardlECMHAC()`.
 
 | Member | Dimensions | Description |
 |--------|-----------|-------------|
@@ -466,8 +475,8 @@ Returned by `qardlECM()`.
 | `rho_ols` | `1 × 1` | OLS speed of adjustment |
 | `alpha` | `s × 1` | ECM intercept α(τ) |
 | `rho` | `s × 1` | Speed of adjustment ρ(τ) |
-| `rho_cov` | `s × s` | Asymptotic covariance of ρ |
-| `alpha_cov` | `s × s` | Asymptotic covariance of α |
+| `rho_cov` | `s × s` | Covariance of rho, using the selected ECM covariance estimator |
+| `alpha_cov` | `s × s` | Covariance of alpha, using the selected ECM covariance estimator |
 
 ### `qardlFullOut`
 

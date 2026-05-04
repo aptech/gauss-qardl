@@ -93,6 +93,22 @@ call assert_true(rows(qECMOut.tau) == rows(tau) and qECMOut.nobs > 0, "qardlECM 
 call assert_true(rows(qECMOut.rho) == rows(tau), "qardlECM rho has wrong row count");
 call assert_true(rows(qECMOut.rho_cov) == rows(tau), "qardlECM rho covariance has wrong row count");
 
+struct qardlECMOut qECMRobustOut;
+qECMRobustOut = qardlECMRobust(data, 2, 1, tau);
+call assert_true(rows(qECMRobustOut.rho_cov) == rows(tau) and cols(qECMRobustOut.rho_cov) == rows(tau),
+                 "qardlECMRobust rho covariance shape changed");
+call assert_true(qECMRobustOut.rho_cov[2, 2] > 0 and qECMRobustOut.alpha_cov[2, 2] > 0,
+                 "qardlECMRobust covariance diagonal invalid");
+
+struct qardlECMOut qECMHACOut;
+qECMHACOut = qardlECMHAC(data, 2, 1, tau, 2);
+call assert_true(rows(qECMHACOut.rho_cov) == rows(tau) and cols(qECMHACOut.rho_cov) == rows(tau),
+                 "qardlECMHAC rho covariance shape changed");
+call assert_true(qECMHACOut.rho_cov[2, 2] > 0 and qECMHACOut.alpha_cov[2, 2] > 0,
+                 "qardlECMHAC covariance diagonal invalid");
+qECMHACOut = qardlECM(data, 2, 1, tau, "hac", 2);
+call assert_true(qECMHACOut.rho_cov[2, 2] > 0, "qardlECM HAC covariance option invalid");
+
 { p_alpha, p_rho } = qardl_pval_ecm(qECMOut);
 call assert_true(rows(p_alpha) == rows(tau), "qardl_pval_ecm alpha p-values have wrong shape");
 call assert_true(rows(p_rho) == rows(tau), "qardl_pval_ecm rho p-values have wrong shape");

@@ -20,7 +20,9 @@
 - `pqorderRange` for restricted lag-search grids and fixed lag-order searches.
 - `pqorderGrid` and `pqorderRangeGrid` for full lag-selection IC tables.
 - `blockBootstrapQARDLDiag` and `blockBootstrapQARDLECMDiag` for seeded
-  bootstrap runs with simple diagnostics.
+  bootstrap runs with rank-deficient resample recovery and simple diagnostics.
+- `qardlECM(..., cov_type, hac_lags)`, `qardlECMRobust`, and `qardlECMHAC`
+  for robust and Newey-West/Bartlett HAC ECM covariance estimates.
 - `qardlFull(..., verbose = 1)` option; pass `0` to compute silently.
 - Metadata fields on `qardlOut`, `qardlECMOut`, and `qardlFullOut`.
 - `GOLD_STANDARD_TODO.md` release-readiness inventory and improvement backlog.
