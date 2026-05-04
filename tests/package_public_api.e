@@ -35,6 +35,16 @@ call assert_true(rows(ic_range_grid) == 1 and cols(ic_range_grid) == 3, "pqorder
 struct qardlOut qaOut;
 qaOut = qardl(data, pst, qst, tau);
 call assert_true(rows(qaOut.bigbt) == 2*rows(tau), "qardl beta shape changed");
+struct qardlOut qaRobustOut;
+qaRobustOut = qardlRobust(data, pst, qst, tau);
+call assert_true(rows(qaRobustOut.bigbt_cov) == rows(qaOut.bigbt) and cols(qaRobustOut.bigbt_cov) == rows(qaOut.bigbt),
+                 "qardlRobust beta covariance shape changed");
+struct qardlOut qaHACOut;
+qaHACOut = qardlHAC(data, pst, qst, tau, 2);
+call assert_true(rows(qaHACOut.bigbt_cov) == rows(qaOut.bigbt) and cols(qaHACOut.bigbt_cov) == rows(qaOut.bigbt),
+                 "qardlHAC beta covariance shape changed");
+qaHACOut = qardl(data, pst, qst, tau, "hac", 2);
+call assert_true(rows(qaHACOut.bigbt_cov) == rows(qaOut.bigbt), "qardl HAC covariance option changed");
 
 struct qardlECMOut qECMOut;
 qECMOut = qardlECM(data, pst, qst, tau);
@@ -70,9 +80,15 @@ qfOut = qardlFull(data, 2, 2, tau);
 call assert_true(qfOut.pst >= 1 and qfOut.qst >= 1, "qardlFull returned invalid lag orders");
 qfOut = qardlFull(data, 2, 2, tau, "", 0, "hq");
 call assert_true(qfOut.pst >= 1 and qfOut.qst >= 1, "qardlFull HQ returned invalid lag orders");
+qfOut = qardlFull(data, 2, 2, tau, "", 0, "bic", "robust", 0);
+call assert_true(rows(qfOut.qa.bigbt_cov) == rows(qfOut.qa.bigbt), "qardlFull robust covariance changed");
 { ci_rho, ci_alpha } = blockBootstrapQARDLECM(data, pst, qst, tau, 2, 10, 0.10);
 call assert_true(rows(ci_rho) == rows(tau) and cols(ci_rho) == 2, "blockBootstrapQARDLECM rho CI shape changed");
 call assert_true(rows(ci_alpha) == rows(tau) and cols(ci_alpha) == 2, "blockBootstrapQARDLECM alpha CI shape changed");
+{ ci_beta, ci_gamma, ci_phi } = blockBootstrapQARDLMethod(data, pst, qst, tau, 2, 10, 0.10, "circular");
+call assert_true(rows(ci_beta) == 2*rows(tau) and cols(ci_beta) == 2, "blockBootstrapQARDLMethod output changed");
+{ ci_rho, ci_alpha } = blockBootstrapQARDLECMMethod(data, pst, qst, tau, 2, 10, 0.10, "stationary");
+call assert_true(rows(ci_rho) == rows(tau) and cols(ci_rho) == 2, "blockBootstrapQARDLECMMethod output changed");
 { ci_rho_seed, ci_alpha_seed, boot_diag } = blockBootstrapQARDLECMDiag(data, pst, qst, tau, 2, 10, 0.10, 24680);
 call assert_true(rows(boot_diag) == 1 and cols(boot_diag) == 5, "blockBootstrapQARDLECMDiag diagnostics shape changed");
 call assert_true(boot_diag[1, 1] == 2 and boot_diag[1, 2] == 2 and boot_diag[1, 3] == 0,

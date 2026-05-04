@@ -5,7 +5,7 @@
 **
 **  Format:     qOut = qardl(data, ppp, qqq);
 **              qOut = qardl(data, ppp, qqq, tau);
-**              qOut = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
+**              qOut = qardl(data, ppp, qqq, tau, cov_type, hac_lags);
 **
 **  Input:
 **              data:   (n *(1+k)) matrix, where the 1st column is the dependent variable,
@@ -18,6 +18,13 @@
 **
 **              tau     (s * 1) vector of quantiles, which is sorted
 **                      from the smallest to the largest.
+**
+**              cov_type string, covariance estimator: "iid" (default),
+**                      "robust", or "hac".
+**
+**              hac_lags scalar, non-negative HAC lag truncation. If cov_type
+**                      is "hac" and hac_lags = 0, a Newey-West automatic
+**                      bandwidth floor(4*(T/100)^(2/9)) is used.
 
 **  Output:     qOut            An instance of the qardlOut structure. The structure qOut contains
 **                              the following members:
@@ -40,14 +47,19 @@
 
 #include qardl.sdf
 
-proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
+proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_type = "iid", hac_lags = 0);
 
     local za, nn, yy, xx, mm, ee, Y, X, ONEX, bigbt, psu, midbt,
         tw, bb, qq, eei, xxi, yyi, ii, yyj, xxj, wwj, kk, kkk, tilw, lll,
         bbt, cc, bigpi, bigphi, midphi, jj, bigam, bilam, k0, ss, hb, hs,
-        bt, fh, uu, midgam, bigff, bigbtmm, barw, mtau, mbb, mfh;
+        bt, fh, uu, midgam, bigff, bigbtmm, barw, mtau, mbb, mfh,
+        Y_qr, ONEX_qr,
+        cov_lags, full_cov, D_qr, D_inv_qr;
     
     call _qardlValidateEstimatorInputs(data, ppp, qqq, tau, "qardl");
+    cov_type = lower(cov_type);
+    call _qardlValidateECMCovType(cov_type, "qardl");
+    call _qardlValidateHACLags(hac_lags, "qardl");
 
     // Number of observations
     nn = rows(data);
@@ -115,6 +127,8 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
     
     // Adjust y for length of x
     Y  = yy[(nn-rows(X)+1):nn, 1];
+    Y_qr = Y;
+    ONEX_qr = ONEX;
     
     // Storage for bt
     bt = zeros(cols(ONEX), ss);
@@ -319,6 +333,20 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
     endo;
     
     bigff = bilam*bigpi*bilam';
+
+    if not (cov_type $== "iid");
+        cov_lags = hac_lags;
+        if cov_type $== "robust";
+            cov_lags = 0;
+        elseif cov_lags == 0;
+            cov_lags = _qardlAutomaticHACLags(rows(Y));
+        endif;
+
+        D_qr = ONEX_qr'*ONEX_qr / rows(Y_qr);
+        D_inv_qr = inv(D_qr);
+        full_cov = _qardlQRCovSandwich(ONEX_qr, Y_qr, bt, tau, fh, D_inv_qr, cov_lags);
+        { bigbtmm, bigpi, bigff } = _qardlLevelsCovFromFull(full_cov, bt, ppp, qqq, k0, ss);
+    endif;
     
     struct qardlOut qaOut;
     
@@ -344,6 +372,33 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
     // Full coefficient matrix for downstream use (e.g., QIRF)
     qaOut.bt = bt;
 
+    retp(qaOut);
+endp;
+
+/*
+**> qardlRobust
+**
+**  Purpose:    Levels-form QARDL with heteroskedasticity-robust QR sandwich
+**              covariance for beta, gamma/theta, and phi.
+*/
+proc (struct qardlOut) = qardlRobust(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
+    struct qardlOut qaOut;
+    qaOut = qardl(data, ppp, qqq, tau, "robust", 0);
+    retp(qaOut);
+endp;
+
+/*
+**> qardlHAC
+**
+**  Purpose:    Levels-form QARDL with Newey-West/Bartlett HAC QR sandwich
+**              covariance for beta, gamma/theta, and phi.
+**
+**  Input:      hac_lags    scalar non-negative lag truncation. Use 0 for the
+**                          automatic Newey-West bandwidth.
+*/
+proc (struct qardlOut) = qardlHAC(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, hac_lags = 0);
+    struct qardlOut qaOut;
+    qaOut = qardl(data, ppp, qqq, tau, "hac", hac_lags);
     retp(qaOut);
 endp;
 
@@ -1936,6 +1991,98 @@ proc (3) = blockBootstrapQARDL(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, B = 99
 endp;
 
 /*
+**> blockBootstrapQARDLMethod
+**
+**  Purpose:    Bootstrap confidence intervals for QARDL parameters with
+**              selectable resampling method.
+**
+**  Input:      method      string: "moving" (default moving-block bootstrap),
+**                          "circular" (circular-block bootstrap), or
+**                          "stationary" (Politis-Romano stationary bootstrap).
+*/
+proc (3) = blockBootstrapQARDLMethod(data, ppp, qqq, tau, B, blk_len, alpha, method);
+    local T, k0, ss, jj, bbb, idx, boot_data, used_blk_len;
+    local dim_beta, dim_phi, dim_gamma;
+    local boot_beta, boot_gamma, boot_phi;
+    local ci_beta, ci_gamma, ci_phi;
+    local q_lo, q_hi;
+
+    struct qardlOut qa_b;
+
+    call _qardlValidateEstimatorInputs(data, ppp, qqq, tau, "blockBootstrapQARDLMethod");
+
+    if rows(B) * cols(B) /= 1 or B < 1 or round(B) /= B;
+        errorlog "blockBootstrapQARDLMethod: B must be a positive integer";
+        end;
+    endif;
+
+    if rows(alpha) * cols(alpha) /= 1 or alpha <= 0 or alpha >= 1;
+        errorlog "blockBootstrapQARDLMethod: alpha must be a scalar in (0, 1)";
+        end;
+    endif;
+
+    method = lower(method);
+    call _qardlValidateBootstrapMethod(method, "blockBootstrapQARDLMethod");
+
+    T = rows(data);
+    k0 = cols(data) - 1;
+    ss = rows(tau);
+    used_blk_len = _qardlResolvedBlockLength(T, blk_len, "blockBootstrapQARDLMethod");
+
+    dim_beta  = k0 * ss;
+    dim_gamma = k0 * ss;
+    dim_phi   = ppp * ss;
+
+    boot_beta  = zeros(B, dim_beta);
+    boot_gamma = zeros(B, dim_gamma);
+    boot_phi   = zeros(B, dim_phi);
+
+    bbb = 1;
+    do until bbb > B;
+        idx = _qardlBootstrapIndex(T, used_blk_len, method);
+        boot_data = data[idx, .];
+
+        qa_b = qardl(boot_data, ppp, qqq, tau);
+
+        boot_beta[bbb, .]  = qa_b.bigbt';
+        boot_gamma[bbb, .] = qa_b.gamma';
+        boot_phi[bbb, .]   = qa_b.phi';
+
+        bbb = bbb + 1;
+    endo;
+
+    q_lo = alpha / 2;
+    q_hi = 1 - q_lo;
+
+    ci_beta  = zeros(dim_beta,  2);
+    ci_gamma = zeros(dim_gamma, 2);
+    ci_phi   = zeros(dim_phi,   2);
+
+    jj = 1;
+    do until jj > dim_beta;
+        ci_beta[jj, 1] = quantile(boot_beta[., jj], q_lo);
+        ci_beta[jj, 2] = quantile(boot_beta[., jj], q_hi);
+        jj = jj + 1;
+    endo;
+
+    jj = 1;
+    do until jj > dim_gamma;
+        ci_gamma[jj, 1] = quantile(boot_gamma[., jj], q_lo);
+        ci_gamma[jj, 2] = quantile(boot_gamma[., jj], q_hi);
+        jj = jj + 1;
+    endo;
+
+    jj = 1;
+    do until jj > dim_phi;
+        ci_phi[jj, 1] = quantile(boot_phi[., jj], q_lo);
+        ci_phi[jj, 2] = quantile(boot_phi[., jj], q_hi);
+        jj = jj + 1;
+    endo;
+
+    retp(ci_beta, ci_gamma, ci_phi);
+endp;
+
+/*
 **> blockBootstrapQARDLDiag
 **
 **  Purpose:    Moving-block bootstrap confidence intervals for QARDL
@@ -2178,6 +2325,75 @@ proc (2) = blockBootstrapQARDLECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, B =
     do until jj > ss;
         ci_rho[jj, 1]   = quantile(boot_rho[., jj],   q_lo);
         ci_rho[jj, 2]   = quantile(boot_rho[., jj],   q_hi);
+        ci_alpha[jj, 1] = quantile(boot_alpha[., jj], q_lo);
+        ci_alpha[jj, 2] = quantile(boot_alpha[., jj], q_hi);
+        jj = jj + 1;
+    endo;
+
+    retp(ci_rho, ci_alpha);
+endp;
+
+/*
+**> blockBootstrapQARDLECMMethod
+**
+**  Purpose:    Bootstrap confidence intervals for QARDL-ECM alpha/rho with
+**              selectable resampling method.
+**
+**  Input:      method      string: "moving", "circular", or "stationary".
+*/
+proc (2) = blockBootstrapQARDLECMMethod(data, ppp, qqq, tau, B, blk_len, alpha, method);
+    local T, ss, jj, bbb, idx, boot_data, used_blk_len;
+    local boot_rho, boot_alpha;
+    local ci_rho, ci_alpha;
+    local q_lo, q_hi;
+
+    struct qardlECMOut qecm_b;
+
+    call _qardlValidateEstimatorInputs(data, ppp, qqq, tau, "blockBootstrapQARDLECMMethod");
+
+    if rows(B) * cols(B) /= 1 or B < 1 or round(B) /= B;
+        errorlog "blockBootstrapQARDLECMMethod: B must be a positive integer";
+        end;
+    endif;
+
+    if rows(alpha) * cols(alpha) /= 1 or alpha <= 0 or alpha >= 1;
+        errorlog "blockBootstrapQARDLECMMethod: alpha must be a scalar in (0, 1)";
+        end;
+    endif;
+
+    method = lower(method);
+    call _qardlValidateBootstrapMethod(method, "blockBootstrapQARDLECMMethod");
+
+    T = rows(data);
+    ss = rows(tau);
+    used_blk_len = _qardlResolvedBlockLength(T, blk_len, "blockBootstrapQARDLECMMethod");
+
+    boot_rho   = zeros(B, ss);
+    boot_alpha = zeros(B, ss);
+
+    bbb = 1;
+    do until bbb > B;
+        idx = _qardlBootstrapIndex(T, used_blk_len, method);
+        boot_data = data[idx, .];
+
+        qecm_b = qardlECM(boot_data, ppp, qqq, tau);
+
+        boot_rho[bbb, .]   = qecm_b.rho';
+        boot_alpha[bbb, .] = qecm_b.alpha';
+
+        bbb = bbb + 1;
+    endo;
+
+    q_lo = alpha / 2;
+    q_hi = 1 - q_lo;
+
+    ci_rho   = zeros(ss, 2);
+    ci_alpha = zeros(ss, 2);
+
+    jj = 1;
+    do until jj > ss;
+        ci_rho[jj, 1]   = quantile(boot_rho[., jj], q_lo);
+        ci_rho[jj, 2]   = quantile(boot_rho[., jj], q_hi);
         ci_alpha[jj, 1] = quantile(boot_alpha[., jj], q_lo);
         ci_alpha[jj, 2] = quantile(boot_alpha[., jj], q_hi);
         jj = jj + 1;
@@ -2501,6 +2717,109 @@ proc (1) = _qardlECMDesignOK(data, ppp, qqq);
     retp(rank(ONEX_ecm) == cols(ONEX_ecm) and rows(Y_ecm) > cols(ONEX_ecm));
 endp;
 
+proc (1) = _qardlQRCovSandwich(ONEX, Y, bt, tau, fh, D_inv, hac_lags);
+    local N, K, ss, ii, jj, lag, w;
+    local full_cov, resid_i, resid_j, psi_i, psi_j;
+    local scores_i, scores_j, S_ij, cov_block, scale_i, scale_j;
+
+    N = rows(ONEX);
+    K = cols(ONEX);
+    ss = rows(tau);
+
+    full_cov = zeros(K*ss, K*ss);
+
+    jj = 1;
+    do until jj > ss;
+        resid_j = Y - ONEX*bt[., jj];
+        psi_j = tau[jj] - (resid_j .< 0);
+        scores_j = ONEX .* (psi_j*ones(1, K));
+
+        ii = 1;
+        do until ii > ss;
+            resid_i = Y - ONEX*bt[., ii];
+            psi_i = tau[ii] - (resid_i .< 0);
+            scores_i = ONEX .* (psi_i*ones(1, K));
+
+            S_ij = scores_i'*scores_j / N;
+
+            lag = 1;
+            do until lag > hac_lags;
+                w = 1 - lag/(hac_lags + 1);
+                S_ij = S_ij
+                     + w*(scores_i[(lag+1):N, .]'*scores_j[1:(N-lag), .] / N)
+                     + w*(scores_i[1:(N-lag), .]'*scores_j[(lag+1):N, .] / N);
+                lag = lag + 1;
+            endo;
+
+            scale_i = fh[ii];
+            scale_j = fh[jj];
+            cov_block = D_inv*S_ij*D_inv / (scale_i*scale_j*N);
+
+            full_cov[(ii-1)*K+1:ii*K, (jj-1)*K+1:jj*K] = cov_block;
+
+            ii = ii + 1;
+        endo;
+
+        jj = jj + 1;
+    endo;
+
+    retp(full_cov);
+endp;
+
+proc (3) = _qardlLevelsCovFromFull(full_cov, bt, ppp, qqq, k0, ss);
+    local K, theta_start, theta_end, phi_start, phi_end;
+    local bigbt_cov, phi_cov, gamma_cov, ii, jj, row_i, row_j;
+    local trans_i, trans_j, block_ij, cov_beta_ij, theta_i, den_i;
+
+    K = rows(bt);
+    theta_start = 2 + qqq*k0;
+    theta_end = 1 + (qqq+1)*k0;
+    phi_start = 2 + (qqq+1)*k0;
+    phi_end = 1 + (qqq+1)*k0 + ppp;
+
+    bigbt_cov = zeros(k0*ss, k0*ss);
+    phi_cov = zeros(ppp*ss, ppp*ss);
+    gamma_cov = zeros(k0*ss, k0*ss);
+
+    ii = 1;
+    do until ii > ss;
+        theta_i = bt[theta_start:theta_end, ii];
+        den_i = 1 - sumc(bt[phi_start:phi_end, ii]);
+
+        trans_i = zeros(k0, K);
+        trans_i[., theta_start:theta_end] = eye(k0) / den_i;
+        trans_i[., phi_start:phi_end] = (theta_i/(den_i^2))*ones(1, ppp);
+
+        jj = 1;
+        do until jj > ss;
+            theta_i = bt[theta_start:theta_end, jj];
+            den_i = 1 - sumc(bt[phi_start:phi_end, jj]);
+
+            trans_j = zeros(k0, K);
+            trans_j[., theta_start:theta_end] = eye(k0) / den_i;
+            trans_j[., phi_start:phi_end] = (theta_i/(den_i^2))*ones(1, ppp);
+
+            row_i = (ii-1)*K + 1;
+            row_j = (jj-1)*K + 1;
+            block_ij = full_cov[row_i:row_i+K-1, row_j:row_j+K-1];
+
+            cov_beta_ij = trans_i*block_ij*trans_j';
+
+            bigbt_cov[(ii-1)*k0+1:ii*k0, (jj-1)*k0+1:jj*k0] = cov_beta_ij;
+            gamma_cov[(ii-1)*k0+1:ii*k0, (jj-1)*k0+1:jj*k0] =
+                block_ij[theta_start:theta_end, theta_start:theta_end];
+            phi_cov[(ii-1)*ppp+1:ii*ppp, (jj-1)*ppp+1:jj*ppp] =
+                block_ij[phi_start:phi_end, phi_start:phi_end];
+
+            jj = jj + 1;
+        endo;
+
+        ii = ii + 1;
+    endo;
+
+    retp(bigbt_cov, phi_cov, gamma_cov);
+endp;
+
 proc (2) = _qardlECMCovSandwich(ONEX_ecm, Y_ecm, bt_ecm, tau, fh_ecm, D_inv_ecm, hac_lags);
     local N_ecm, K_ecm, ss, ii, jj, lag, w;
     local alpha_cov, rho_cov, resid_i, resid_j, psi_i, psi_j;
@@ -2600,6 +2919,70 @@ proc (1) = _qardlResolvedBlockLength(T, blk_len, caller);
     retp(used_blk_len);
 endp;
 
+proc (1) = _qardlBootstrapIndex(T, blk_len, method);
+    local idx, n_blks, starts, jj, kk, idx_first, idx_last;
+    local pos, new_start_prob;
+
+    if method $== "stationary";
+        idx = zeros(T, 1);
+        new_start_prob = 1 / blk_len;
+        pos = ceil(rndu(1, 1) * T);
+        jj = 1;
+        do until jj > T;
+            idx[jj] = pos;
+            if rndu(1, 1) < new_start_prob;
+                pos = ceil(rndu(1, 1) * T);
+            else;
+                pos = pos + 1;
+                if pos > T;
+                    pos = 1;
+                endif;
+            endif;
+            jj = jj + 1;
+        endo;
+        retp(idx);
+    endif;
+
+    n_blks = ceil(T / blk_len);
+    idx = zeros(n_blks*blk_len, 1);
+
+    if method $== "moving";
+        starts = ceil(rndu(n_blks, 1) * (T - blk_len + 1));
+
+        jj = 1;
+        do until jj > n_blks;
+            idx_first = (jj-1)*blk_len + 1;
+            idx_last  = jj*blk_len;
+            idx[idx_first:idx_last] = seqa(starts[jj], 1, blk_len);
+            jj = jj + 1;
+        endo;
+    else;
+        starts = ceil(rndu(n_blks, 1) * T);
+
+        jj = 1;
+        do until jj > n_blks;
+            kk = 1;
+            do until kk > blk_len;
+                idx[(jj-1)*blk_len + kk] = starts[jj] + kk - 1;
+                do while idx[(jj-1)*blk_len + kk] > T;
+                    idx[(jj-1)*blk_len + kk] = idx[(jj-1)*blk_len + kk] - T;
+                endo;
+                kk = kk + 1;
+            endo;
+            jj = jj + 1;
+        endo;
+    endif;
+
+    retp(idx[1:T, .]);
+endp;
+
+proc (0) = _qardlValidateBootstrapMethod(method, caller);
+    if not (method $== "moving" or method $== "circular" or method $== "stationary");
+        errorlog caller $+ ": method must be \"moving\", \"circular\", or \"stationary\"";
+        end;
+    endif;
+endp;
+
 proc (0) = _qardlValidateBootstrapSeed(seed, caller);
     if rows(seed) * cols(seed) /= 1 or seed < 0 or round(seed) /= seed;
         errorlog caller $+ ": seed must be a non-negative integer";
@@ -2643,7 +3026,8 @@ endp;
 **
 **  Format:     qfOut = qardlFull(data, pend, qend);
 **              qfOut = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 },
-**                                formula = "", verbose = 1, criterion = "bic");
+**                                formula = "", verbose = 1, criterion = "bic",
+**                                cov_type = "iid", hac_lags = 0);
 **
 **  Input:      data    (T x (1+k)) matrix (or dataframe with formula).
 **              pend    scalar, maximum AR lag to search.
@@ -2656,6 +3040,13 @@ endp;
 **              criterion string, lag-selection information criterion:
 **                       "bic" (default), "aic", "hq", or "hqc".
 **
+**              cov_type string, covariance estimator passed to qardl() and
+**                       qardlECM(): "iid" (default), "robust", or "hac".
+**
+**              hac_lags scalar, non-negative HAC lag truncation. If cov_type
+**                       is "hac" and hac_lags = 0, the automatic bandwidth is
+**                       used.
+**
 **  Output:     qfOut   struct qardlFullOut:
 **                  .pst        Selected AR lag order.
 **                  .qst        Selected DL lag order.
@@ -2666,7 +3057,7 @@ endp;
 **
 **  Developed:  April 2026
 */
-proc (struct qardlFullOut) = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 }, formula = "", verbose = 1, criterion = "bic");
+proc (struct qardlFullOut) = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 }, formula = "", verbose = 1, criterion = "bic", cov_type = "iid", hac_lags = 0);
     local pst, qst, fstat, cv;
 
     struct qardlFullOut qfOut;
@@ -2682,6 +3073,9 @@ proc (struct qardlFullOut) = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75
     call _qardlValidateSearchInputs(data, pend, qend, tau, "qardlFull");
     criterion = lower(criterion);
     call _qardlValidateICCriterion(criterion, "qardlFull");
+    cov_type = lower(cov_type);
+    call _qardlValidateECMCovType(cov_type, "qardlFull");
+    call _qardlValidateHACLags(hac_lags, "qardlFull");
 
     // Step 1: Information-criterion lag order selection
     if verbose;
@@ -2703,18 +3097,26 @@ proc (struct qardlFullOut) = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75
 
     // Step 3: QARDL levels estimation
     if verbose;
-        print "qardlFull: estimating QARDL (levels form) ...";
+        if cov_type $== "iid";
+            print "qardlFull: estimating QARDL (levels form) ...";
+        else;
+            print "qardlFull: estimating QARDL (levels form, " $+ upper(cov_type) $+ " covariance) ...";
+        endif;
     endif;
-    qa = qardl(data, pst, qst, tau);
+    qa = qardl(data, pst, qst, tau, cov_type, hac_lags);
     if verbose;
         printQARDL(qa, tau);
     endif;
 
     // Step 4: QARDL-ECM two-step estimation
     if verbose;
-        print "qardlFull: estimating QARDL-ECM (two-step) ...";
+        if cov_type $== "iid";
+            print "qardlFull: estimating QARDL-ECM (two-step) ...";
+        else;
+            print "qardlFull: estimating QARDL-ECM (two-step, " $+ upper(cov_type) $+ " covariance) ...";
+        endif;
     endif;
-    ecm = qardlECM(data, pst, qst, tau);
+    ecm = qardlECM(data, pst, qst, tau, cov_type, hac_lags);
     if verbose;
         printQARDLECM(ecm, tau);
     endif;

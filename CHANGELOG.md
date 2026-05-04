@@ -23,6 +23,12 @@
   bootstrap runs with rank-deficient resample recovery and simple diagnostics.
 - `qardlECM(..., cov_type, hac_lags)`, `qardlECMRobust`, and `qardlECMHAC`
   for robust and Newey-West/Bartlett HAC ECM covariance estimates.
+- `qardl(..., cov_type, hac_lags)`, `qardlRobust`, and `qardlHAC` for robust
+  and Newey-West/Bartlett HAC levels-form covariance estimates.
+- `qardlFull(..., cov_type, hac_lags)` pass-through for robust/HAC covariance
+  in the integrated workflow.
+- `blockBootstrapQARDLMethod` and `blockBootstrapQARDLECMMethod` with
+  `"moving"`, `"circular"`, and `"stationary"` resampling choices.
 - `qardlFull(..., verbose = 1)` option; pass `0` to compute silently.
 - Metadata fields on `qardlOut`, `qardlECMOut`, and `qardlFullOut`.
 - `GOLD_STANDARD_TODO.md` release-readiness inventory and improvement backlog.

@@ -10,6 +10,7 @@ Use `qardlFull` when you want the standard applied workflow:
 ```gauss
 qfOut = qardlFull(data, 8, 8);
 qfOut = qardlFull(data, 8, 8, tau = { 0.25, 0.5, 0.75 }, formula = "", verbose = 1);
+qfOut = qardlFull(data, 8, 8, tau, "", 0, "bic", "hac", 4);
 ```
 
 It performs information-criterion lag selection, ARDL bounds testing, QARDL
@@ -24,6 +25,19 @@ estimates:
 qaOut = qardl(data, 2, 1, tau);
 printQARDL(qaOut, tau);
 ```
+
+For levels-form covariance estimates that are robust to heteroskedasticity or
+serial dependence in the quantile score, use the levels covariance variants:
+
+```gauss
+qaRobust = qardlRobust(data, 2, 1, tau);
+qaHAC = qardlHAC(data, 2, 1, tau, 4);
+qaAutoHAC = qardlHAC(data, 2, 1, tau, 0);
+```
+
+`qardlHAC(..., 0)` uses the automatic Newey-West bandwidth
+`floor(4*(T/100)^(2/9))`. The parameter estimates are the same as `qardl`;
+only `bigbt_cov`, `gamma_cov`, and `phi_cov` change.
 
 Use `qardlECM` when you specifically want the two-step ECM estimator:
 
@@ -146,6 +160,10 @@ The bootstrap helpers are intended for applied uncertainty checks:
 { ci_rho, ci_alpha } = blockBootstrapQARDLECM(data, 2, 1, tau, 999, 0, 0.05);
 { ci_beta, ci_gamma, ci_phi, boot_diag } =
     blockBootstrapQARDLDiag(data, 2, 1, tau, 999, 0, 0.05, 12345);
+{ ci_beta_c, ci_gamma_c, ci_phi_c } =
+    blockBootstrapQARDLMethod(data, 2, 1, tau, 999, 0, 0.05, "circular");
+{ ci_rho_s, ci_alpha_s } =
+    blockBootstrapQARDLECMMethod(data, 2, 1, tau, 999, 0, 0.05, "stationary");
 ```
 
 Set `blk_len = 0` to use the default `floor(T^(1/3))` block length. For
@@ -155,6 +173,8 @@ reproducible intervals, use `blockBootstrapQARDLDiag` or
 The diagnostic wrappers skip rank-deficient bootstrap resamples and keep
 drawing until they complete the requested number of valid replications or reach
 the internal attempt limit.
+The method variants support `"moving"`, `"circular"`, and `"stationary"`
+resampling.
 
 ## Quantile Impulse Responses
 
@@ -173,10 +193,10 @@ estimated AR dynamics are stable. For a temporary shock, set `permanent = 0`.
 - Individual p-values use asymptotic normal approximations.
 - Wald tests use chi-squared asymptotics and depend on correctly specified
   restriction matrices.
-- HAC/robust covariance support is currently available for the two-step ECM
-  alpha/rho covariance surface. Levels-form beta/gamma/phi HAC covariance is a
-  separate extension because the long-run parameter transformations require a
-  larger block covariance system.
+- HAC/robust covariance support is available for levels-form beta/gamma/phi
+  covariance and two-step ECM alpha/rho covariance. The default estimators
+  preserve the original covariance formulas unless an alternate covariance type
+  is requested.
 - `ardlbounds` currently implements PSS Case III tabulated critical values for
   up to 10 regressors.
 - Rolling window length is fixed internally at 10 percent of the sample.

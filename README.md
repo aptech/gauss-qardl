@@ -143,6 +143,7 @@ Runs the complete QARDL pipeline in a single call: BIC lag selection → ARDL bo
 qfOut = qardlFull(data, pend, qend);
 qfOut = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 }, formula = "", verbose = 1);
 qfOut = qardlFull(data, 8, 8, tau, "", 0, "aic");
+qfOut = qardlFull(data, 8, 8, tau, "", 0, "bic", "hac", 4);
 ```
 
 | Argument | Default | Description |
@@ -154,6 +155,8 @@ qfOut = qardlFull(data, 8, 8, tau, "", 0, "aic");
 | `formula` | `""` | Wilkinson formula string |
 | `verbose` | `1` | `1` prints workflow summaries; `0` computes silently |
 | `criterion` | `"bic"` | Lag-selection criterion: `"bic"`, `"aic"`, `"hq"`, or `"hqc"` |
+| `cov_type` | `"iid"` | Covariance estimator: `"iid"`, `"robust"`, or `"hac"` |
+| `hac_lags` | `0` | HAC lag truncation; `0` selects the automatic bandwidth |
 
 Returns a `qardlFullOut` structure (see [Output Structures](#output-structures)).
 
@@ -194,6 +197,9 @@ columns `[p, q, IC]`.
 ```gauss
 qaOut = qardl(data, ppp, qqq);
 qaOut = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
+qaOut = qardl(data, ppp, qqq, tau, "hac", 4);
+qaOut = qardlRobust(data, ppp, qqq, tau);
+qaOut = qardlHAC(data, ppp, qqq, tau, 4);
 ```
 
 | Argument | Default | Description |
@@ -202,8 +208,15 @@ qaOut = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
 | `ppp` | — | AR lag order p ≥ 1 |
 | `qqq` | — | Distributed-lag order q ≥ 1 |
 | `tau` | `{ 0.25, 0.5, 0.75 }` | `(s × 1)` quantile vector |
+| `cov_type` | `"iid"` | `"iid"`, `"robust"`, or `"hac"` |
+| `hac_lags` | `0` | HAC lag truncation; `0` selects the automatic bandwidth |
 
-Returns a `qardlOut` structure.
+Returns a `qardlOut` structure. The default `qardl` covariance preserves the
+original QARDL asymptotic covariance formulas. Use `qardlRobust` for a
+heteroskedasticity-robust QR sandwich covariance, or `qardlHAC` for a
+Newey-West/Bartlett HAC QR sandwich covariance with delta-method long-run beta
+covariance. Passing `hac_lags = 0` to `qardlHAC` uses
+`floor(4*(T/100)^(2/9))`.
 
 ---
 
@@ -309,6 +322,8 @@ Moving-block bootstrap (Künsch 1989) CIs for β, γ, and φ.
 { ci_beta, ci_gamma, ci_phi } = blockBootstrapQARDL(data, ppp, qqq);
 { ci_beta, ci_gamma, ci_phi } = blockBootstrapQARDL(data, ppp, qqq,
     tau = { 0.25, 0.5, 0.75 }, B = 999, blk_len = 0, alpha = 0.05);
+{ ci_beta, ci_gamma, ci_phi } =
+    blockBootstrapQARDLMethod(data, ppp, qqq, tau, 999, 0, 0.05, "circular");
 { ci_beta, ci_gamma, ci_phi, boot_diag } =
     blockBootstrapQARDLDiag(data, ppp, qqq, tau, 999, 0, 0.05, 12345);
 ```
@@ -318,6 +333,8 @@ diagnostic variant sets `rndseed` when `seed > 0` and returns diagnostics
 `[B requested, B completed, B failed, blk_len, seed]`.
 Rank-deficient bootstrap resamples are skipped and counted as failed
 replications.
+`blockBootstrapQARDLMethod` supports `"moving"`, `"circular"`, and
+`"stationary"` resampling.
 
 #### `blockBootstrapQARDLECM`
 
@@ -327,11 +344,15 @@ Moving-block bootstrap CIs for the ECM speed-of-adjustment ρ(τ) and intercept 
 { ci_rho, ci_alpha } = blockBootstrapQARDLECM(data, ppp, qqq);
 { ci_rho, ci_alpha } = blockBootstrapQARDLECM(data, ppp, qqq,
     tau = { 0.25, 0.5, 0.75 }, B = 999, blk_len = 0, alpha = 0.05);
+{ ci_rho, ci_alpha } =
+    blockBootstrapQARDLECMMethod(data, ppp, qqq, tau, 999, 0, 0.05, "stationary");
 { ci_rho, ci_alpha, boot_diag } =
     blockBootstrapQARDLECMDiag(data, ppp, qqq, tau, 999, 0, 0.05, 12345);
 ```
 
 Each CI output is an `(ss × 2)` matrix of `[lower, upper]` bounds.
+`blockBootstrapQARDLECMMethod` supports `"moving"`, `"circular"`, and
+`"stationary"` resampling.
 
 ---
 
@@ -439,7 +460,7 @@ Output files: `qardl_ecm_lr.csv` (OLS β), `qardl_ecm_qr.csv` (QR α and ρ with
 
 ### `qardlOut`
 
-Returned by `qardl()`.
+Returned by `qardl()`, `qardlRobust()`, and `qardlHAC()`.
 
 | Member | Dimensions | Description |
 |--------|-----------|-------------|

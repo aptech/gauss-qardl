@@ -65,5 +65,8 @@ call assert_true(rows(qfOut.ecm.rho) == rows(tau), "qardlFull ECM rho shape chan
 
 qfOut = qardlFull(data, 2, 2, tau, "", 0, "hq");
 call assert_true(qfOut.pst >= 1 and qfOut.qst >= 1, "qardlFull HQ returned invalid lag orders");
+qfOut = qardlFull(data, 2, 2, tau, "", 0, "bic", "hac", 2);
+call assert_true(rows(qfOut.qa.bigbt_cov) == rows(qfOut.qa.bigbt), "qardlFull HAC levels covariance invalid");
+call assert_true(rows(qfOut.ecm.rho_cov) == rows(tau), "qardlFull HAC ECM covariance invalid");
 
 print "smoke_workflow_api.e: PASS";

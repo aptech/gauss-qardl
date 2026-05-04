@@ -79,6 +79,24 @@ call assert_true(rows(qaOut.alpha) == rows(tau), "qardl alpha has wrong row coun
 call assert_true(rows(qaOut.rho) == rows(tau), "qardl rho has wrong row count");
 call assert_true(rows(qaOut.bt) == 7 and cols(qaOut.bt) == rows(tau), "qardl bt has wrong shape");
 
+struct qardlOut qaRobustOut;
+qaRobustOut = qardlRobust(data, 2, 1, tau);
+call assert_close(qaRobustOut.bigbt, qaOut.bigbt, 1e-12, "qardlRobust changed parameter estimates");
+call assert_true(rows(qaRobustOut.bigbt_cov) == rows(qaOut.bigbt) and cols(qaRobustOut.bigbt_cov) == rows(qaOut.bigbt),
+                 "qardlRobust beta covariance shape changed");
+call assert_true(qaRobustOut.bigbt_cov[3, 3] > 0 and qaRobustOut.phi_cov[2, 2] > 0 and qaRobustOut.gamma_cov[3, 3] > 0,
+                 "qardlRobust covariance diagonal invalid");
+
+struct qardlOut qaHACOut;
+qaHACOut = qardlHAC(data, 2, 1, tau, 2);
+call assert_close(qaHACOut.bigbt, qaOut.bigbt, 1e-12, "qardlHAC changed parameter estimates");
+call assert_true(rows(qaHACOut.bigbt_cov) == rows(qaOut.bigbt) and cols(qaHACOut.bigbt_cov) == rows(qaOut.bigbt),
+                 "qardlHAC beta covariance shape changed");
+call assert_true(qaHACOut.bigbt_cov[3, 3] > 0 and qaHACOut.phi_cov[2, 2] > 0 and qaHACOut.gamma_cov[3, 3] > 0,
+                 "qardlHAC covariance diagonal invalid");
+qaHACOut = qardl(data, 2, 1, tau, "hac", 2);
+call assert_true(qaHACOut.bigbt_cov[3, 3] > 0, "qardl HAC covariance option invalid");
+
 // Individual p-values.
 { p_beta, p_phi, p_gamma } = qardl_pval(qaOut);
 call assert_true(rows(p_beta) == rows(qaOut.bigbt), "qardl_pval beta p-values have wrong shape");
@@ -139,10 +157,18 @@ boot_data = data[1:250, .];
 call assert_true(rows(ci_beta) == 2*rows(tau) and cols(ci_beta) == 2, "blockBootstrapQARDL beta CI shape changed");
 call assert_true(rows(ci_gamma) == 2*rows(tau) and cols(ci_gamma) == 2, "blockBootstrapQARDL gamma CI shape changed");
 call assert_true(rows(ci_phi) == rows(tau) and cols(ci_phi) == 2, "blockBootstrapQARDL phi CI shape changed");
+{ ci_beta, ci_gamma, ci_phi } = blockBootstrapQARDLMethod(boot_data, 1, 1, tau, 2, 10, 0.10, "circular");
+call assert_true(rows(ci_beta) == 2*rows(tau) and cols(ci_beta) == 2, "blockBootstrapQARDLMethod circular shape changed");
+{ ci_beta, ci_gamma, ci_phi } = blockBootstrapQARDLMethod(boot_data, 1, 1, tau, 2, 10, 0.10, "stationary");
+call assert_true(rows(ci_phi) == rows(tau) and cols(ci_phi) == 2, "blockBootstrapQARDLMethod stationary shape changed");
 
 { ci_rho, ci_alpha } = blockBootstrapQARDLECM(boot_data, 1, 1, tau, 2, 10, 0.10);
 call assert_true(rows(ci_rho) == rows(tau) and cols(ci_rho) == 2, "blockBootstrapQARDLECM rho CI shape changed");
 call assert_true(rows(ci_alpha) == rows(tau) and cols(ci_alpha) == 2, "blockBootstrapQARDLECM alpha CI shape changed");
+{ ci_rho, ci_alpha } = blockBootstrapQARDLECMMethod(boot_data, 1, 1, tau, 2, 10, 0.10, "circular");
+call assert_true(rows(ci_rho) == rows(tau) and cols(ci_rho) == 2, "blockBootstrapQARDLECMMethod circular shape changed");
+{ ci_rho, ci_alpha } = blockBootstrapQARDLECMMethod(boot_data, 1, 1, tau, 2, 10, 0.10, "stationary");
+call assert_true(rows(ci_alpha) == rows(tau) and cols(ci_alpha) == 2, "blockBootstrapQARDLECMMethod stationary shape changed");
 
 { ci_beta_seed1, ci_gamma_seed1, ci_phi_seed1, boot_diag1 } =
     blockBootstrapQARDLDiag(boot_data, 1, 1, tau, 2, 10, 0.10, 12345);
