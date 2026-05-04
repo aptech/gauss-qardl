@@ -51,10 +51,17 @@ proc (6) = wtestsym(struct qardlOut qaOut, tau, data);
     local rb_beta, rb_gamma, rb_phi;
     local rnk_beta, rnk_gamma, rnk_phi;
 
+    call _qardlValidateTau(tau, "wtestsym");
+
     ss = rows(tau);
     nn = rows(data);
     k  = rows(qaOut.bigbt)   / ss;
     p  = rows(qaOut.phi)     / ss;
+
+    if round(k) /= k or round(p) /= p;
+        errorlog "wtestsym: tau length does not match qaOut";
+        end;
+    endif;
 
     // --- Find symmetric quantile pairs (tau[j] + tau[m] = 1, j < m) ---
     tol = 1e-10;

@@ -29,6 +29,7 @@ A [GAUSS](https://www.aptech.com) application package implementing the **Quantil
 - [ARDL Bounds Test](#ardl-bounds-test)
 - [Examples](#examples)
 - [Development and Tests](#development-and-tests)
+- [Usage Guide](#usage-guide)
 - [Reference](#reference)
 
 ---
@@ -141,6 +142,7 @@ Runs the complete QARDL pipeline in a single call: BIC lag selection → ARDL bo
 ```gauss
 qfOut = qardlFull(data, pend, qend);
 qfOut = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 }, formula = "", verbose = 1);
+qfOut = qardlFull(data, 8, 8, tau, "", 0, "aic");
 ```
 
 | Argument | Default | Description |
@@ -151,6 +153,7 @@ qfOut = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 }, formula = "", ver
 | `tau` | `{ 0.25, 0.5, 0.75 }` | Quantile vector |
 | `formula` | `""` | Wilkinson formula string |
 | `verbose` | `1` | `1` prints workflow summaries; `0` computes silently |
+| `criterion` | `"bic"` | Lag-selection criterion: `"bic"`, `"aic"`, `"hq"`, or `"hqc"` |
 
 Returns a `qardlFullOut` structure (see [Output Structures](#output-structures)).
 
@@ -160,11 +163,12 @@ Returns a `qardlFullOut` structure (see [Output Structures](#output-structures))
 
 #### `pqorder`
 
-BIC-based selection of ARDL lag orders.
+Information-criterion selection of ARDL lag orders. BIC is the default.
 
 ```gauss
 { pst, qst } = pqorder(data);
 { pst, qst } = pqorder(data, pend = 8, qend = 8);
+{ pst, qst } = pqorder(data, 8, 8, "aic");
 ```
 
 | Argument | Default | Description |
@@ -172,6 +176,7 @@ BIC-based selection of ARDL lag orders.
 | `data` | — | `(n × (1+k))` matrix, y in column 1 |
 | `pend` | `8` | Maximum AR lag to search |
 | `qend` | `8` | Maximum distributed lag to search |
+| `criterion` | `"bic"` | `"bic"`, `"aic"`, `"hq"`, or `"hqc"` |
 
 ---
 
@@ -457,8 +462,8 @@ Returned by `qardlFull()`.
 
 | Member | Type | Description |
 |--------|------|-------------|
-| `pst` | scalar | BIC-selected AR lag order |
-| `qst` | scalar | BIC-selected DL lag order |
+| `pst` | scalar | Selected AR lag order |
+| `qst` | scalar | Selected DL lag order |
 | `tau` | `s × 1` | Quantile vector used in estimation |
 | `nobs` | scalar | Number of observations in the input sample |
 | `ardl_fstat` | scalar | ARDL bounds test F-statistic |
@@ -603,6 +608,12 @@ Before publishing a release, reinstall the package and verify that `library qard
 ```gauss
 run package_public_api.e;
 ```
+
+---
+
+## Usage Guide
+
+For guidance on choosing between `qardlFull`, `qardl`, and `qardlECM`, formula dataframe workflows, parameter stacking, bootstrap intervals, QIRF, and current limitations, see [`docs/USAGE_GUIDE.md`](docs/USAGE_GUIDE.md).
 
 ---
 

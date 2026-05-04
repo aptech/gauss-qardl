@@ -61,6 +61,8 @@
 **
 **  Developed:  April 2026
 */
+#include qardl.sdf
+
 proc (struct qirfOut) = qirf(struct qardlOut qaOut, ppp, qqq, H, tau = { 0.25, 0.5, 0.75 }, k_x = 1, permanent = 1);
     local ss, k0, jj, hh, ll;
     local theta_row, gamma_start, gamma_first, gamma_last, phi_start, phi_last;

@@ -31,6 +31,8 @@
 
 proc (2) = wtestlrb(_beta, cov, bigR, smr, data);
     local nn, wt, rnk, pv;
+
+    call _qardlValidateWaldInputs(_beta, cov, bigR, smr, data, "wtestlrb");
     
     nn = rows(data);
     wt = ((nn-1)^2)*(bigR*_beta-smr)'*inv(bigR*cov*bigR')*(bigR*_beta-smr);

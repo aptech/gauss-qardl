@@ -23,6 +23,8 @@ tau = { 0.25, 0.5, 0.75 };
 
 { pst, qst } = pqorder(data, 2, 2);
 call assert_true(pst >= 1 and qst >= 1, "pqorder returned invalid lag orders");
+{ pst_aic, qst_aic } = pqorder(data, 2, 2, "aic");
+call assert_true(pst_aic >= 1 and qst_aic >= 1, "pqorder AIC returned invalid lag orders");
 
 struct qardlOut qaOut;
 qaOut = qardl(data, pst, qst, tau);
@@ -50,6 +52,8 @@ call assert_true(rows(qiOut.irf) == 5 and cols(qiOut.irf) == rows(tau), "qirf ou
 struct qardlFullOut qfOut;
 qfOut = qardlFull(data, 2, 2, tau);
 call assert_true(qfOut.pst >= 1 and qfOut.qst >= 1, "qardlFull returned invalid lag orders");
+qfOut = qardlFull(data, 2, 2, tau, "", 0, "hq");
+call assert_true(qfOut.pst >= 1 and qfOut.qst >= 1, "qardlFull HQ returned invalid lag orders");
 
 { ci_rho, ci_alpha } = blockBootstrapQARDLECM(data, pst, qst, tau, 2, 10, 0.10);
 call assert_true(rows(ci_rho) == rows(tau) and cols(ci_rho) == 2, "blockBootstrapQARDLECM rho CI shape changed");

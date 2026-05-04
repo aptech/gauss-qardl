@@ -1,7 +1,9 @@
-proc icmean(data, ppp, qqq);
-    local yy, xx, ee, nn, eei, xxi, yyi, ii, jj, X, onex, Y, bt, uu, rh, bic;
+proc icmean(data, ppp, qqq, criterion = "bic");
+    local yy, xx, ee, nn, eei, xxi, yyi, ii, jj, X, onex, Y, bt, uu, rh, ic;
 
     call _qardlValidateEstimatorInputs(data, ppp, qqq, { 0.5 }, "icmean");
+    criterion = lower(criterion);
+    call _qardlValidateICCriterion(criterion, "icmean");
     
     nn = rows(data);
     yy = data[., 1];
@@ -42,24 +44,26 @@ proc icmean(data, ppp, qqq);
     uu = Y - onex*bt;
     rh = uu^2;
 
-    bic = rows(Y)*ln(meanc(rh)) + cols(onex)*ln(rows(Y));
+    ic = _qardlInformationCriterion(meanc(rh), rows(Y), cols(onex), criterion);
 
-    retp(bic);
+    retp(ic);
 endp;
 
-proc (2) = pqorder(data, pend = 8, qend = 8);
+proc (2) = pqorder(data, pend = 8, qend = 8, criterion = "bic");
 
     local icb, jj1, jj2, lst, pst, qst;
 
     call _qardlValidateSearchInputs(data, pend, qend, { 0.5 }, "pqorder");
+    criterion = lower(criterion);
+    call _qardlValidateICCriterion(criterion, "pqorder");
 
-    /* bic computation */
+    /* Information criterion computation */
     icb = zeros(pend*qend,1);
     jj1 = 1;
     do until jj1 > pend;
         jj2 = 1;
         do until jj2 > qend;
-            icb[pend*(jj1-1)+jj2, 1] = icmean(data, jj1, jj2);
+            icb[pend*(jj1-1)+jj2, 1] = icmean(data, jj1, jj2, criterion);
             jj2 = jj2 + 1;
         endo;
         jj1 = jj1 + 1;
@@ -71,4 +75,25 @@ proc (2) = pqorder(data, pend = 8, qend = 8);
     qst = lst - (pst-1)*qend;
 
     retp(pst, qst);
+endp;
+
+proc (1) = _qardlInformationCriterion(sigma2, nobs, nparam, criterion);
+    local ic;
+
+    if criterion $== "aic";
+        ic = nobs*ln(sigma2) + 2*nparam;
+    elseif criterion $== "hq" or criterion $== "hqc";
+        ic = nobs*ln(sigma2) + 2*nparam*ln(ln(nobs));
+    else;
+        ic = nobs*ln(sigma2) + nparam*ln(nobs);
+    endif;
+
+    retp(ic);
+endp;
+
+proc (0) = _qardlValidateICCriterion(criterion, caller);
+    if not (criterion $== "aic" or criterion $== "bic" or criterion $== "hq" or criterion $== "hqc");
+        errorlog caller $+ ": criterion must be \"aic\", \"bic\", \"hq\", or \"hqc\"";
+        end;
+    endif;
 endp;

@@ -8,6 +8,15 @@
 - Installed-package release gate for `library qardl`.
 - Package manifest verifier for `package.json`/`src` consistency.
 - One-command source and example smoke-test runners.
+- Usage guide covering API choice, parameter stacking, formula workflows,
+  bootstrap, QIRF, and current limitations.
+- First-pass validation for plotting, Wald restriction matrices, and rolling
+  estimation APIs.
+- Rolling smoke coverage for levels-form QARDL and two-step ECM estimators.
+- `#include qardl.sdf` in `qirf.src` for package builds that compile source
+  files independently.
+- AIC, BIC, HQ, and HQC lag-selection criteria in `icmean`, `pqorder`, and
+  `qardlFull`; BIC remains the default.
 - `qardlFull(..., verbose = 1)` option; pass `0` to compute silently.
 - Metadata fields on `qardlOut`, `qardlECMOut`, and `qardlFullOut`.
 - `GOLD_STANDARD_TODO.md` release-readiness inventory and improvement backlog.
@@ -21,6 +30,8 @@
 - GAUSS-compatible number formatting in `ardlbounds_print`.
 - Package manifest ordering and duplicate source entries.
 - CSV writer console noise and export failure handling.
+- Smoke-test runners now scan GAUSS output for compile/execute failures even
+  when `tgauss` returns exit code 0.
 
 ### Changed
 - Minimum supported GAUSS version is GAUSS 26.

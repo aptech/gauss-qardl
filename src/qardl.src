@@ -590,6 +590,8 @@ endp;
 proc (0) = plotQARDL(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
     local _beta, _gamma, _phi, _alpha, _rho, ntau, k, p, nCols;
 
+    call _qardlValidateTau(tau, "plotQARDL");
+
     ntau = rows(tau);
 
     _beta  = qaOut.bigbt;
@@ -601,6 +603,11 @@ proc (0) = plotQARDL(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
     // Get dimensions of model
     k = rows(_beta) / ntau;
     p = rows(_phi)  / ntau;
+
+    if round(k) /= k or round(p) /= p;
+        errorlog "plotQARDL: tau length does not match qaOut";
+        end;
+    endif;
 
     // Reshape parameter matrices
     _beta  = reshape(_beta,  ntau, k);
@@ -699,6 +706,8 @@ proc (0) = plotQARDLbands(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
     local se_beta, se_gamma, se_phi;
     local lb_beta, ub_beta, lb_gamma, ub_gamma, lb_phi, ub_phi;
 
+    call _qardlValidateTau(tau, "plotQARDLbands");
+
     ntau = rows(tau);
 
     _beta  = qaOut.bigbt;
@@ -708,6 +717,11 @@ proc (0) = plotQARDLbands(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
     // Recover dimensions
     k = rows(_beta) / ntau;
     p = rows(_phi)  / ntau;
+
+    if round(k) /= k or round(p) /= p;
+        errorlog "plotQARDLbands: tau length does not match qaOut";
+        end;
+    endif;
 
     // Reshape to (ntau x param)
     _beta  = reshape(_beta,  ntau, k);
@@ -833,13 +847,24 @@ proc (0) = plotRollingQARDLECM(struct rollingQardlECMOut rECMOut, tau = { 0.25, 
     local _font, title_size, axis_size, label_size;
     struct plotControl myPlot;
 
+    call _qardlValidateTau(tau, "plotRollingQARDLECM");
+
     ss      = rows(tau);
     num_est = rows(rECMOut.rho);
+
+    if cols(rECMOut.rho) /= ss or cols(rECMOut.alpha) /= ss;
+        errorlog "plotRollingQARDLECM: tau length does not match rolling output";
+        end;
+    endif;
 
     // Build time axis
     if scalmiss(dates) or (rows(dates) == 1 and dates == 0);
         t_axis = seqa(1, 1, num_est);
     else;
+        if rows(dates) /= num_est;
+            errorlog "plotRollingQARDLECM: dates must have one row per rolling estimate";
+            end;
+        endif;
         t_axis = dates;
     endif;
 
@@ -899,15 +924,26 @@ proc (0) = plotRollingQARDL(struct rollingQardlOut rqaOut, tau = { 0.25, 0.5, 0.
     struct plotControl myPlot;
 
     local _dims;
+    call _qardlValidateTau(tau, "plotRollingQARDL");
+
     ss  = rows(tau);
     _dims   = getorders(rqaOut.bigbt);  // [k, num_est, num_tau]
     k       = _dims[1];
     num_est = _dims[2];
 
+    if _dims[3] /= ss;
+        errorlog "plotRollingQARDL: tau length does not match rolling output";
+        end;
+    endif;
+
     // Build time axis
     if scalmiss(dates) or (rows(dates) == 1 and dates == 0);
         t_axis = seqa(1, 1, num_est);
     else;
+        if rows(dates) /= num_est;
+            errorlog "plotRollingQARDL: dates must have one row per rolling estimate";
+            end;
+        endif;
         t_axis = dates;
     endif;
 
@@ -944,26 +980,36 @@ proc (0) = plotRollingQARDL(struct rollingQardlOut rqaOut, tau = { 0.25, 0.5, 0.
 endp;
 
 proc (struct rollingQardlOut) = rollingQardl(data, pend, qend, tau, struct waldTestRestrictions wCtl);
-    local window_size, k, t, num_est, num_tau, st, fin_obs, pst, qst,
+    local window_size, k, T, num_est, num_tau, st, fin_obs, pst, qst,
         beta_array, phi_array, gamma_array, beta_se, gamma_se, phi_se, data_subset,
     wald_beta, pv_beta, wald_gamma, wald_phi, pv_gamma, pv_phi, c_indx, bigR_phi_test;
 
     // Struct declared once at proc scope (not inside the loop)
     struct qardlOut qaOut;
     struct rollingQardlOut rqaOut;
+
+    call _qardlValidateSearchInputs(data, pend, qend, tau, "rollingQardl");
     
     // qardl order estimation
     // Estimated using full sample
-    { pst, qst } = pqorder(data, pend, qend);
+    { pst, qst } = pqorder(data, pend, qend, "bic");
     
     // Select window size
     window_size = trunc(0.1*rows(data));
+    if window_size <= maxc(pst|qst) + 2;
+        errorlog "rollingQardl: rolling window is too short for selected lag orders";
+        end;
+    endif;
     
     // Dimensions
     k = cols(data) - 1;
     T = rows(data);
     num_est = T-window_size;
     num_tau = rows(tau);
+
+    call _qardlValidateRestrictionShape(wCtl.bigR_beta, wCtl.smlr_beta, k*num_tau, "rollingQardl: beta restrictions");
+    call _qardlValidateRestrictionShape(wCtl.bigR_phi, wCtl.smlr_phi, pend*num_tau, "rollingQardl: phi restrictions");
+    call _qardlValidateRestrictionShape(wCtl.bigR_gamma, wCtl.smlr_gamma, k*num_tau, "rollingQardl: gamma restrictions");
     
     // Starting indeces for rolling data
     st = 1;
@@ -1077,10 +1123,16 @@ proc (struct rollingQardlECMOut) = rollingQardlECM(data, ppp, qqq, tau = { 0.25,
     struct qardlECMOut qECMOut;
     struct rollingQardlECMOut rECMOut;
 
+    call _qardlValidateEstimatorInputs(data, ppp, qqq, tau, "rollingQardlECM");
+
     T          = rows(data);
     k          = cols(data) - 1;
     ss         = rows(tau);
     window_size = trunc(0.1 * T);
+    if window_size <= maxc(ppp|qqq) + 2;
+        errorlog "rollingQardlECM: rolling window is too short for selected lag orders";
+        end;
+    endif;
     num_est    = T - window_size;
 
     // Storage matrices: each row = one estimation window
@@ -2003,6 +2055,37 @@ proc (0) = _qardlValidateLagScalar(lag, label);
     endif;
 endp;
 
+proc (0) = _qardlValidateRestrictionShape(bigR, smr, nparam, caller);
+    if rows(bigR) < 1 or cols(bigR) /= nparam;
+        errorlog caller $+ ": R must have one column per tested parameter";
+        end;
+    endif;
+
+    if rows(smr) /= rows(bigR) or cols(smr) /= 1;
+        errorlog caller $+ ": r must be a column vector with one row per restriction";
+        end;
+    endif;
+endp;
+
+proc (0) = _qardlValidateWaldInputs(param, cov, bigR, smr, data, caller);
+    if rows(param) < 1 or cols(param) /= 1;
+        errorlog caller $+ ": parameter vector must be a non-empty column vector";
+        end;
+    endif;
+
+    if rows(cov) /= rows(param) or cols(cov) /= rows(param);
+        errorlog caller $+ ": covariance matrix must be square and conformable with the parameter vector";
+        end;
+    endif;
+
+    call _qardlValidateRestrictionShape(bigR, smr, rows(param), caller);
+
+    if rows(data) < 2;
+        errorlog caller $+ ": data must contain at least two observations";
+        end;
+    endif;
+endp;
+
 proc (0) = _qardlValidateTau(tau, caller);
     local tau_sorted;
 
@@ -2039,7 +2122,7 @@ endp;
 **
 **  Format:     qfOut = qardlFull(data, pend, qend);
 **              qfOut = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 },
-**                                formula = "", verbose = 1);
+**                                formula = "", verbose = 1, criterion = "bic");
 **
 **  Input:      data    (T x (1+k)) matrix (or dataframe with formula).
 **              pend    scalar, maximum AR lag to search.
@@ -2049,9 +2132,12 @@ endp;
 **
 **              verbose scalar, 1 = print summaries, 0 = compute silently.
 **
+**              criterion string, lag-selection information criterion:
+**                       "bic" (default), "aic", "hq", or "hqc".
+**
 **  Output:     qfOut   struct qardlFullOut:
-**                  .pst        Selected AR lag order (BIC).
-**                  .qst        Selected DL lag order (BIC).
+**                  .pst        Selected AR lag order.
+**                  .qst        Selected DL lag order.
 **                  .ardl_fstat Bounds test F-statistic.
 **                  .ardl_cv    (3 x 2) I(0)/I(1) critical values.
 **                  .qa         qardlOut (levels estimates).
@@ -2059,7 +2145,7 @@ endp;
 **
 **  Developed:  April 2026
 */
-proc (struct qardlFullOut) = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 }, formula = "", verbose = 1);
+proc (struct qardlFullOut) = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 }, formula = "", verbose = 1, criterion = "bic");
     local pst, qst, fstat, cv;
 
     struct qardlFullOut qfOut;
@@ -2073,14 +2159,16 @@ proc (struct qardlFullOut) = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75
 
     data = _applyFormula(data, formula);
     call _qardlValidateSearchInputs(data, pend, qend, tau, "qardlFull");
+    criterion = lower(criterion);
+    call _qardlValidateICCriterion(criterion, "qardlFull");
 
-    // Step 1: BIC lag order selection
+    // Step 1: Information-criterion lag order selection
     if verbose;
-        print "qardlFull: selecting lag orders (BIC) ...";
+        print "qardlFull: selecting lag orders (" $+ upper(criterion) $+ ") ...";
     endif;
-    { pst, qst } = pqorder(data, pend, qend);
+    { pst, qst } = pqorder(data, pend, qend, criterion);
     if verbose;
-        sprintf("  BIC-selected: p = %d, q = %d", pst, qst);
+        sprintf("  %s-selected: p = %d, q = %d", upper(criterion), pst, qst);
     endif;
 
     // Step 2: ARDL bounds test

@@ -44,6 +44,8 @@ tests/
   verify_package_manifest.ps1 # package.json/src consistency check
   run_source_tests.ps1 # manifest + source GAUSS smoke tests
   run_examples_smoke.ps1 # modern examples smoke runner
+docs/
+  USAGE_GUIDE.md     # API choice, stacking, formula, bootstrap, QIRF, limitations
 package.json         # GAUSS package manifest (name: qardl, version: 3.0.0)
 GOLD_STANDARD_TODO.md # Release-readiness inventory and improvement backlog
 CHANGELOG.md         # Release notes

@@ -13,10 +13,44 @@ $examples = @(
     "sp500.e"
 )
 
+function Invoke-GaussBatch {
+    param(
+        [string]$Exe,
+        [string[]]$Arguments
+    )
+
+    $psi = [System.Diagnostics.ProcessStartInfo]::new()
+    $psi.FileName = $Exe
+    $psi.Arguments = (($Arguments | ForEach-Object {
+        if ($_ -match '[\s"]') {
+            '"' + ($_ -replace '"', '\"') + '"'
+        } else {
+            $_
+        }
+    }) -join " ")
+    $psi.UseShellExecute = $false
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+
+    $proc = [System.Diagnostics.Process]::Start($psi)
+    $stdout = $proc.StandardOutput.ReadToEnd()
+    $stderr = $proc.StandardError.ReadToEnd()
+    $proc.WaitForExit()
+
+    [pscustomobject]@{
+        ExitCode = $proc.ExitCode
+        Output = ($stdout + $stderr)
+    }
+}
+
 foreach ($example in $examples) {
     $path = Join-Path $examplesDir $example
-    & $GaussExe -nb -b -x $path
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    $result = Invoke-GaussBatch -Exe $GaussExe -Arguments @("-nb", "-b", "-x", $path)
+    $output = $result.Output
+    $output
+    if ($result.ExitCode -ne 0 -or ($output -match "Program execute failed|error G[0-9]+|Program compile failed")) {
+        exit 1
+    }
 }
 
 Write-Host "run_examples_smoke.ps1: PASS"

@@ -46,10 +46,17 @@ proc (6) = wtestconst(struct qardlOut qaOut, tau, data);
     local wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi;
     local rb_beta, rb_gamma, rb_phi;
 
+    call _qardlValidateTau(tau, "wtestconst");
+
     ss = rows(tau);
     nn = rows(data);
     k  = rows(qaOut.bigbt) / ss;
     p  = rows(qaOut.phi)   / ss;
+
+    if round(k) /= k or round(p) /= p;
+        errorlog "wtestconst: tau length does not match qaOut";
+        end;
+    endif;
 
     if ss == 1;
         print "WARNING (wtestconst): only one quantile supplied — nothing to test.";

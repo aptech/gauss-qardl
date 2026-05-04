@@ -33,6 +33,8 @@
 
 proc (2) = wtestsrp(phi, cov, bigR, smr, data);
     local nn, wt, rnk, pv;
+
+    call _qardlValidateWaldInputs(phi, cov, bigR, smr, data, "wtestsrp");
     
     nn = rows(data);
     wt = (nn-1)*(bigR*phi-smr)'*inv(bigR*cov*bigR')*(bigR*phi-smr);

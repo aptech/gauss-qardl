@@ -63,4 +63,7 @@ call assert_true(rows(qfOut.ardl_cv) == 3 and cols(qfOut.ardl_cv) == 2, "qardlFu
 call assert_true(rows(qfOut.qa.bigbt) == 2*rows(tau), "qardlFull levels beta shape changed");
 call assert_true(rows(qfOut.ecm.rho) == rows(tau), "qardlFull ECM rho shape changed");
 
+qfOut = qardlFull(data, 2, 2, tau, "", 0, "hq");
+call assert_true(qfOut.pst >= 1 and qfOut.qst >= 1, "qardlFull HQ returned invalid lag orders");
+
 print "smoke_workflow_api.e: PASS";

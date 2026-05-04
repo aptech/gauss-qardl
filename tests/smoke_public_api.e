@@ -40,6 +40,11 @@ tau = { 0.25, 0.5, 0.75 };
 // Core lag selection and QARDL estimation.
 { pst, qst } = pqorder(data, 3, 3);
 call assert_true(pst >= 1 and qst >= 1, "pqorder returned invalid lag orders");
+{ pst_aic, qst_aic } = pqorder(data, 3, 3, "aic");
+{ pst_hq, qst_hq } = pqorder(data, 3, 3, "hq");
+call assert_true(pst_aic >= 1 and qst_aic >= 1, "pqorder AIC returned invalid lag orders");
+call assert_true(pst_hq >= 1 and qst_hq >= 1, "pqorder HQ returned invalid lag orders");
+call assert_true(icmean(data, pst, qst) == icmean(data, pst, qst, "bic"), "icmean default criterion changed");
 
 struct qardlOut qaOut;
 qaOut = qardl(data, 2, 1, tau);
@@ -106,5 +111,30 @@ call assert_true(rows(ci_phi) == rows(tau) and cols(ci_phi) == 2, "blockBootstra
 { ci_rho, ci_alpha } = blockBootstrapQARDLECM(boot_data, 1, 1, tau, 2, 10, 0.10);
 call assert_true(rows(ci_rho) == rows(tau) and cols(ci_rho) == 2, "blockBootstrapQARDLECM rho CI shape changed");
 call assert_true(rows(ci_alpha) == rows(tau) and cols(ci_alpha) == 2, "blockBootstrapQARDLECM alpha CI shape changed");
+
+// Rolling estimators on a small sample and a small lag-search grid.
+struct waldTestRestrictions waldR;
+waldR.bigR_beta = zeros(1, 2*rows(tau));
+waldR.bigR_beta[1, 1] = 1;
+waldR.bigR_beta[1, 3] = -1;
+waldR.smlr_beta = 0;
+
+waldR.bigR_phi = zeros(1, rows(tau));
+waldR.bigR_phi[1, 1] = 1;
+waldR.bigR_phi[1, 2] = -1;
+waldR.smlr_phi = 0;
+
+waldR.bigR_gamma = waldR.bigR_beta;
+waldR.smlr_gamma = 0;
+
+roll_data = data[1:300, .];
+struct rollingQardlOut rqaOut;
+rqaOut = rollingQardl(roll_data, 1, 1, tau, waldR);
+roll_dims = getorders(rqaOut.bigbt);
+call assert_true(roll_dims[1] == 2 and roll_dims[3] == rows(tau), "rollingQardl beta array dimensions changed");
+
+struct rollingQardlECMOut rECMOut;
+rECMOut = rollingQardlECM(roll_data, 1, 1, tau);
+call assert_true(cols(rECMOut.rho) == rows(tau) and rows(rECMOut.rho) > 0, "rollingQardlECM rho shape changed");
 
 print "smoke_public_api.e: PASS";
