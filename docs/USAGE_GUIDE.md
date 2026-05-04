@@ -37,6 +37,8 @@ Use `pqorder` directly when you only need lag selection:
 ```gauss
 { pst, qst } = pqorder(data, pend = 8, qend = 8);
 { pst, qst } = pqorder(data, pend = 8, qend = 8, criterion = "aic");
+{ pst, qst } = pqorderRange(data, 2, 8, 1, 4, "bic");
+ic_grid = pqorderGrid(data, 8, 8, "bic");
 ```
 
 Supported lag-selection criteria are `"bic"` (default), `"aic"`, `"hq"`, and
@@ -45,6 +47,13 @@ Supported lag-selection criteria are `"bic"` (default), `"aic"`, `"hq"`, and
 ```gauss
 qfOut = qardlFull(data, 8, 8, tau, "", 0, "hq");
 ```
+
+Use `pqorderRange` when you need a restricted lag-search grid. For example,
+`pqorderRange(data, 2, 8, 1, 4, "bic")` searches p from 2 through 8 and q from
+1 through 4. Setting the start and end equal fixes a lag order.
+Use `pqorderGrid` or `pqorderRangeGrid` to inspect the full search table. The
+returned matrix has columns `[p, q, IC]`; the selected model is the row with the
+smallest IC value.
 
 ## Formula And Dataframe Workflow
 
@@ -122,11 +131,14 @@ The bootstrap helpers are intended for applied uncertainty checks:
 ```gauss
 { ci_beta, ci_gamma, ci_phi } = blockBootstrapQARDL(data, 2, 1, tau, 999, 0, 0.05);
 { ci_rho, ci_alpha } = blockBootstrapQARDLECM(data, 2, 1, tau, 999, 0, 0.05);
+{ ci_beta, ci_gamma, ci_phi, boot_diag } =
+    blockBootstrapQARDLDiag(data, 2, 1, tau, 999, 0, 0.05, 12345);
 ```
 
 Set `blk_len = 0` to use the default `floor(T^(1/3))` block length. For
-reproducible intervals, set the GAUSS random seed before calling the bootstrap
-procedure.
+reproducible intervals, use `blockBootstrapQARDLDiag` or
+`blockBootstrapQARDLECMDiag` with a positive seed. The diagnostic return is
+`[B requested, B completed, B failed, blk_len, seed]`.
 
 ## Quantile Impulse Responses
 

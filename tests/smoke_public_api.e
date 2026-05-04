@@ -42,8 +42,24 @@ tau = { 0.25, 0.5, 0.75 };
 call assert_true(pst >= 1 and qst >= 1, "pqorder returned invalid lag orders");
 { pst_aic, qst_aic } = pqorder(data, 3, 3, "aic");
 { pst_hq, qst_hq } = pqorder(data, 3, 3, "hq");
+{ pst_rect, qst_rect } = pqorder(data, 2, 3, "bic");
+{ pst_range, qst_range } = pqorderRange(data, 2, 3, 2, 3, "bic");
+ic_grid = pqorderGrid(data, 2, 3, "bic");
+ic_range_grid = pqorderRangeGrid(data, 2, 3, 2, 3, "bic");
 call assert_true(pst_aic >= 1 and qst_aic >= 1, "pqorder AIC returned invalid lag orders");
 call assert_true(pst_hq >= 1 and qst_hq >= 1, "pqorder HQ returned invalid lag orders");
+call assert_true(pst_rect >= 1 and pst_rect <= 2 and qst_rect >= 1 and qst_rect <= 3,
+                 "pqorder rectangular grid returned invalid lag orders");
+call assert_true(pst_range >= 2 and qst_range >= 2,
+                 "pqorderRange ignored lower lag bounds");
+call assert_true(rows(ic_grid) == 6 and cols(ic_grid) == 3, "pqorderGrid returned wrong shape");
+call assert_true(rows(ic_range_grid) == 4 and cols(ic_range_grid) == 3, "pqorderRangeGrid returned wrong shape");
+best_idx = minindc(ic_grid[., 3]);
+call assert_true(ic_grid[best_idx, 1] == pst_rect and ic_grid[best_idx, 2] == qst_rect,
+                 "pqorderGrid minimum does not match pqorder");
+best_idx = minindc(ic_range_grid[., 3]);
+call assert_true(ic_range_grid[best_idx, 1] == pst_range and ic_range_grid[best_idx, 2] == qst_range,
+                 "pqorderRangeGrid minimum does not match pqorderRange");
 call assert_true(icmean(data, pst, qst) == icmean(data, pst, qst, "bic"), "icmean default criterion changed");
 
 struct qardlOut qaOut;
@@ -111,6 +127,26 @@ call assert_true(rows(ci_phi) == rows(tau) and cols(ci_phi) == 2, "blockBootstra
 { ci_rho, ci_alpha } = blockBootstrapQARDLECM(boot_data, 1, 1, tau, 2, 10, 0.10);
 call assert_true(rows(ci_rho) == rows(tau) and cols(ci_rho) == 2, "blockBootstrapQARDLECM rho CI shape changed");
 call assert_true(rows(ci_alpha) == rows(tau) and cols(ci_alpha) == 2, "blockBootstrapQARDLECM alpha CI shape changed");
+
+{ ci_beta_seed1, ci_gamma_seed1, ci_phi_seed1, boot_diag1 } =
+    blockBootstrapQARDLDiag(boot_data, 1, 1, tau, 2, 10, 0.10, 12345);
+{ ci_beta_seed2, ci_gamma_seed2, ci_phi_seed2, boot_diag2 } =
+    blockBootstrapQARDLDiag(boot_data, 1, 1, tau, 2, 10, 0.10, 12345);
+call assert_close(ci_beta_seed1, ci_beta_seed2, 1e-12, "blockBootstrapQARDLDiag seed reproducibility failed");
+call assert_close(ci_gamma_seed1, ci_gamma_seed2, 1e-12, "blockBootstrapQARDLDiag gamma seed reproducibility failed");
+call assert_close(ci_phi_seed1, ci_phi_seed2, 1e-12, "blockBootstrapQARDLDiag phi seed reproducibility failed");
+call assert_true(rows(boot_diag1) == 1 and cols(boot_diag1) == 5, "blockBootstrapQARDLDiag diagnostics shape changed");
+call assert_true(boot_diag1[1, 1] == 2 and boot_diag1[1, 2] == 2 and boot_diag1[1, 3] == 0 and
+                 boot_diag1[1, 4] == 10 and boot_diag1[1, 5] == 12345,
+                 "blockBootstrapQARDLDiag diagnostics content changed");
+
+{ ci_rho_seed1, ci_alpha_seed1, boot_ecm_diag1 } =
+    blockBootstrapQARDLECMDiag(boot_data, 1, 1, tau, 2, 10, 0.10, 67890);
+{ ci_rho_seed2, ci_alpha_seed2, boot_ecm_diag2 } =
+    blockBootstrapQARDLECMDiag(boot_data, 1, 1, tau, 2, 10, 0.10, 67890);
+call assert_close(ci_rho_seed1, ci_rho_seed2, 1e-12, "blockBootstrapQARDLECMDiag rho seed reproducibility failed");
+call assert_close(ci_alpha_seed1, ci_alpha_seed2, 1e-12, "blockBootstrapQARDLECMDiag alpha seed reproducibility failed");
+call assert_true(rows(boot_ecm_diag1) == 1 and cols(boot_ecm_diag1) == 5, "blockBootstrapQARDLECMDiag diagnostics shape changed");
 
 // Rolling estimators on a small sample and a small lag-search grid.
 struct waldTestRestrictions waldR;

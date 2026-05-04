@@ -17,6 +17,10 @@
   files independently.
 - AIC, BIC, HQ, and HQC lag-selection criteria in `icmean`, `pqorder`, and
   `qardlFull`; BIC remains the default.
+- `pqorderRange` for restricted lag-search grids and fixed lag-order searches.
+- `pqorderGrid` and `pqorderRangeGrid` for full lag-selection IC tables.
+- `blockBootstrapQARDLDiag` and `blockBootstrapQARDLECMDiag` for seeded
+  bootstrap runs with simple diagnostics.
 - `qardlFull(..., verbose = 1)` option; pass `0` to compute silently.
 - Metadata fields on `qardlOut`, `qardlECMOut`, and `qardlFullOut`.
 - `GOLD_STANDARD_TODO.md` release-readiness inventory and improvement backlog.
@@ -32,6 +36,7 @@
 - CSV writer console noise and export failure handling.
 - Smoke-test runners now scan GAUSS output for compile/execute failures even
   when `tgauss` returns exit code 0.
+- Rectangular-grid indexing in `pqorder`.
 
 ### Changed
 - Minimum supported GAUSS version is GAUSS 26.

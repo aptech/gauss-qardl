@@ -169,6 +169,8 @@ Information-criterion selection of ARDL lag orders. BIC is the default.
 { pst, qst } = pqorder(data);
 { pst, qst } = pqorder(data, pend = 8, qend = 8);
 { pst, qst } = pqorder(data, 8, 8, "aic");
+{ pst, qst } = pqorderRange(data, 2, 8, 1, 4, "bic");
+ic_grid = pqorderGrid(data, 8, 8, "bic");
 ```
 
 | Argument | Default | Description |
@@ -177,6 +179,11 @@ Information-criterion selection of ARDL lag orders. BIC is the default.
 | `pend` | `8` | Maximum AR lag to search |
 | `qend` | `8` | Maximum distributed lag to search |
 | `criterion` | `"bic"` | `"bic"`, `"aic"`, `"hq"`, or `"hqc"` |
+
+Use `pqorderRange(data, pstart, pend, qstart, qend, criterion)` to restrict the
+searched grid. Setting `pstart == pend` or `qstart == qend` pins that lag order.
+Use `pqorderGrid` or `pqorderRangeGrid` to return the full search table with
+columns `[p, q, IC]`.
 
 ---
 
@@ -295,9 +302,13 @@ Moving-block bootstrap (Künsch 1989) CIs for β, γ, and φ.
 { ci_beta, ci_gamma, ci_phi } = blockBootstrapQARDL(data, ppp, qqq);
 { ci_beta, ci_gamma, ci_phi } = blockBootstrapQARDL(data, ppp, qqq,
     tau = { 0.25, 0.5, 0.75 }, B = 999, blk_len = 0, alpha = 0.05);
+{ ci_beta, ci_gamma, ci_phi, boot_diag } =
+    blockBootstrapQARDLDiag(data, ppp, qqq, tau, 999, 0, 0.05, 12345);
 ```
 
-Each output is a `(dim × 2)` matrix of `[lower, upper]` bounds.
+Each CI output is a `(dim × 2)` matrix of `[lower, upper]` bounds. The
+diagnostic variant sets `rndseed` when `seed > 0` and returns diagnostics
+`[B requested, B completed, B failed, blk_len, seed]`.
 
 #### `blockBootstrapQARDLECM`
 
@@ -307,9 +318,11 @@ Moving-block bootstrap CIs for the ECM speed-of-adjustment ρ(τ) and intercept 
 { ci_rho, ci_alpha } = blockBootstrapQARDLECM(data, ppp, qqq);
 { ci_rho, ci_alpha } = blockBootstrapQARDLECM(data, ppp, qqq,
     tau = { 0.25, 0.5, 0.75 }, B = 999, blk_len = 0, alpha = 0.05);
+{ ci_rho, ci_alpha, boot_diag } =
+    blockBootstrapQARDLECMDiag(data, ppp, qqq, tau, 999, 0, 0.05, 12345);
 ```
 
-Each output is an `(ss × 2)` matrix of `[lower, upper]` bounds.
+Each CI output is an `(ss × 2)` matrix of `[lower, upper]` bounds.
 
 ---
 

@@ -1889,6 +1889,47 @@ proc (3) = blockBootstrapQARDL(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, B = 99
 endp;
 
 /*
+**> blockBootstrapQARDLDiag
+**
+**  Purpose:    Moving-block bootstrap confidence intervals for QARDL
+**              parameters with reproducible seed control and simple run
+**              diagnostics.
+**
+**  Format:     { ci_beta, ci_gamma, ci_phi, boot_diag } =
+**                  blockBootstrapQARDLDiag(data, ppp, qqq, tau, B, blk_len,
+**                                         alpha, seed);
+**
+**  Input:      seed        scalar.  If seed > 0, rndseed is set before
+**                          drawing bootstrap block starts.  Use 0 to leave
+**                          the current GAUSS random state unchanged.
+**
+**  Output:     boot_diag   (1 x 5) matrix:
+**                          [B requested, B completed, B failed, blk_len, seed].
+**
+**  Remarks:    The current GAUSS implementation terminates on estimator errors
+**              inside bootstrap replications, so failed-rep recovery is not yet
+**              available. The failure count is reserved for that future
+**              behavior and is 0 when the procedure returns normally.
+*/
+proc (4) = blockBootstrapQARDLDiag(data, ppp, qqq, tau, B, blk_len, alpha, seed);
+    local ci_beta, ci_gamma, ci_phi, boot_diag, used_blk_len;
+
+    call _qardlValidateBootstrapSeed(seed, "blockBootstrapQARDLDiag");
+
+    used_blk_len = _qardlResolvedBlockLength(rows(data), blk_len, "blockBootstrapQARDLDiag");
+
+    if seed > 0;
+        rndseed seed;
+    endif;
+
+    { ci_beta, ci_gamma, ci_phi } = blockBootstrapQARDL(data, ppp, qqq, tau, B, used_blk_len, alpha);
+
+    boot_diag = B~B~0~used_blk_len~seed;
+
+    retp(ci_beta, ci_gamma, ci_phi, boot_diag);
+endp;
+
+/*
 **> blockBootstrapQARDLECM
 **
 **  Purpose:    Moving-block bootstrap confidence intervals for the QARDL-ECM
@@ -1999,6 +2040,38 @@ proc (2) = blockBootstrapQARDLECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, B =
 endp;
 
 /*
+**> blockBootstrapQARDLECMDiag
+**
+**  Purpose:    Moving-block bootstrap confidence intervals for QARDL-ECM
+**              alpha/rho with reproducible seed control and simple run
+**              diagnostics.
+**
+**  Format:     { ci_rho, ci_alpha, boot_diag } =
+**                  blockBootstrapQARDLECMDiag(data, ppp, qqq, tau, B, blk_len,
+**                                            alpha, seed);
+**
+**  Output:     boot_diag   (1 x 5) matrix:
+**                          [B requested, B completed, B failed, blk_len, seed].
+*/
+proc (3) = blockBootstrapQARDLECMDiag(data, ppp, qqq, tau, B, blk_len, alpha, seed);
+    local ci_rho, ci_alpha, boot_diag, used_blk_len;
+
+    call _qardlValidateBootstrapSeed(seed, "blockBootstrapQARDLECMDiag");
+
+    used_blk_len = _qardlResolvedBlockLength(rows(data), blk_len, "blockBootstrapQARDLECMDiag");
+
+    if seed > 0;
+        rndseed seed;
+    endif;
+
+    { ci_rho, ci_alpha } = blockBootstrapQARDLECM(data, ppp, qqq, tau, B, used_blk_len, alpha);
+
+    boot_diag = B~B~0~used_blk_len~seed;
+
+    retp(ci_rho, ci_alpha, boot_diag);
+endp;
+
+/*
 ** Internal validation helpers for public QARDL APIs.
 */
 proc (0) = _qardlValidateEstimatorInputs(data, ppp, qqq, tau, caller);
@@ -2082,6 +2155,33 @@ proc (0) = _qardlValidateWaldInputs(param, cov, bigR, smr, data, caller);
 
     if rows(data) < 2;
         errorlog caller $+ ": data must contain at least two observations";
+        end;
+    endif;
+endp;
+
+proc (1) = _qardlResolvedBlockLength(T, blk_len, caller);
+    local used_blk_len;
+
+    if rows(blk_len) * cols(blk_len) /= 1 or blk_len < 0 or round(blk_len) /= blk_len;
+        errorlog caller $+ ": blk_len must be a non-negative integer";
+        end;
+    endif;
+
+    if blk_len <= 0 or scalmiss(blk_len);
+        used_blk_len = trunc(T^(1/3));
+        if used_blk_len < 2;
+            used_blk_len = 2;
+        endif;
+    else;
+        used_blk_len = blk_len;
+    endif;
+
+    retp(used_blk_len);
+endp;
+
+proc (0) = _qardlValidateBootstrapSeed(seed, caller);
+    if rows(seed) * cols(seed) /= 1 or seed < 0 or round(seed) /= seed;
+        errorlog caller $+ ": seed must be a non-negative integer";
         end;
     endif;
 endp;

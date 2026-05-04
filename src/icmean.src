@@ -51,30 +51,98 @@ endp;
 
 proc (2) = pqorder(data, pend = 8, qend = 8, criterion = "bic");
 
-    local icb, jj1, jj2, lst, pst, qst;
+    local pst, qst;
 
     call _qardlValidateSearchInputs(data, pend, qend, { 0.5 }, "pqorder");
     criterion = lower(criterion);
     call _qardlValidateICCriterion(criterion, "pqorder");
 
+    { pst, qst } = _qardlLagOrderSearch(data, 1, pend, 1, qend, criterion);
+
+    retp(pst, qst);
+endp;
+
+proc (1) = pqorderGrid(data, pend = 8, qend = 8, criterion = "bic");
+
+    local icgrid;
+
+    call _qardlValidateSearchInputs(data, pend, qend, { 0.5 }, "pqorderGrid");
+    criterion = lower(criterion);
+    call _qardlValidateICCriterion(criterion, "pqorderGrid");
+
+    icgrid = _qardlLagOrderGrid(data, 1, pend, 1, qend, criterion);
+
+    retp(icgrid);
+endp;
+
+proc (2) = pqorderRange(data, pstart, pend, qstart, qend, criterion);
+
+    local pst, qst;
+
+    call _qardlValidateSearchInputs(data, pend, qend, { 0.5 }, "pqorderRange");
+    criterion = lower(criterion);
+    call _qardlValidateICCriterion(criterion, "pqorderRange");
+    call _qardlValidateLagRange(pstart, pend, "pqorder: pstart/pend");
+    call _qardlValidateLagRange(qstart, qend, "pqorder: qstart/qend");
+
+    { pst, qst } = _qardlLagOrderSearch(data, pstart, pend, qstart, qend, criterion);
+
+    retp(pst, qst);
+endp;
+
+proc (1) = pqorderRangeGrid(data, pstart, pend, qstart, qend, criterion);
+
+    local icgrid;
+
+    call _qardlValidateSearchInputs(data, pend, qend, { 0.5 }, "pqorderRangeGrid");
+    criterion = lower(criterion);
+    call _qardlValidateICCriterion(criterion, "pqorderRangeGrid");
+    call _qardlValidateLagRange(pstart, pend, "pqorderRangeGrid: pstart/pend");
+    call _qardlValidateLagRange(qstart, qend, "pqorderRangeGrid: qstart/qend");
+
+    icgrid = _qardlLagOrderGrid(data, pstart, pend, qstart, qend, criterion);
+
+    retp(icgrid);
+endp;
+
+proc (2) = _qardlLagOrderSearch(data, pstart, pend, qstart, qend, criterion);
+
+    local icgrid, lst, pst, qst;
+
+    icgrid = _qardlLagOrderGrid(data, pstart, pend, qstart, qend, criterion);
+
+    lst = minindc(icgrid[., 3]);
+    pst = icgrid[lst, 1];
+    qst = icgrid[lst, 2];
+
+    retp(pst, qst);
+endp;
+
+proc (1) = _qardlLagOrderGrid(data, pstart, pend, qstart, qend, criterion);
+
+    local icgrid, jj1, jj2, idx, pgrid, qgrid, num_p, num_q;
+
+    pgrid = seqa(pstart, 1, pend - pstart + 1);
+    qgrid = seqa(qstart, 1, qend - qstart + 1);
+    num_p = rows(pgrid);
+    num_q = rows(qgrid);
+
     /* Information criterion computation */
-    icb = zeros(pend*qend,1);
+    icgrid = zeros(num_p*num_q, 3);
     jj1 = 1;
-    do until jj1 > pend;
+    do until jj1 > num_p;
         jj2 = 1;
-        do until jj2 > qend;
-            icb[pend*(jj1-1)+jj2, 1] = icmean(data, jj1, jj2, criterion);
+        do until jj2 > num_q;
+            idx = num_q*(jj1-1)+jj2;
+            icgrid[idx, 1] = pgrid[jj1];
+            icgrid[idx, 2] = qgrid[jj2];
+            icgrid[idx, 3] = icmean(data, pgrid[jj1], qgrid[jj2], criterion);
             jj2 = jj2 + 1;
         endo;
         jj1 = jj1 + 1;
     endo;
 
-    /* p and q estimation */
-    lst = minindc(icb);
-    pst = ceil(lst/qend);
-    qst = lst - (pst-1)*qend;
-
-    retp(pst, qst);
+    retp(icgrid);
 endp;
 
 proc (1) = _qardlInformationCriterion(sigma2, nobs, nparam, criterion);
@@ -94,6 +162,16 @@ endp;
 proc (0) = _qardlValidateICCriterion(criterion, caller);
     if not (criterion $== "aic" or criterion $== "bic" or criterion $== "hq" or criterion $== "hqc");
         errorlog caller $+ ": criterion must be \"aic\", \"bic\", \"hq\", or \"hqc\"";
+        end;
+    endif;
+endp;
+
+proc (0) = _qardlValidateLagRange(lag_start, lag_end, label);
+    call _qardlValidateLagScalar(lag_start, label $+ " start");
+    call _qardlValidateLagScalar(lag_end, label $+ " end");
+
+    if lag_start > lag_end;
+        errorlog label $+ " start must be less than or equal to end";
         end;
     endif;
 endp;
