@@ -56,7 +56,7 @@ data = data[1:350, 1:3];
 struct qardlFullOut qfOut;
 qfOut = qardlFull(data, 2, 2, tau, "", 0);
 
-call assert_true(qfOut.pst >= 1 and qfOut.qst >= 1, "qardlFull returned invalid lag orders");
+call assert_true(qfOut.pst >= 1 and qfOut.qst >= 0, "qardlFull returned invalid lag orders");
 call assert_true(rows(qfOut.tau) == rows(tau) and qfOut.nobs == rows(data), "qardlFull metadata invalid");
 call assert_true(qfOut.ardl_fstat > 0, "qardlFull ARDL F-statistic should be positive");
 call assert_true(rows(qfOut.ardl_cv) == 3 and cols(qfOut.ardl_cv) == 2, "qardlFull critical values shape changed");
@@ -64,7 +64,7 @@ call assert_true(rows(qfOut.qa.bigbt) == 2*rows(tau), "qardlFull levels beta sha
 call assert_true(rows(qfOut.ecm.rho) == rows(tau), "qardlFull ECM rho shape changed");
 
 qfOut = qardlFull(data, 2, 2, tau, "", 0, "hq");
-call assert_true(qfOut.pst >= 1 and qfOut.qst >= 1, "qardlFull HQ returned invalid lag orders");
+call assert_true(qfOut.pst >= 1 and qfOut.qst >= 0, "qardlFull HQ returned invalid lag orders");
 qfOut = qardlFull(data, 2, 2, tau, "", 0, "bic", "hac", 2);
 call assert_true(rows(qfOut.qa.bigbt_cov) == rows(qfOut.qa.bigbt), "qardlFull HAC levels covariance invalid");
 call assert_true(rows(qfOut.ecm.rho_cov) == rows(tau), "qardlFull HAC ECM covariance invalid");

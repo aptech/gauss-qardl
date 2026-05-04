@@ -10,6 +10,7 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $gaussTests = @(
     "smoke_public_api.e",
+    "statistical_benchmark.e",
     "smoke_workflow_api.e",
     "smoke_export_api.e"
 )

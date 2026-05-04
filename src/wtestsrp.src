@@ -32,13 +32,13 @@
 
 
 proc (2) = wtestsrp(phi, cov, bigR, smr, data);
-    local nn, wt, rnk, pv;
+    local nn, wt, rnk, pv, w_inv;
 
     call _qardlValidateWaldInputs(phi, cov, bigR, smr, data, "wtestsrp");
     
     nn = rows(data);
-    wt = (nn-1)*(bigR*phi-smr)'*inv(bigR*cov*bigR')*(bigR*phi-smr);
-    rnk= rows(bigR);
+    { w_inv, rnk } = _qardlWaldInvAndRank(bigR*cov*bigR', "wtestsrp", "Wald covariance matrix");
+    wt = (nn-1)*(bigR*phi-smr)'*w_inv*(bigR*phi-smr);
     pv = cdfchic(wt,rnk);
     
     retp(wt, pv);

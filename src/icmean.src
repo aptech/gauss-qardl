@@ -11,19 +11,25 @@ proc icmean(data, ppp, qqq, criterion = "bic");
     ee = xx[2:nn, .] - xx[1:(nn-1), .];
     ee = zeros(1, cols(ee))|ee;
 
-    eei = zeros(nn-qqq,qqq*cols(ee));
-    xxi = xx[qqq+1:nn, .];
+    if qqq > 0;
+        eei = zeros(nn-qqq,qqq*cols(ee));
+        xxi = xx[qqq+1:nn, .];
+    else;
+        xxi = xx;
+    endif;
     yyi = zeros(nn-ppp, ppp);
 
-    jj = 1;
-    do until jj > cols(ee);
-        ii = 0;
-        do until ii > qqq-1;
-            eei[., ii+1+(jj-1)*qqq] = ee[(qqq+1-ii):(nn-ii), jj];
-            ii = ii + 1;
+    if qqq > 0;
+        jj = 1;
+        do until jj > cols(ee);
+            ii = 0;
+            do until ii > qqq-1;
+                eei[., ii+1+(jj-1)*qqq] = ee[(qqq+1-ii):(nn-ii), jj];
+                ii = ii + 1;
+            endo;
+            jj = jj+1;
         endo;
-        jj = jj+1;
-    endo;
+    endif;
 
     ii = 1;
     do until ii > ppp;
@@ -31,7 +37,9 @@ proc icmean(data, ppp, qqq, criterion = "bic");
         ii = ii + 1;
     endo;
 
-    if ppp .> qqq;
+    if qqq == 0;
+        X = xxi[(rows(xxi)+1-rows(yyi)):rows(xxi), .]~yyi;
+    elseif ppp .> qqq;
         X  = eei[(rows(eei)+1-rows(yyi)):rows(eei), .]~xxi[(rows(xxi)+1-rows(yyi)):rows(xxi), .]~yyi;
     else;
         X  = eei~xxi~yyi[(rows(yyi)+1-rows(xxi)):rows(yyi),.];
@@ -39,8 +47,9 @@ proc icmean(data, ppp, qqq, criterion = "bic");
 
     ONEX= ones(rows(X), 1)~X;
     Y  = yy[(nn-rows(X)+1):nn, 1];
+    call _qardlCheckFullColumnRank(onex, "icmean", "information-criterion design matrix");
     
-    bt = inv(onex'*onex)*onex'*Y;
+    bt = _qardlSafeInv(onex'*onex, "icmean", "information-criterion moment matrix")*onex'*Y;
     uu = Y - onex*bt;
     rh = uu^2;
 
@@ -57,9 +66,57 @@ proc (2) = pqorder(data, pend = 8, qend = 8, criterion = "bic");
     criterion = lower(criterion);
     call _qardlValidateICCriterion(criterion, "pqorder");
 
-    { pst, qst } = _qardlLagOrderSearch(data, 1, pend, 1, qend, criterion);
+    { pst, qst } = _qardlLagOrderSearch(data, 1, pend, 0, qend, criterion);
 
     retp(pst, qst);
+endp;
+
+proc icmeanX(data, ppp, qvec, criterion = "bic");
+    local Y, ONEX, theta_start, phi_start, bt, uu, rh, ic, k0;
+
+    call _qardlValidateEstimatorInputs(data, ppp, 0, { 0.5 }, "icmeanX");
+    k0 = cols(data) - 1;
+    qvec = _qardlNormalizeQVector(qvec, k0, "icmeanX: qvec");
+    criterion = lower(criterion);
+    call _qardlValidateICCriterion(criterion, "icmeanX");
+
+    { Y, ONEX, theta_start, phi_start } = _qardlBuildLevelsDesignX(data, ppp, qvec);
+    call _qardlCheckFullColumnRank(ONEX, "icmeanX", "information-criterion design matrix");
+
+    bt = _qardlSafeInv(ONEX'*ONEX, "icmeanX", "information-criterion moment matrix")*ONEX'*Y;
+    uu = Y - ONEX*bt;
+    rh = uu^2;
+
+    ic = _qardlInformationCriterion(meanc(rh), rows(Y), cols(ONEX), criterion);
+
+    retp(ic);
+endp;
+
+proc (2) = pqorderX(data, pend = 8, qend = 8, criterion = "bic");
+    local icgrid, lst, pst, qst, k0;
+
+    call _qardlValidateSearchInputs(data, pend, qend, { 0.5 }, "pqorderX");
+    criterion = lower(criterion);
+    call _qardlValidateICCriterion(criterion, "pqorderX");
+
+    k0 = cols(data) - 1;
+    icgrid = _qardlLagOrderGridX(data, 1, pend, qend, criterion);
+    lst = minindc(icgrid[., cols(icgrid)]);
+    pst = icgrid[lst, 1];
+    qst = icgrid[lst, 2:1+k0]';
+
+    retp(pst, qst);
+endp;
+
+proc (1) = pqorderXGrid(data, pend = 8, qend = 8, criterion = "bic");
+    local icgrid;
+
+    call _qardlValidateSearchInputs(data, pend, qend, { 0.5 }, "pqorderXGrid");
+    criterion = lower(criterion);
+    call _qardlValidateICCriterion(criterion, "pqorderXGrid");
+
+    icgrid = _qardlLagOrderGridX(data, 1, pend, qend, criterion);
+    retp(icgrid);
 endp;
 
 proc (1) = pqorderGrid(data, pend = 8, qend = 8, criterion = "bic");
@@ -70,7 +127,7 @@ proc (1) = pqorderGrid(data, pend = 8, qend = 8, criterion = "bic");
     criterion = lower(criterion);
     call _qardlValidateICCriterion(criterion, "pqorderGrid");
 
-    icgrid = _qardlLagOrderGrid(data, 1, pend, 1, qend, criterion);
+    icgrid = _qardlLagOrderGrid(data, 1, pend, 0, qend, criterion);
 
     retp(icgrid);
 endp;
@@ -83,7 +140,7 @@ proc (2) = pqorderRange(data, pstart, pend, qstart, qend, criterion);
     criterion = lower(criterion);
     call _qardlValidateICCriterion(criterion, "pqorderRange");
     call _qardlValidateLagRange(pstart, pend, "pqorder: pstart/pend");
-    call _qardlValidateLagRange(qstart, qend, "pqorder: qstart/qend");
+    call _qardlValidateLagRangeZero(qstart, qend, "pqorder: qstart/qend");
 
     { pst, qst } = _qardlLagOrderSearch(data, pstart, pend, qstart, qend, criterion);
 
@@ -98,7 +155,7 @@ proc (1) = pqorderRangeGrid(data, pstart, pend, qstart, qend, criterion);
     criterion = lower(criterion);
     call _qardlValidateICCriterion(criterion, "pqorderRangeGrid");
     call _qardlValidateLagRange(pstart, pend, "pqorderRangeGrid: pstart/pend");
-    call _qardlValidateLagRange(qstart, qend, "pqorderRangeGrid: qstart/qend");
+    call _qardlValidateLagRangeZero(qstart, qend, "pqorderRangeGrid: qstart/qend");
 
     icgrid = _qardlLagOrderGrid(data, pstart, pend, qstart, qend, criterion);
 
@@ -145,6 +202,49 @@ proc (1) = _qardlLagOrderGrid(data, pstart, pend, qstart, qend, criterion);
     retp(icgrid);
 endp;
 
+proc (1) = _qardlLagOrderGridX(data, pstart, pend, qend, criterion);
+    local k0, num_p, num_qvec, num_rows, icgrid, idx, pp, qqidx, qvec;
+
+    k0 = cols(data) - 1;
+    num_p = pend - pstart + 1;
+    num_qvec = (qend + 1)^k0;
+    num_rows = num_p*num_qvec;
+    icgrid = zeros(num_rows, k0 + 2);
+
+    idx = 1;
+    pp = pstart;
+    do until pp > pend;
+        qqidx = 0;
+        do until qqidx > num_qvec - 1;
+            qvec = _qardlQVectorFromIndex(qqidx, k0, qend);
+            icgrid[idx, 1] = pp;
+            icgrid[idx, 2:1+k0] = qvec';
+            icgrid[idx, k0+2] = icmeanX(data, pp, qvec, criterion);
+            idx = idx + 1;
+            qqidx = qqidx + 1;
+        endo;
+        pp = pp + 1;
+    endo;
+
+    retp(icgrid);
+endp;
+
+proc (1) = _qardlQVectorFromIndex(idx, k0, qend);
+    local qvec, base, rem, ii, basepow;
+
+    qvec = zeros(k0, 1);
+    base = qend + 1;
+    rem = idx;
+    ii = 1;
+    do until ii > k0;
+        basepow = base^(ii-1);
+        qvec[ii] = floor(rem/basepow) - base*floor(rem/(basepow*base));
+        ii = ii + 1;
+    endo;
+
+    retp(qvec);
+endp;
+
 proc (1) = _qardlInformationCriterion(sigma2, nobs, nparam, criterion);
     local ic;
 
@@ -169,6 +269,16 @@ endp;
 proc (0) = _qardlValidateLagRange(lag_start, lag_end, label);
     call _qardlValidateLagScalar(lag_start, label $+ " start");
     call _qardlValidateLagScalar(lag_end, label $+ " end");
+
+    if lag_start > lag_end;
+        errorlog label $+ " start must be less than or equal to end";
+        end;
+    endif;
+endp;
+
+proc (0) = _qardlValidateLagRangeZero(lag_start, lag_end, label);
+    call _qardlValidateLagScalarZero(lag_start, label $+ " start");
+    call _qardlValidateLagScalarZero(lag_end, label $+ " end");
 
     if lag_start > lag_end;
         errorlog label $+ " start must be less than or equal to end";

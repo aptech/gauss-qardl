@@ -50,6 +50,7 @@ proc (6) = wtestsym(struct qardlOut qaOut, tau, data);
     local wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi;
     local rb_beta, rb_gamma, rb_phi;
     local rnk_beta, rnk_gamma, rnk_phi;
+    local inv_beta, inv_gamma, inv_phi;
 
     call _qardlValidateTau(tau, "wtestsym");
 
@@ -149,9 +150,13 @@ proc (6) = wtestsym(struct qardlOut qaOut, tau, data);
     rnk_gamma = rows(R_gamma);
     rnk_phi   = rows(R_phi);
 
-    wt_beta  = ((nn-1)^2) * rb_beta'  * inv(R_beta  * qaOut.bigbt_cov  * R_beta')  * rb_beta;
-    wt_gamma = ((nn-1)^2) * rb_gamma' * inv(R_gamma * qaOut.gamma_cov  * R_gamma') * rb_gamma;
-    wt_phi   = ((nn-1)^2) * rb_phi'   * inv(R_phi   * qaOut.phi_cov    * R_phi')   * rb_phi;
+    { inv_beta, rnk_beta } = _qardlWaldInvAndRank(R_beta * qaOut.bigbt_cov * R_beta', "wtestsym", "beta Wald covariance matrix");
+    { inv_gamma, rnk_gamma } = _qardlWaldInvAndRank(R_gamma * qaOut.gamma_cov * R_gamma', "wtestsym", "gamma Wald covariance matrix");
+    { inv_phi, rnk_phi } = _qardlWaldInvAndRank(R_phi * qaOut.phi_cov * R_phi', "wtestsym", "phi Wald covariance matrix");
+
+    wt_beta  = ((nn-1)^2) * rb_beta'  * inv_beta  * rb_beta;
+    wt_gamma = ((nn-1)^2) * rb_gamma' * inv_gamma * rb_gamma;
+    wt_phi   = ((nn-1)^2) * rb_phi'   * inv_phi   * rb_phi;
 
     pv_beta  = cdfchic(wt_beta,  rnk_beta);
     pv_gamma = cdfchic(wt_gamma, rnk_gamma);

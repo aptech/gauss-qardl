@@ -74,7 +74,7 @@ proc (struct qirfOut) = qirf(struct qardlOut qaOut, ppp, qqq, H, tau = { 0.25, 0
     struct qirfOut qOut;
 
     call _qardlValidateLagScalar(ppp, "qirf: p");
-    call _qardlValidateLagScalar(qqq, "qirf: q");
+    call _qardlValidateLagScalarZero(qqq, "qirf: q");
     call _qardlValidateTau(tau, "qirf");
 
     if rows(H) * cols(H) /= 1 or H < 1 or round(H) /= H;
@@ -120,7 +120,11 @@ proc (struct qirfOut) = qirf(struct qardlOut qaOut, ppp, qqq, H, tau = { 0.25, 0
 
         // Gamma: qqq coefficients for variable k_x at this quantile
         // gamma_col[lag+1] = coefficient on Dx_{k_x, t-lag}, lag = 0,...,qqq-1
-        gamma_col = qaOut.bt[gamma_first:gamma_last, jj];
+        if qqq > 0;
+            gamma_col = qaOut.bt[gamma_first:gamma_last, jj];
+        else;
+            gamma_col = 0;
+        endif;
 
         // Phi: ppp AR coefficients
         phi_vec = qaOut.bt[phi_start:phi_last, jj];

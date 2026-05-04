@@ -36,8 +36,9 @@ endp;
 **              tstat       t-statistic for the lagged dependent level.
 **
 **              cv          PSS asymptotic F critical values where tabulated in
-**                          this package. Currently populated for Case III and
-**                          missing for other cases.
+**                          this package. Currently populated for Case III.
+**                          Use ardlboundsCaseSim for simulation-based critical
+**                          values for Cases I-V, finite samples, or k > 10.
 **
 **              case_id     Deterministic case used.
 **
@@ -78,12 +79,14 @@ proc (5) = ardlboundsCase(data, ppp, qqq, case_id);
         endo;
     endif;
 
-    dx = zeros(N, qqq*k0);
-    jj = 0;
-    do until jj > qqq-1;
-        dx[., (jj*k0+1):((jj+1)*k0)] = ee[(T0+1-jj):(nn-jj), .];
-        jj = jj + 1;
-    endo;
+    if qqq > 0;
+        dx = zeros(N, qqq*k0);
+        jj = 0;
+        do until jj > qqq-1;
+            dx[., (jj*k0+1):((jj+1)*k0)] = ee[(T0+1-jj):(nn-jj), .];
+            jj = jj + 1;
+        endo;
+    endif;
 
     trend = seqa(T0+1, 1, N);
 
@@ -101,15 +104,18 @@ proc (5) = ardlboundsCase(data, ppp, qqq, case_id);
     if ppp > 1;
         ONEX = ONEX~dy_lags;
     endif;
-    ONEX = ONEX~dx;
+    if qqq > 0;
+        ONEX = ONEX~dx;
+    endif;
 
     Y = dy[T0:(nn-1)];
     K_total = cols(ONEX);
+    call _qardlCheckFullColumnRank(ONEX, "ardlboundsCase", "unrestricted bounds-test design matrix");
 
-    bt_ols = inv(ONEX'*ONEX)*ONEX'*Y;
+    bt_ols = _qardlSafeInv(ONEX'*ONEX, "ardlboundsCase", "unrestricted bounds-test moment matrix")*ONEX'*Y;
     RSS_U = sumc((Y - ONEX*bt_ols).^2);
     sigma2 = RSS_U / (N - K_total);
-    cov_ols = sigma2*inv(ONEX'*ONEX);
+    cov_ols = sigma2*_qardlSafeInv(ONEX'*ONEX, "ardlboundsCase", "unrestricted bounds-test moment matrix");
 
     level_start = det_cols + 1;
     level_end = det_cols + k0 + 1;
@@ -135,7 +141,8 @@ proc (5) = ardlboundsCase(data, ppp, qqq, case_id);
         ONEX_R = ONEX[., 1:drop_start-1]~ONEX[., drop_end+1:K_total];
     endif;
 
-    bt_R = inv(ONEX_R'*ONEX_R)*ONEX_R'*Y;
+    call _qardlCheckFullColumnRank(ONEX_R, "ardlboundsCase", "restricted bounds-test design matrix");
+    bt_R = _qardlSafeInv(ONEX_R'*ONEX_R, "ardlboundsCase", "restricted bounds-test moment matrix")*ONEX_R'*Y;
     RSS_R = sumc((Y - ONEX_R*bt_R).^2);
 
     Fstat = ((RSS_R - RSS_U) / q_restrict) / (RSS_U / (N - K_total));
@@ -144,6 +151,101 @@ proc (5) = ardlboundsCase(data, ppp, qqq, case_id);
     cv = _ardlboundsCaseCriticalValues(k0, case_id);
 
     retp(Fstat, tstat, cv, case_id, q_restrict);
+endp;
+
+/*
+**> ardlboundsCaseSim
+**
+**  Purpose:    ARDL bounds test with simulation-based finite-sample critical
+**              values for PSS deterministic Cases I-V.
+**
+**  Format:     { Fstat, tstat, cv, case_id, q_restrict } =
+**                  ardlboundsCaseSim(data, ppp, qqq, case_id, reps, seed);
+**
+**  Notes:      cv rows are 10%, 5%, and 1%; columns are I(0), I(1).
+**              Set T = rows(data) through the supplied sample. Use a larger
+**              reps value for applied inference.
+*/
+proc (5) = ardlboundsCaseSim(data, ppp, qqq, case_id, reps = 40000, seed = 0);
+    local Fstat, tstat, cv_table, cv_sim, q_restrict, k0, Tsim;
+
+    { Fstat, tstat, cv_table, case_id, q_restrict } = ardlboundsCase(data, ppp, qqq, case_id);
+    k0 = cols(data) - 1;
+    Tsim = rows(data);
+    cv_sim = ardlboundsCaseSimCV(k0, case_id, Tsim, reps, seed);
+
+    retp(Fstat, tstat, cv_sim, case_id, q_restrict);
+endp;
+
+/*
+**> ardlboundsCaseCV
+**
+**  Purpose:    Return bundled PSS Case III F critical values when available,
+**              or simulation-based F critical values when reps > 0.
+*/
+proc (1) = ardlboundsCaseCV(k0, case_id, Tsim = 1000, reps = 0, seed = 0);
+    call _ardlboundsValidateCase(case_id);
+    call _ardlboundsValidateCVInputs(k0, Tsim, reps, "ardlboundsCaseCV");
+
+    if reps > 0;
+        retp(ardlboundsCaseSimCV(k0, case_id, Tsim, reps, seed));
+    endif;
+
+    retp(_ardlboundsCaseCriticalValues(k0, case_id));
+endp;
+
+/*
+**> ardlboundsCaseSimCV
+**
+**  Purpose:    Simulate PSS-style F critical-value bounds for Cases I-V.
+*/
+proc (1) = ardlboundsCaseSimCV(k0, case_id, Tsim = 1000, reps = 40000, seed = 0);
+    local f_i0, f_i1, rr, y, dy_sim, y_lag, x, x_i1, x_lag_i0, x_lag_i1, trend;
+    local cv, probs;
+
+    call _ardlboundsValidateCase(case_id);
+    call _ardlboundsValidateCVInputs(k0, Tsim, reps, "ardlboundsCaseSimCV");
+    call _qardlValidateBootstrapSeed(seed, "ardlboundsCaseSimCV");
+
+    if seed > 0;
+        rndseed seed;
+    endif;
+
+    f_i0 = zeros(reps, 1);
+    f_i1 = zeros(reps, 1);
+    trend = seqa(1, 1, Tsim-1);
+
+    rr = 1;
+    do until rr > reps;
+        y = cumsumc(rndn(Tsim, 1));
+        dy_sim = y[2:Tsim] - y[1:Tsim-1];
+        y_lag = y[1:Tsim-1];
+
+        if k0 > 0;
+            x = rndn(Tsim, k0);
+            x_i1 = cumsumc(x);
+            x_lag_i0 = x[1:Tsim-1, .];
+            x_lag_i1 = x_i1[1:Tsim-1, .];
+        else;
+            x_lag_i0 = error(0);
+            x_lag_i1 = error(0);
+        endif;
+
+        f_i0[rr] = _ardlboundsSimFstat(dy_sim, y_lag, x_lag_i0, trend, case_id, k0);
+        f_i1[rr] = _ardlboundsSimFstat(dy_sim, y_lag, x_lag_i1, trend, case_id, k0);
+        rr = rr + 1;
+    endo;
+
+    probs = { 0.90, 0.95, 0.99 };
+    cv = zeros(3, 2);
+    rr = 1;
+    do until rr > 3;
+        cv[rr, 1] = quantile(f_i0, probs[rr]);
+        cv[rr, 2] = quantile(f_i1, probs[rr]);
+        rr = rr + 1;
+    endo;
+
+    retp(cv);
 endp;
 
 /*
@@ -213,20 +315,162 @@ proc (1) = _ardlboundsCaseLabel(case_id);
     endif;
 endp;
 
-proc (1) = _ardlboundsCaseCriticalValues(k0, case_id);
-    local cv, cv_table, k_idx;
+proc (1) = _ardlboundsSimFstat(Y, y_lag, x_lag, trend, case_id, k0);
+    local N, XU, XR, bt_U, bt_R, RSS_U, RSS_R, q_restrict, K_total;
 
-    if case_id /= 3;
-        retp(error(0)*ones(3, 2));
+    N = rows(Y);
+
+    if case_id == 1;
+        XU = y_lag;
+        if k0 > 0;
+            XU = XU~x_lag;
+        endif;
+        RSS_R = sumc(Y.^2);
+        q_restrict = k0 + 1;
+    elseif case_id == 2;
+        XU = ones(N, 1)~y_lag;
+        if k0 > 0;
+            XU = XU~x_lag;
+        endif;
+        RSS_R = sumc(Y.^2);
+        q_restrict = k0 + 2;
+    elseif case_id == 3;
+        XU = ones(N, 1)~y_lag;
+        if k0 > 0;
+            XU = XU~x_lag;
+        endif;
+        XR = ones(N, 1);
+        bt_R = inv(XR'*XR)*XR'*Y;
+        RSS_R = sumc((Y - XR*bt_R).^2);
+        q_restrict = k0 + 1;
+    elseif case_id == 4;
+        XU = ones(N, 1)~trend~y_lag;
+        if k0 > 0;
+            XU = XU~x_lag;
+        endif;
+        XR = ones(N, 1);
+        bt_R = inv(XR'*XR)*XR'*Y;
+        RSS_R = sumc((Y - XR*bt_R).^2);
+        q_restrict = k0 + 2;
+    else;
+        XU = ones(N, 1)~trend~y_lag;
+        if k0 > 0;
+            XU = XU~x_lag;
+        endif;
+        XR = ones(N, 1)~trend;
+        bt_R = inv(XR'*XR)*XR'*Y;
+        RSS_R = sumc((Y - XR*bt_R).^2);
+        q_restrict = k0 + 1;
     endif;
 
+    K_total = cols(XU);
+    bt_U = inv(XU'*XU)*XU'*Y;
+    RSS_U = sumc((Y - XU*bt_U).^2);
+
+    retp(((RSS_R - RSS_U) / q_restrict) / (RSS_U / (N - K_total)));
+endp;
+
+proc (0) = _ardlboundsValidateCVInputs(k0, Tsim, reps, caller);
+    if rows(k0)*cols(k0) /= 1 or k0 < 0 or round(k0) /= k0;
+        errorlog caller $+ ": k must be a non-negative integer";
+        end;
+    endif;
+
+    if rows(Tsim)*cols(Tsim) /= 1 or Tsim < 20 or round(Tsim) /= Tsim;
+        errorlog caller $+ ": T must be an integer of at least 20";
+        end;
+    endif;
+
+    if rows(reps)*cols(reps) /= 1 or reps < 0 or round(reps) /= reps;
+        errorlog caller $+ ": reps must be a non-negative integer";
+        end;
+    endif;
+
+    if reps > 0 and reps < 100;
+        errorlog caller $+ ": reps must be at least 100 for simulation-based critical values";
+        end;
+    endif;
+endp;
+
+proc (1) = _ardlboundsCaseCriticalValues(k0, case_id);
+    local cv, cv_table, k_idx, case_offset;
+
     cv_table = reshape(
+        // Case I: no intercept, no trend.
+        3.00~3.00 |
+        4.20~4.20 |
+        7.17~7.17 |
+        2.44~3.28 |
+        3.15~4.11 |
+        4.81~6.02 |
+        2.17~3.19 |
+        2.72~3.83 |
+        3.88~5.30 |
+        2.01~3.10 |
+        2.45~3.63 |
+        3.42~4.84 |
+        1.90~3.01 |
+        2.26~3.48 |
+        3.07~4.44 |
+        1.81~2.93 |
+        2.14~3.34 |
+        2.82~4.21 |
+        1.75~2.87 |
+        2.04~3.24 |
+        2.66~4.05 |
+        1.70~2.83 |
+        1.97~3.18 |
+        2.54~3.91 |
+        1.66~2.79 |
+        1.91~3.11 |
+        2.45~3.79 |
+        1.63~2.75 |
+        1.86~3.05 |
+        2.34~3.68 |
+        1.60~2.72 |
+        1.82~2.99 |
+        2.26~3.60 |
+        // Case II: restricted intercept, no trend.
+        3.80~3.80 |
+        4.60~4.60 |
+        6.44~6.44 |
+        3.02~3.51 |
+        3.62~4.16 |
+        4.94~5.58 |
+        2.63~3.35 |
+        3.10~3.87 |
+        4.13~5.00 |
+        2.37~3.20 |
+        2.79~3.67 |
+        3.65~4.66 |
+        2.20~3.09 |
+        2.56~3.49 |
+        3.29~4.37 |
+        2.08~3.00 |
+        2.39~3.38 |
+        3.06~4.15 |
+        1.99~2.94 |
+        2.27~3.28 |
+        2.88~3.99 |
+        1.92~2.89 |
+        2.17~3.21 |
+        2.73~3.90 |
+        1.85~2.85 |
+        2.11~3.15 |
+        2.62~3.77 |
+        1.80~2.80 |
+        2.04~3.08 |
+        2.50~3.68 |
+        1.76~2.77 |
+        1.98~3.04 |
+        2.41~3.61 |
+        // Case III: unrestricted intercept, no trend.
         6.58~6.58 |
         8.21~8.21 |
-       12.39~12.39 |
+       11.79~11.79 |
         4.04~4.78 |
         4.94~5.73 |
-        7.06~8.06 |
+        6.84~7.84 |
         3.17~4.14 |
         3.79~4.85 |
         5.15~6.36 |
@@ -253,15 +497,84 @@ proc (1) = _ardlboundsCaseCriticalValues(k0, case_id);
         2.65~3.97 |
         1.83~2.94 |
         2.06~3.24 |
-        2.56~3.86,
-    33, 2);
+        2.54~3.86 |
+        // Case IV: unrestricted intercept, restricted trend.
+        5.37~5.37 |
+        6.29~6.29 |
+        8.26~8.26 |
+        4.05~4.49 |
+        4.68~5.15 |
+        6.10~6.73 |
+        3.38~4.02 |
+        3.88~4.61 |
+        4.99~5.85 |
+        2.97~3.74 |
+        3.38~4.23 |
+        4.30~5.23 |
+        2.68~3.53 |
+        3.05~3.97 |
+        3.81~4.92 |
+        2.49~3.38 |
+        2.81~3.76 |
+        3.50~4.63 |
+        2.33~3.25 |
+        2.63~3.62 |
+        3.27~4.39 |
+        2.22~3.17 |
+        2.50~3.50 |
+        3.07~4.23 |
+        2.13~3.09 |
+        2.38~3.41 |
+        2.93~4.06 |
+        2.05~3.02 |
+        2.30~3.33 |
+        2.79~3.93 |
+        1.98~2.97 |
+        2.21~3.25 |
+        2.68~3.84 |
+        // Case V: unrestricted intercept, unrestricted trend.
+        9.81~9.81 |
+       11.64~11.64 |
+       15.73~15.73 |
+        5.59~6.26 |
+        6.56~7.30 |
+        8.74~9.63 |
+        4.19~5.06 |
+        4.87~5.85 |
+        6.34~7.52 |
+        3.47~4.45 |
+        4.01~5.07 |
+        5.17~6.36 |
+        3.03~4.06 |
+        3.47~4.57 |
+        4.40~5.72 |
+        2.75~3.79 |
+        3.12~4.25 |
+        3.93~5.23 |
+        2.53~3.59 |
+        2.87~4.00 |
+        3.60~4.90 |
+        2.38~3.45 |
+        2.69~3.83 |
+        3.34~4.63 |
+        2.26~3.34 |
+        2.55~3.68 |
+        3.15~4.43 |
+        2.16~3.24 |
+        2.43~3.56 |
+        2.97~4.24 |
+        2.07~3.16 |
+        2.33~3.46 |
+        2.84~4.10,
+    165, 2);
 
     if k0 <= 10;
-        k_idx = k0 * 3 + 1;
+        case_offset = (case_id - 1)*33;
+        k_idx = case_offset + k0*3 + 1;
         cv = cv_table[k_idx:k_idx+2, .];
     else;
         cv = error(0)*ones(3, 2);
-        print "ardlboundsCase: WARNING - k > 10, PSS critical values not tabulated.";
+        print "ardlboundsCase: WARNING - k > 10, bundled asymptotic PSS critical values not tabulated; use ardlboundsCaseSimCV.";
     endif;
 
     retp(cv);

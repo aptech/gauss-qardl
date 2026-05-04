@@ -31,13 +31,13 @@
 */
 
 proc (2) = wtestsrg(_gamma, cov, bigR, smr, data);
-    local nn, wt, rnk, pv;
+    local nn, wt, rnk, pv, w_inv;
 
     call _qardlValidateWaldInputs(_gamma, cov, bigR, smr, data, "wtestsrg");
     
     nn = rows(data);
-    wt = (nn-1)*(bigR*_gamma-smr)'*inv(bigR*cov*bigR')*(bigR*_gamma-smr);
-    rnk= rows(bigR);
+    { w_inv, rnk } = _qardlWaldInvAndRank(bigR*cov*bigR', "wtestsrg", "Wald covariance matrix");
+    wt = (nn-1)*(bigR*_gamma-smr)'*w_inv*(bigR*_gamma-smr);
     pv = cdfchic(wt, rnk);
     
     retp(wt, pv);

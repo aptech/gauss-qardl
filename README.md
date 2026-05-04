@@ -30,7 +30,7 @@ A [GAUSS](https://www.aptech.com) application package implementing the **Quantil
 - [Examples](#examples)
 - [Development and Tests](#development-and-tests)
 - [Usage Guide](#usage-guide)
-- [Reference](#reference)
+- [References](#references)
 
 ---
 
@@ -150,7 +150,7 @@ qfOut = qardlFull(data, 8, 8, tau, "", 0, "bic", "hac", 4);
 |----------|---------|-------------|
 | `data` | — | `(T × (1+k))` matrix or dataframe |
 | `pend` | — | Maximum AR lag to search |
-| `qend` | — | Maximum DL lag to search |
+| `qend` | — | Maximum DL lag to search; `q = 0` is included |
 | `tau` | `{ 0.25, 0.5, 0.75 }` | Quantile vector |
 | `formula` | `""` | Wilkinson formula string |
 | `verbose` | `1` | `1` prints workflow summaries; `0` computes silently |
@@ -174,19 +174,25 @@ Information-criterion selection of ARDL lag orders. BIC is the default.
 { pst, qst } = pqorder(data, 8, 8, "aic");
 { pst, qst } = pqorderRange(data, 2, 8, 1, 4, "bic");
 ic_grid = pqorderGrid(data, 8, 8, "bic");
+{ pst_x, qvec_x } = pqorderX(data, 4, 2, "bic");
+ic_x_grid = pqorderXGrid(data, 4, 2, "bic");
 ```
 
 | Argument | Default | Description |
 |----------|---------|-------------|
 | `data` | — | `(n × (1+k))` matrix, y in column 1 |
 | `pend` | `8` | Maximum AR lag to search |
-| `qend` | `8` | Maximum distributed lag to search |
+| `qend` | `8` | Maximum distributed lag to search; `q = 0` is included |
 | `criterion` | `"bic"` | `"bic"`, `"aic"`, `"hq"`, or `"hqc"` |
 
 Use `pqorderRange(data, pstart, pend, qstart, qend, criterion)` to restrict the
 searched grid. Setting `pstart == pend` or `qstart == qend` pins that lag order.
 Use `pqorderGrid` or `pqorderRangeGrid` to return the full search table with
-columns `[p, q, IC]`.
+columns `[p, q, IC]`. The default search includes `q = 0`; set `qstart = 1`
+with `pqorderRange` when the model should require differenced-x lag terms.
+Use `pqorderX` when each regressor may have a different distributed-lag order.
+It returns scalar `p` and a `k x 1` vector `qvec`; `pqorderXGrid` returns
+columns `[p, q1, ..., qk, IC]`.
 
 ---
 
@@ -200,13 +206,14 @@ qaOut = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
 qaOut = qardl(data, ppp, qqq, tau, "hac", 4);
 qaOut = qardlRobust(data, ppp, qqq, tau);
 qaOut = qardlHAC(data, ppp, qqq, tau, 4);
+qaOut = qardlX(data, ppp, qvec, tau);
 ```
 
 | Argument | Default | Description |
 |----------|---------|-------------|
 | `data` | — | `(n × (1+k))` matrix |
 | `ppp` | — | AR lag order p ≥ 1 |
-| `qqq` | — | Distributed-lag order q ≥ 1 |
+| `qqq` | — | Distributed-lag order q >= 0 |
 | `tau` | `{ 0.25, 0.5, 0.75 }` | `(s × 1)` quantile vector |
 | `cov_type` | `"iid"` | `"iid"`, `"robust"`, or `"hac"` |
 | `hac_lags` | `0` | HAC lag truncation; `0` selects the automatic bandwidth |
@@ -217,6 +224,8 @@ heteroskedasticity-robust QR sandwich covariance, or `qardlHAC` for a
 Newey-West/Bartlett HAC QR sandwich covariance with delta-method long-run beta
 covariance. Passing `hac_lags = 0` to `qardlHAC` uses
 `floor(4*(T/100)^(2/9))`.
+Use `qardlX` for per-regressor distributed-lag orders, where `qvec` is `k x 1`
+or `1 x k`. `qaOut.q` stores `max(qvec)` for legacy metadata compatibility.
 
 ---
 
@@ -232,6 +241,7 @@ qECMOut = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
 qECMOut = qardlECM(data, ppp, qqq, tau, "hac", 4);
 qECMOut = qardlECMRobust(data, ppp, qqq, tau);
 qECMOut = qardlECMHAC(data, ppp, qqq, tau, 4);
+qECMOut = qardlECMX(data, ppp, qvec, tau);
 ```
 
 Returns a `qardlECMOut` structure. The default `qardlECM` covariance is the
@@ -239,6 +249,7 @@ stationary-regressor QR asymptotic covariance. Use `qardlECMRobust` for a
 heteroskedasticity-robust QR sandwich covariance, or `qardlECMHAC` for a
 Newey-West/Bartlett HAC QR sandwich covariance. Passing `hac_lags = 0` to
 `qardlECMHAC` uses the automatic bandwidth `floor(4*(T/100)^(2/9))`.
+Use `qardlECMX` for two-step ECM estimation with per-regressor `qvec` orders.
 
 ```gauss
 print qECMOut.beta_lr;            // OLS long-run coefficients
@@ -601,13 +612,18 @@ smlr = { 0, 0 };
 ardlbounds_print(Fstat, cv, k);
 { Fstat, tstat, cv, case_id, q_restrict } = ardlboundsCase(data, ppp, qqq, 5);
 ardlboundsCase_print(Fstat, tstat, cv, k, case_id);
+{ Fstat, tstat, cv_sim, case_id, q_restrict } =
+    ardlboundsCaseSim(data, ppp, qqq, 5, 40000, 12345);
+cv_sim = ardlboundsCaseSimCV(k, 5, rows(data), 40000, 12345);
 ```
 
 `cv` is a `(3 × 2)` matrix of I(0)/I(1) critical value bounds at 10%, 5%, and 1% for up to k=10 regressors (Case III: unrestricted intercept, no trend).
 `ardlboundsCase` supports PSS deterministic Cases I-V and also returns the
-t-statistic for the lagged dependent level. Case III critical values are
-tabulated in this package; other cases currently return missing critical values
-while still reporting the model-specific F and t statistics.
+t-statistic for the lagged dependent level. PSS asymptotic F critical values
+are bundled for Cases I-V and k=0 through k=10. Use `ardlboundsCaseSim` or
+`ardlboundsCaseSimCV` for finite-sample critical values, non-tabulated
+significance levels, or more than 10 regressors. Simulation critical-value rows
+are 10%, 5%, and 1%; columns are I(0) and I(1).
 
 ---
 
@@ -666,12 +682,25 @@ For guidance on choosing between `qardlFull`, `qardl`, and `qardlECM`, formula d
 
 ---
 
-## Reference
+## References
 
 - Cho, J.S., Kim, T-H., Shin, Y. (2015). Quantile cointegration in the autoregressive distributed-lag modeling framework. *Journal of Econometrics*, 188(1), 281–300.
 - Pesaran, M.H., Shin, Y. & Smith, R.J. (2001). Bounds testing approaches to the analysis of level relationships. *Journal of Applied Econometrics*, 16(3), 289–326.
 - Künsch, H.R. (1989). The jackknife and the bootstrap for general stationary observations. *Annals of Statistics*, 17(3), 1217–1241.
 - Original author's page: https://web.yonsei.ac.kr/jinseocho/qardl.htm
+- Additional references for implemented estimators, covariance estimators,
+  lag-selection criteria, and bootstrap methods:
+- Akaike, H. (1974). A new look at the statistical model identification. *IEEE Transactions on Automatic Control*, 19(6), 716-723. https://doi.org/10.1109/TAC.1974.1100705
+- Cho, J.S., Kim, T.-H., & Shin, Y. (2015). Quantile cointegration in the autoregressive distributed-lag modeling framework. *Journal of Econometrics*, 188(1), 281-300. https://doi.org/10.1016/j.jeconom.2015.05.003
+- Hannan, E.J., & Quinn, B.G. (1979). The determination of the order of an autoregression. *Journal of the Royal Statistical Society: Series B*, 41(2), 190-195. https://doi.org/10.1111/j.2517-6161.1979.tb01072.x
+- Koenker, R. (2005). *Quantile Regression*. Cambridge University Press. https://doi.org/10.1017/CBO9780511754098
+- Koenker, R., & Bassett, G. Jr. (1978). Regression quantiles. *Econometrica*, 46(1), 33-50. https://www.jstor.org/stable/1913643
+- Kunsch, H.R. (1989). The jackknife and the bootstrap for general stationary observations. *The Annals of Statistics*, 17(3), 1217-1241. https://doi.org/10.1214/aos/1176347265
+- Newey, W.K., & West, K.D. (1987). A simple, positive semi-definite, heteroskedasticity and autocorrelation consistent covariance matrix. *Econometrica*, 55(3), 703-708. https://doi.org/10.2307/1913610
+- Pesaran, M.H., & Shin, Y. (1998). An autoregressive distributed-lag modelling approach to cointegration analysis. In S. Strom (Ed.), *Econometrics and Economic Theory in the 20th Century: The Ragnar Frisch Centennial Symposium* (pp. 371-413). Cambridge University Press. https://doi.org/10.1017/CCOL0521633230.011
+- Pesaran, M.H., Shin, Y., & Smith, R.J. (2001). Bounds testing approaches to the analysis of level relationships. *Journal of Applied Econometrics*, 16(3), 289-326. https://doi.org/10.1002/jae.616
+- Politis, D.N., & Romano, J.P. (1994). The stationary bootstrap. *Journal of the American Statistical Association*, 89(428), 1303-1313. https://doi.org/10.1080/01621459.1994.10476870
+- Schwarz, G. (1978). Estimating the dimension of a model. *The Annals of Statistics*, 6(2), 461-464. https://doi.org/10.1214/aos/1176344136
 
 ---
 

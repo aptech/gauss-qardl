@@ -92,22 +92,28 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_ty
     ee = xx[2:nn, .] - xx[1:(nn-1), .];
     ee = zeros(1, k0)|ee;
     
-    eei = zeros(nn-qqq, qqq*k0);
-    xxi = xx[qqq+1:nn, .];
+    if qqq > 0;
+        eei = zeros(nn-qqq, qqq*k0);
+        xxi = xx[qqq+1:nn, .];
+    else;
+        xxi = xx;
+    endif;
     yyi = zeros(nn-ppp, ppp);
     
     // Create lagged differences of
     // independent variables
     // Variable counter
-    jj = 1;
-    do until jj > k0;
-        
-        // Forward lags of first differences
-        // of independent variables
-        eei[., 1+(jj-1)*qqq:(jj-1)*qqq+qqq] = packr(lagn(ee[.,jj], seqa(-qqq, 1, qqq)));
-        
-        jj = jj+1;
-    endo;
+    if qqq > 0;
+        jj = 1;
+        do until jj > k0;
+            
+            // Forward lags of first differences
+            // of independent variables
+            eei[., 1+(jj-1)*qqq:(jj-1)*qqq+qqq] = packr(lagn(ee[.,jj], seqa(-qqq, 1, qqq)));
+            
+            jj = jj+1;
+        endo;
+    endif;
     
     yyi = packr(lagn(yy, seqa(-ppp+1, 1, ppp)));
     yyi = yyi[1:rows(yyi)-1, .];
@@ -115,7 +121,9 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_ty
     // Build independent variables
     // First differences of x~foward lagged xx~ forward lagged yy
     //  adjusted for appropriate lag length
-    if ppp .> qqq;
+    if qqq == 0;
+        X = xxi[(rows(xxi)+1-rows(yyi)):rows(xxi), .]~yyi;
+    elseif ppp .> qqq;
         X  = eei[(rows(eei)+1-rows(yyi)):rows(eei), .]~xxi[(rows(xxi)+1-rows(yyi)):rows(xxi), .]~yyi;
     else;
         X  = eei~xxi~yyi[(rows(yyi)+1-rows(xxi)):rows(yyi), .];
@@ -129,6 +137,7 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_ty
     Y  = yy[(nn-rows(X)+1):nn, 1];
     Y_qr = Y;
     ONEX_qr = ONEX;
+    call _qardlCheckFullColumnRank(ONEX, "qardl", "levels design matrix");
     
     // Storage for bt
     bt = zeros(cols(ONEX), ss);
@@ -156,6 +165,62 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_ty
         jj = jj + 1;
     endo;
     
+    if qqq == 0;
+        midbt = zeros(k0, ss);
+        jj = 1;
+        do until jj > ss;
+            midbt[., jj] = bt[2:1+k0, jj]/(1-sumc(bt[2+k0:1+k0+ppp, jj]));
+            jj = jj + 1;
+        endo;
+        bigbt = vec(midbt);
+
+        midphi = zeros(ppp, ss);
+        jj = 1;
+        do until jj > ss;
+            midphi[., jj] = bt[2+k0:1+k0+ppp, jj];
+            jj = jj + 1;
+        endo;
+        bigphi = vec(midphi);
+
+        midgam = zeros(k0, ss);
+        jj = 1;
+        do until jj > ss;
+            midgam[., jj] = bt[2:1+k0, jj];
+            jj = jj + 1;
+        endo;
+        bigam = vec(midgam);
+
+        D_qr = ONEX_qr'*ONEX_qr / rows(Y_qr);
+        D_inv_qr = _qardlSafeInv(D_qr, "qardl", "QR moment matrix");
+        cov_lags = 0;
+        if cov_type $== "hac";
+            cov_lags = hac_lags;
+            if cov_lags == 0;
+                cov_lags = _qardlAutomaticHACLags(rows(Y_qr));
+            endif;
+        endif;
+        full_cov = _qardlQRCovSandwich(ONEX_qr, Y_qr, bt, tau, fh, D_inv_qr, cov_lags);
+        { bigbtmm, bigpi, bigff } = _qardlLevelsCovFromFull(full_cov, bt, ppp, qqq, k0, ss);
+
+        struct qardlOut qaOutQ0;
+        qaOutQ0.tau = tau;
+        qaOutQ0.p = ppp;
+        qaOutQ0.q = qqq;
+        qaOutQ0.nobs = rows(Y_qr);
+        qaOutQ0.k = k0;
+        qaOutQ0.bigbt = bigbt;
+        qaOutQ0.bigbt_cov = bigbtmm;
+        qaOutQ0.phi = bigphi;
+        qaOutQ0.phi_cov = bigpi;
+        qaOutQ0.gamma = bigam;
+        qaOutQ0.gamma_cov = bigff;
+        qaOutQ0.alpha = bt[1, .]';
+        qaOutQ0.rho = -(1 - sumc(bt[2+k0:1+k0+ppp, .]));
+        qaOutQ0.bt = bt;
+
+        retp(qaOutQ0);
+    endif;
+
     // Testing long-run parameter: beta
     barw = zeros(nn-1, qqq*k0);
     
@@ -343,7 +408,7 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_ty
         endif;
 
         D_qr = ONEX_qr'*ONEX_qr / rows(Y_qr);
-        D_inv_qr = inv(D_qr);
+        D_inv_qr = _qardlSafeInv(D_qr, "qardl", "QR moment matrix");
         full_cov = _qardlQRCovSandwich(ONEX_qr, Y_qr, bt, tau, fh, D_inv_qr, cov_lags);
         { bigbtmm, bigpi, bigff } = _qardlLevelsCovFromFull(full_cov, bt, ppp, qqq, k0, ss);
     endif;
@@ -399,6 +464,115 @@ endp;
 proc (struct qardlOut) = qardlHAC(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, hac_lags = 0);
     struct qardlOut qaOut;
     qaOut = qardl(data, ppp, qqq, tau, "hac", hac_lags);
+    retp(qaOut);
+endp;
+
+/*
+**> qardlX
+**
+**  Purpose:    Levels-form QARDL with a separate distributed-lag order for
+**              each regressor. qvec is k x 1 or 1 x k and contains
+**              non-negative integer q_i values.
+**
+**  Format:     qaOut = qardlX(data, ppp, qvec);
+**              qaOut = qardlX(data, ppp, qvec, tau, cov_type, hac_lags);
+**
+**  Notes:      Uses the QR sandwich covariance path for all covariance types.
+**              `qaOut.q` stores max(qvec); keep qvec with your model spec.
+*/
+proc (struct qardlOut) = qardlX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }, cov_type = "robust", hac_lags = 0);
+    local nn, k0, ss, za, hb, hs, jj, yy, Y, ONEX, bt, fh, uu;
+    local qmax, theta_start, phi_start, D_qr, D_inv_qr, cov_lags, full_cov;
+    local midbt, bigbt, midphi, bigphi, midgam, bigam, bigbtmm, bigpi, bigff;
+
+    call _qardlValidateEstimatorInputs(data, ppp, 0, tau, "qardlX");
+    k0 = cols(data) - 1;
+    qvec = _qardlNormalizeQVector(qvec, k0, "qardlX: qvec");
+    cov_type = lower(cov_type);
+    call _qardlValidateECMCovType(cov_type, "qardlX");
+    call _qardlValidateHACLags(hac_lags, "qardlX");
+
+    nn = rows(data);
+    ss = rows(tau);
+    tau = sortc(tau, 1);
+    yy = data[., 1];
+    qmax = maxc(qvec);
+
+    { Y, ONEX, theta_start, phi_start } = _qardlBuildLevelsDesignX(data, ppp, qvec);
+    call _qardlCheckFullColumnRank(ONEX, "qardlX", "levels design matrix");
+
+    za = cdfni(0.975);
+    hb = zeros(ss, 1);
+    hs = zeros(ss, 1);
+    jj = 1;
+    do until jj > ss;
+        hb[jj] = (4.5*pdfn(cdfni(tau[jj]))^4/(nn*(2*cdfni(tau[jj])^2+1)^2))^0.2;
+        hs[jj] = za^(2/3)*(1.5*pdfn(cdfni(tau[jj]))^2/(nn*(2*cdfni(tau[jj])^2+1)))^(1/3);
+        jj = jj + 1;
+    endo;
+
+    struct qfitControl qCtl;
+    qCtl = qfitControlCreate();
+    qCtl.const = 0;
+    qCtl.verbose = 0;
+
+    struct qfitOut qOut;
+    qOut = quantileFit(Y, ONEX, tau, 0, qCtl);
+    bt = qOut.beta;
+
+    fh = zeros(ss, 1);
+    jj = 1;
+    do until jj > ss;
+        uu = Y - ONEX*bt[., jj];
+        fh[jj] = meanc(pdfn(-uu/hb[jj]))/hb[jj];
+        jj = jj + 1;
+    endo;
+
+    midbt = zeros(k0, ss);
+    midphi = zeros(ppp, ss);
+    midgam = zeros(k0, ss);
+    jj = 1;
+    do until jj > ss;
+        midbt[., jj] = bt[theta_start:theta_start+k0-1, jj] /
+                       (1 - sumc(bt[phi_start:phi_start+ppp-1, jj]));
+        midphi[., jj] = bt[phi_start:phi_start+ppp-1, jj];
+        midgam[., jj] = bt[theta_start:theta_start+k0-1, jj];
+        jj = jj + 1;
+    endo;
+    bigbt = vec(midbt);
+    bigphi = vec(midphi);
+    bigam = vec(midgam);
+
+    cov_lags = 0;
+    if cov_type $== "hac";
+        cov_lags = hac_lags;
+        if cov_lags == 0;
+            cov_lags = _qardlAutomaticHACLags(rows(Y));
+        endif;
+    endif;
+
+    D_qr = ONEX'*ONEX / rows(Y);
+    D_inv_qr = _qardlSafeInv(D_qr, "qardlX", "QR moment matrix");
+    full_cov = _qardlQRCovSandwich(ONEX, Y, bt, tau, fh, D_inv_qr, cov_lags);
+    { bigbtmm, bigpi, bigff } =
+        _qardlLevelsCovFromFullPositions(full_cov, bt, theta_start, phi_start, k0, ppp, ss);
+
+    struct qardlOut qaOut;
+    qaOut.tau = tau;
+    qaOut.p = ppp;
+    qaOut.q = qmax;
+    qaOut.nobs = rows(Y);
+    qaOut.k = k0;
+    qaOut.bigbt = bigbt;
+    qaOut.bigbt_cov = bigbtmm;
+    qaOut.phi = bigphi;
+    qaOut.phi_cov = bigpi;
+    qaOut.gamma = bigam;
+    qaOut.gamma_cov = bigff;
+    qaOut.alpha = bt[1, .]';
+    qaOut.rho = -(1 - sumc(bt[phi_start:phi_start+ppp-1, .]));
+    qaOut.bt = bt;
+
     retp(qaOut);
 endp;
 
@@ -497,20 +671,28 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, 
     ee = zeros(1, k0)|ee;
 
     // ---- Step 1: OLS ARDL (identical regressor construction to qardl) ----
-    eei = zeros(nn-qqq, qqq*k0);
-    xxi = xx[qqq+1:nn, .];
+    if qqq > 0;
+        eei = zeros(nn-qqq, qqq*k0);
+        xxi = xx[qqq+1:nn, .];
+    else;
+        xxi = xx;
+    endif;
     yyi = zeros(nn-ppp, ppp);
 
-    jj = 1;
-    do until jj > k0;
-        eei[., 1+(jj-1)*qqq:(jj-1)*qqq+qqq] = packr(lagn(ee[., jj], seqa(-qqq, 1, qqq)));
-        jj = jj + 1;
-    endo;
+    if qqq > 0;
+        jj = 1;
+        do until jj > k0;
+            eei[., 1+(jj-1)*qqq:(jj-1)*qqq+qqq] = packr(lagn(ee[., jj], seqa(-qqq, 1, qqq)));
+            jj = jj + 1;
+        endo;
+    endif;
 
     yyi = packr(lagn(yy, seqa(-ppp+1, 1, ppp)));
     yyi = yyi[1:rows(yyi)-1, .];
 
-    if ppp .> qqq;
+    if qqq == 0;
+        X_ols = xxi[(rows(xxi)+1-rows(yyi)):rows(xxi), .]~yyi;
+    elseif ppp .> qqq;
         X_ols = eei[(rows(eei)+1-rows(yyi)):rows(eei), .]~xxi[(rows(xxi)+1-rows(yyi)):rows(xxi), .]~yyi;
     else;
         X_ols = eei~xxi~yyi[(rows(yyi)+1-rows(xxi)):rows(yyi), .];
@@ -520,9 +702,10 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, 
     Y_ols = yy[(nn-rows(X_ols)+1):nn, 1];
     N = rows(Y_ols);
     T0 = nn - N;
+    call _qardlCheckFullColumnRank(ONEX_ols, "qardlECM", "levels OLS design matrix");
 
     // OLS ARDL coefficient vector
-    bt_ols = inv(ONEX_ols'*ONEX_ols)*ONEX_ols'*Y_ols;
+    bt_ols = _qardlSafeInv(ONEX_ols'*ONEX_ols, "qardlECM", "levels OLS moment matrix")*ONEX_ols'*Y_ols;
 
     // OLS speed of adjustment: rho_ols = -(1 - sum_j phi_j)
     rho_ols = -(1 - sumc(bt_ols[2+(qqq+1)*k0:1+(qqq+1)*k0+ppp]));
@@ -555,13 +738,16 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, 
 
     // First-differences of x: Dx_{t-j} for j = 0,...,qqq-1
     // j=0 is contemporaneous Dx_t; j=qqq-1 is Dx_{t-q+1}
-    dx_ecm = zeros(N_ecm, qqq*k0);
-    for ii(1, k0, 1);
-        for j(0, qqq-1, 1);
-            dx_ecm[., j+1+(ii-1)*qqq] = xx[(T0+2-j):(nn-j), ii] - xx[(T0+1-j):(nn-j-1), ii];
+    if qqq > 0;
+        dx_ecm = zeros(N_ecm, qqq*k0);
+        for ii(1, k0, 1);
+            for j(0, qqq-1, 1);
+                dx_ecm[., j+1+(ii-1)*qqq] = xx[(T0+2-j):(nn-j), ii] - xx[(T0+1-j):(nn-j-1), ii];
+            endfor;
         endfor;
-    endfor;
-    ONEX_ecm = ONEX_ecm~dx_ecm;
+        ONEX_ecm = ONEX_ecm~dx_ecm;
+    endif;
+    call _qardlCheckFullColumnRank(ONEX_ecm, "qardlECM", "ECM design matrix");
 
     // ---- Step 3: Quantile regression of ECM ----
     struct qfitControl qCtl;
@@ -604,7 +790,7 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, 
     endo;
 
     D_ecm = ONEX_ecm'*ONEX_ecm / N_ecm;
-    D_inv_ecm = inv(D_ecm);
+    D_inv_ecm = _qardlSafeInv(D_ecm, "qardlECM", "ECM moment matrix");
 
     if cov_type $== "iid";
         // Extract variance contributions: row 1 = alpha, row 2 = rho
@@ -662,6 +848,143 @@ endp;
 proc (struct qardlECMOut) = qardlECMHAC(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, hac_lags = 0);
     struct qardlECMOut qECMOut;
     qECMOut = qardlECM(data, ppp, qqq, tau, "hac", hac_lags);
+    retp(qECMOut);
+endp;
+
+/*
+**> qardlECMX
+**
+**  Purpose:    Two-step QARDL-ECM with a separate distributed-lag order for
+**              each regressor.
+*/
+proc (struct qardlECMOut) = qardlECMX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }, cov_type = "robust", hac_lags = 0);
+    local nn, k0, ss, yy, xx, Y_ols, ONEX_ols, theta_start, phi_start;
+    local bt_ols, rho_ols, beta_lr_ols, qmax, T0, N, N_ecm, Y_ecm, ec_lag;
+    local ONEX_ecm, dy_lags, dx_ecm, ii, jj, j, bt_ecm, fh_ecm, uu_ecm;
+    local za, hb, D_ecm, D_inv_ecm, rho_cov, alpha_cov, cov_lags, cc, mtau, mfh, psu;
+
+    call _qardlValidateEstimatorInputs(data, ppp, 0, tau, "qardlECMX");
+    k0 = cols(data) - 1;
+    qvec = _qardlNormalizeQVector(qvec, k0, "qardlECMX: qvec");
+    cov_type = lower(cov_type);
+    call _qardlValidateECMCovType(cov_type, "qardlECMX");
+    call _qardlValidateHACLags(hac_lags, "qardlECMX");
+
+    nn = rows(data);
+    ss = rows(tau);
+    tau = sortc(tau, 1);
+    yy = data[., 1];
+    xx = data[., 2:cols(data)];
+    qmax = maxc(qvec);
+
+    { Y_ols, ONEX_ols, theta_start, phi_start } = _qardlBuildLevelsDesignX(data, ppp, qvec);
+    call _qardlCheckFullColumnRank(ONEX_ols, "qardlECMX", "levels OLS design matrix");
+    bt_ols = _qardlSafeInv(ONEX_ols'*ONEX_ols, "qardlECMX", "levels OLS moment matrix")*ONEX_ols'*Y_ols;
+    rho_ols = -(1 - sumc(bt_ols[phi_start:phi_start+ppp-1]));
+    beta_lr_ols = bt_ols[theta_start:theta_start+k0-1] ./ (-rho_ols);
+
+    T0 = maxc(ppp|qmax);
+    N = rows(Y_ols);
+    N_ecm = N - 1;
+    Y_ecm = yy[(T0+2):nn] - yy[(T0+1):(nn-1)];
+    ec_lag = yy[(T0+1):(nn-1)] - xx[(T0+1):(nn-1), .]*beta_lr_ols;
+    ONEX_ecm = ones(N_ecm, 1)~ec_lag;
+
+    if ppp > 1;
+        dy_lags = zeros(N_ecm, ppp-1);
+        for j(1, ppp-1, 1);
+            dy_lags[., j] = yy[(T0+2-j):(nn-j)] - yy[(T0+1-j):(nn-j-1)];
+        endfor;
+        ONEX_ecm = ONEX_ecm~dy_lags;
+    endif;
+
+    if sumc(qvec) > 0;
+        dx_ecm = zeros(N_ecm, sumc(qvec));
+        jj = 1;
+        ii = 1;
+        do until ii > k0;
+            if qvec[ii] > 0;
+                for j(0, qvec[ii]-1, 1);
+                    dx_ecm[., jj] = xx[(T0+2-j):(nn-j), ii] - xx[(T0+1-j):(nn-j-1), ii];
+                    jj = jj + 1;
+                endfor;
+            endif;
+            ii = ii + 1;
+        endo;
+        ONEX_ecm = ONEX_ecm~dx_ecm;
+    endif;
+    call _qardlCheckFullColumnRank(ONEX_ecm, "qardlECMX", "ECM design matrix");
+
+    za = cdfni(0.975);
+    hb = zeros(ss, 1);
+    jj = 1;
+    do until jj > ss;
+        hb[jj] = (4.5*pdfn(cdfni(tau[jj]))^4/(nn*(2*cdfni(tau[jj])^2+1)^2))^0.2;
+        jj = jj + 1;
+    endo;
+
+    struct qfitControl qCtl;
+    qCtl = qfitControlCreate();
+    qCtl.const = 0;
+    qCtl.verbose = 0;
+
+    struct qfitOut qOutECM;
+    qOutECM = quantileFit(Y_ecm, ONEX_ecm, tau, 0, qCtl);
+    bt_ecm = qOutECM.beta;
+
+    fh_ecm = zeros(ss, 1);
+    jj = 1;
+    do until jj > ss;
+        uu_ecm = Y_ecm - ONEX_ecm*bt_ecm[., jj];
+        fh_ecm[jj] = meanc(pdfn(-uu_ecm/hb[jj]))/hb[jj];
+        jj = jj + 1;
+    endo;
+
+    D_ecm = ONEX_ecm'*ONEX_ecm / N_ecm;
+    D_inv_ecm = _qardlSafeInv(D_ecm, "qardlECMX", "ECM moment matrix");
+
+    if cov_type $== "iid";
+        mtau = tau.*tau';
+        mfh = fh_ecm.*fh_ecm';
+        cc = zeros(ss, ss);
+        jj = 1;
+        do until jj > ss;
+            ii = 1;
+            do until ii > ss;
+                psu = zeros(2, 1);
+                psu[1] = tau[jj];
+                psu[2] = tau[ii];
+                cc[jj, ii] = (minc(psu) - mtau[jj, ii]) / mfh[jj, ii];
+                ii = ii + 1;
+            endo;
+            jj = jj + 1;
+        endo;
+        rho_cov = cc * D_inv_ecm[2, 2] / N_ecm;
+        alpha_cov = cc * D_inv_ecm[1, 1] / N_ecm;
+    else;
+        cov_lags = hac_lags;
+        if cov_type $== "robust";
+            cov_lags = 0;
+        elseif cov_lags == 0;
+            cov_lags = _qardlAutomaticHACLags(N_ecm);
+        endif;
+        { alpha_cov, rho_cov } = _qardlECMCovSandwich(ONEX_ecm, Y_ecm, bt_ecm, tau,
+                                                      fh_ecm, D_inv_ecm, cov_lags);
+    endif;
+
+    struct qardlECMOut qECMOut;
+    qECMOut.tau = tau;
+    qECMOut.p = ppp;
+    qECMOut.q = qmax;
+    qECMOut.nobs = N_ecm;
+    qECMOut.k = k0;
+    qECMOut.beta_lr = beta_lr_ols;
+    qECMOut.rho_ols = rho_ols;
+    qECMOut.alpha = bt_ecm[1, .]';
+    qECMOut.rho = bt_ecm[2, .]';
+    qECMOut.rho_cov = rho_cov;
+    qECMOut.alpha_cov = alpha_cov;
+
     retp(qECMOut);
 endp;
 
@@ -2533,7 +2856,7 @@ proc (0) = _qardlValidateEstimatorInputs(data, ppp, qqq, tau, caller);
     endif;
 
     call _qardlValidateLagScalar(ppp, caller $+ ": p");
-    call _qardlValidateLagScalar(qqq, caller $+ ": q");
+    call _qardlValidateLagScalarZero(qqq, caller $+ ": q");
     call _qardlValidateTau(tau, caller);
 
     nn      = rows(data);
@@ -2560,7 +2883,7 @@ proc (0) = _qardlValidateSearchInputs(data, pend, qend, tau, caller);
     endif;
 
     call _qardlValidateLagScalar(pend, caller $+ ": pend");
-    call _qardlValidateLagScalar(qend, caller $+ ": qend");
+    call _qardlValidateLagScalarZero(qend, caller $+ ": qend");
     call _qardlValidateTau(tau, caller);
 
     call _qardlValidateEstimatorInputs(data, pend, qend, tau, caller);
@@ -2573,6 +2896,34 @@ proc (0) = _qardlValidateLagScalar(lag, label);
     endif;
 endp;
 
+proc (0) = _qardlValidateLagScalarZero(lag, label);
+    if rows(lag) * cols(lag) /= 1 or lag < 0 or round(lag) /= lag;
+        errorlog label $+ " must be a non-negative integer";
+        end;
+    endif;
+endp;
+
+proc (1) = _qardlNormalizeQVector(qvec, k0, label);
+    local qv, ii;
+
+    if rows(qvec) == 1 and cols(qvec) == k0;
+        qv = qvec';
+    elseif rows(qvec) == k0 and cols(qvec) == 1;
+        qv = qvec;
+    else;
+        errorlog label $+ " must be a k x 1 or 1 x k vector with one lag order per regressor";
+        end;
+    endif;
+
+    ii = 1;
+    do until ii > k0;
+        call _qardlValidateLagScalarZero(qv[ii], label $+ "[" $+ ftos(ii, "%g", 1, 0) $+ "]");
+        ii = ii + 1;
+    endo;
+
+    retp(qv);
+endp;
+
 proc (0) = _qardlValidateRestrictionShape(bigR, smr, nparam, caller);
     if rows(bigR) < 1 or cols(bigR) /= nparam;
         errorlog caller $+ ": R must have one column per tested parameter";
@@ -2583,6 +2934,97 @@ proc (0) = _qardlValidateRestrictionShape(bigR, smr, nparam, caller);
         errorlog caller $+ ": r must be a column vector with one row per restriction";
         end;
     endif;
+endp;
+
+proc (1) = _qardlConditionNumber(X);
+    local U, S, V, sdiag, smax, smin;
+
+    { U, S, V } = svd1(X);
+    sdiag = abs(diag(S));
+    smax = maxc(sdiag);
+    smin = minc(sdiag);
+
+    if smax <= 0 or smin <= 1e-14*smax;
+        retp(1e256);
+    endif;
+
+    retp(smax/smin);
+endp;
+
+proc (0) = _qardlCheckFullColumnRank(X, caller, label);
+    local rnk, cond_no;
+
+    if rows(X) <= cols(X);
+        errorlog caller $+ ": " $+ label $+ " has too few observations for its regressors";
+        end;
+    endif;
+
+    rnk = rank(X);
+    if rnk < cols(X);
+        errorlog caller $+ ": " $+ label $+ " is rank deficient";
+        errorlog "  rank = " $+ ftos(rnk, "%g", 1, 0) $+ ", columns = " $+ ftos(cols(X), "%g", 1, 0);
+        end;
+    endif;
+
+    cond_no = sqrt(_qardlConditionNumber(X'X));
+    if cond_no > 1e10;
+        print "WARNING (" $+ caller $+ "): " $+ label $+ " is ill-conditioned; condition number = " $+ ftos(cond_no, "%*.*lf", 1, 4);
+    endif;
+endp;
+
+proc (1) = _qardlSafeInv(X, caller, label);
+    local rnk, cond_no;
+
+    if rows(X) /= cols(X);
+        errorlog caller $+ ": " $+ label $+ " must be square before inversion";
+        end;
+    endif;
+
+    rnk = rank(X);
+    if rnk < rows(X);
+        errorlog caller $+ ": " $+ label $+ " is singular and cannot be inverted";
+        errorlog "  rank = " $+ ftos(rnk, "%g", 1, 0) $+ ", order = " $+ ftos(rows(X), "%g", 1, 0);
+        end;
+    endif;
+
+    cond_no = _qardlConditionNumber(X);
+    if cond_no > 1e14;
+        errorlog caller $+ ": " $+ label $+ " is too ill-conditioned to invert safely";
+        errorlog "  condition number = " $+ ftos(cond_no, "%*.*lf", 1, 4);
+        end;
+    elseif cond_no > 1e10;
+        print "WARNING (" $+ caller $+ "): " $+ label $+ " inversion is ill-conditioned; condition number = " $+ ftos(cond_no, "%*.*lf", 1, 4);
+    endif;
+
+    retp(inv(X));
+endp;
+
+proc (2) = _qardlWaldInvAndRank(X, caller, label);
+    local rnk, cond_no, X_inv;
+
+    if rows(X) /= cols(X);
+        errorlog caller $+ ": " $+ label $+ " must be square before Wald inversion";
+        end;
+    endif;
+
+    rnk = rank(X);
+    if rnk < 1;
+        errorlog caller $+ ": " $+ label $+ " has zero rank";
+        end;
+    endif;
+
+    cond_no = _qardlConditionNumber(X);
+    if rnk < rows(X);
+        print "WARNING (" $+ caller $+ "): " $+ label $+ " is rank deficient; using pseudoinverse and rank-adjusted chi-square degrees of freedom.";
+        X_inv = pinv(X);
+    elseif cond_no > 1e10;
+        print "WARNING (" $+ caller $+ "): " $+ label $+ " is ill-conditioned; using pseudoinverse. condition number = " $+ ftos(cond_no, "%*.*lf", 1, 4);
+        X_inv = pinv(X);
+    else;
+        X_inv = inv(X);
+    endif;
+
+    retp(X_inv, rnk);
 endp;
 
 proc (0) = _qardlValidateWaldInputs(param, cov, bigR, smr, data, caller);
@@ -2616,19 +3058,27 @@ proc (1) = _qardlLevelsDesignOK(data, ppp, qqq);
     ee = xx[2:nn, .] - xx[1:(nn-1), .];
     ee = zeros(1, k0)|ee;
 
-    eei = zeros(nn-qqq, qqq*k0);
-    xxi = xx[qqq+1:nn, .];
+    if qqq > 0;
+        eei = zeros(nn-qqq, qqq*k0);
+        xxi = xx[qqq+1:nn, .];
+    else;
+        xxi = xx;
+    endif;
 
-    jj = 1;
-    do until jj > k0;
-        eei[., 1+(jj-1)*qqq:(jj-1)*qqq+qqq] = packr(lagn(ee[., jj], seqa(-qqq, 1, qqq)));
-        jj = jj + 1;
-    endo;
+    if qqq > 0;
+        jj = 1;
+        do until jj > k0;
+            eei[., 1+(jj-1)*qqq:(jj-1)*qqq+qqq] = packr(lagn(ee[., jj], seqa(-qqq, 1, qqq)));
+            jj = jj + 1;
+        endo;
+    endif;
 
     yyi = packr(lagn(yy, seqa(-ppp+1, 1, ppp)));
     yyi = yyi[1:rows(yyi)-1, .];
 
-    if ppp .> qqq;
+    if qqq == 0;
+        X = xxi[(rows(xxi)+1-rows(yyi)):rows(xxi), .]~yyi;
+    elseif ppp .> qqq;
         X = eei[(rows(eei)+1-rows(yyi)):rows(eei), .]~xxi[(rows(xxi)+1-rows(yyi)):rows(xxi), .]~yyi;
     else;
         X = eei~xxi~yyi[(rows(yyi)+1-rows(xxi)):rows(yyi), .];
@@ -2637,6 +3087,62 @@ proc (1) = _qardlLevelsDesignOK(data, ppp, qqq);
     ONEX = ones(rows(X), 1)~X;
 
     retp(rank(ONEX) == cols(ONEX));
+endp;
+
+proc (4) = _qardlBuildLevelsDesignX(data, ppp, qvec);
+    local yy, xx, ee, nn, k0, qmax, T0, N, Y, X, ONEX;
+    local dx_terms, y_lags, ii, jj, col_idx, theta_start, phi_start;
+
+    nn = rows(data);
+    k0 = cols(data) - 1;
+    yy = data[., 1];
+    xx = data[., 2:cols(data)];
+
+    qvec = _qardlNormalizeQVector(qvec, k0, "_qardlBuildLevelsDesignX: qvec");
+    qmax = maxc(qvec);
+    T0 = maxc(ppp|qmax);
+    N = nn - T0;
+
+    if N <= 0;
+        errorlog "_qardlBuildLevelsDesignX: insufficient observations for requested lag orders";
+        end;
+    endif;
+
+    Y = yy[(T0+1):nn];
+    ee = xx[2:nn, .] - xx[1:(nn-1), .];
+    ee = zeros(1, k0)|ee;
+
+    if sumc(qvec) > 0;
+        dx_terms = zeros(N, sumc(qvec));
+        col_idx = 1;
+        ii = 1;
+        do until ii > k0;
+            if qvec[ii] > 0;
+                for jj(0, qvec[ii]-1, 1);
+                    dx_terms[., col_idx] = ee[(T0+1-jj):(nn-jj), ii];
+                    col_idx = col_idx + 1;
+                endfor;
+            endif;
+            ii = ii + 1;
+        endo;
+        X = dx_terms~xx[(T0+1):nn, .];
+    else;
+        X = xx[(T0+1):nn, .];
+    endif;
+
+    y_lags = zeros(N, ppp);
+    jj = 1;
+    do until jj > ppp;
+        y_lags[., jj] = yy[(T0+1-jj):(nn-jj)];
+        jj = jj + 1;
+    endo;
+
+    X = X~y_lags;
+    ONEX = ones(N, 1)~X;
+    theta_start = 2 + sumc(qvec);
+    phi_start = theta_start + k0;
+
+    retp(Y, ONEX, theta_start, phi_start);
 endp;
 
 proc (1) = _qardlECMDesignOK(data, ppp, qqq);
@@ -2656,19 +3162,27 @@ proc (1) = _qardlECMDesignOK(data, ppp, qqq);
     ee = xx[2:nn, .] - xx[1:(nn-1), .];
     ee = zeros(1, k0)|ee;
 
-    eei = zeros(nn-qqq, qqq*k0);
-    xxi = xx[qqq+1:nn, .];
+    if qqq > 0;
+        eei = zeros(nn-qqq, qqq*k0);
+        xxi = xx[qqq+1:nn, .];
+    else;
+        xxi = xx;
+    endif;
 
-    jj = 1;
-    do until jj > k0;
-        eei[., 1+(jj-1)*qqq:(jj-1)*qqq+qqq] = packr(lagn(ee[., jj], seqa(-qqq, 1, qqq)));
-        jj = jj + 1;
-    endo;
+    if qqq > 0;
+        jj = 1;
+        do until jj > k0;
+            eei[., 1+(jj-1)*qqq:(jj-1)*qqq+qqq] = packr(lagn(ee[., jj], seqa(-qqq, 1, qqq)));
+            jj = jj + 1;
+        endo;
+    endif;
 
     yyi = packr(lagn(yy, seqa(-ppp+1, 1, ppp)));
     yyi = yyi[1:rows(yyi)-1, .];
 
-    if ppp .> qqq;
+    if qqq == 0;
+        X_ols = xxi[(rows(xxi)+1-rows(yyi)):rows(xxi), .]~yyi;
+    elseif ppp .> qqq;
         X_ols = eei[(rows(eei)+1-rows(yyi)):rows(eei), .]~xxi[(rows(xxi)+1-rows(yyi)):rows(xxi), .]~yyi;
     else;
         X_ols = eei~xxi~yyi[(rows(yyi)+1-rows(xxi)):rows(yyi), .];
@@ -2703,16 +3217,18 @@ proc (1) = _qardlECMDesignOK(data, ppp, qqq);
         ONEX_ecm = ONEX_ecm~dy_lags;
     endif;
 
-    dx_ecm = zeros(N_ecm, qqq*k0);
-    jj = 1;
-    do until jj > k0;
-        for j(0, qqq-1, 1);
-            dx_ecm[., (jj-1)*qqq + j + 1] =
-                xx[(T0+2-j):(nn-j), jj] - xx[(T0+1-j):(nn-j-1), jj];
-        endfor;
-        jj = jj + 1;
-    endo;
-    ONEX_ecm = ONEX_ecm~dx_ecm;
+    if qqq > 0;
+        dx_ecm = zeros(N_ecm, qqq*k0);
+        jj = 1;
+        do until jj > k0;
+            for j(0, qqq-1, 1);
+                dx_ecm[., (jj-1)*qqq + j + 1] =
+                    xx[(T0+2-j):(nn-j), jj] - xx[(T0+1-j):(nn-j-1), jj];
+            endfor;
+            jj = jj + 1;
+        endo;
+        ONEX_ecm = ONEX_ecm~dx_ecm;
+    endif;
 
     retp(rank(ONEX_ecm) == cols(ONEX_ecm) and rows(Y_ecm) > cols(ONEX_ecm));
 endp;
@@ -2776,6 +3292,58 @@ proc (3) = _qardlLevelsCovFromFull(full_cov, bt, ppp, qqq, k0, ss);
     theta_end = 1 + (qqq+1)*k0;
     phi_start = 2 + (qqq+1)*k0;
     phi_end = 1 + (qqq+1)*k0 + ppp;
+
+    bigbt_cov = zeros(k0*ss, k0*ss);
+    phi_cov = zeros(ppp*ss, ppp*ss);
+    gamma_cov = zeros(k0*ss, k0*ss);
+
+    ii = 1;
+    do until ii > ss;
+        theta_i = bt[theta_start:theta_end, ii];
+        den_i = 1 - sumc(bt[phi_start:phi_end, ii]);
+
+        trans_i = zeros(k0, K);
+        trans_i[., theta_start:theta_end] = eye(k0) / den_i;
+        trans_i[., phi_start:phi_end] = (theta_i/(den_i^2))*ones(1, ppp);
+
+        jj = 1;
+        do until jj > ss;
+            theta_i = bt[theta_start:theta_end, jj];
+            den_i = 1 - sumc(bt[phi_start:phi_end, jj]);
+
+            trans_j = zeros(k0, K);
+            trans_j[., theta_start:theta_end] = eye(k0) / den_i;
+            trans_j[., phi_start:phi_end] = (theta_i/(den_i^2))*ones(1, ppp);
+
+            row_i = (ii-1)*K + 1;
+            row_j = (jj-1)*K + 1;
+            block_ij = full_cov[row_i:row_i+K-1, row_j:row_j+K-1];
+
+            cov_beta_ij = trans_i*block_ij*trans_j';
+
+            bigbt_cov[(ii-1)*k0+1:ii*k0, (jj-1)*k0+1:jj*k0] = cov_beta_ij;
+            gamma_cov[(ii-1)*k0+1:ii*k0, (jj-1)*k0+1:jj*k0] =
+                block_ij[theta_start:theta_end, theta_start:theta_end];
+            phi_cov[(ii-1)*ppp+1:ii*ppp, (jj-1)*ppp+1:jj*ppp] =
+                block_ij[phi_start:phi_end, phi_start:phi_end];
+
+            jj = jj + 1;
+        endo;
+
+        ii = ii + 1;
+    endo;
+
+    retp(bigbt_cov, phi_cov, gamma_cov);
+endp;
+
+proc (3) = _qardlLevelsCovFromFullPositions(full_cov, bt, theta_start, phi_start, k0, ppp, ss);
+    local K, theta_end, phi_end;
+    local bigbt_cov, phi_cov, gamma_cov, ii, jj, row_i, row_j;
+    local trans_i, trans_j, block_ij, cov_beta_ij, theta_i, den_i;
+
+    K = rows(bt);
+    theta_end = theta_start + k0 - 1;
+    phi_end = phi_start + ppp - 1;
 
     bigbt_cov = zeros(k0*ss, k0*ss);
     phi_cov = zeros(ppp*ss, ppp*ss);

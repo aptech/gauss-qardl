@@ -39,20 +39,20 @@ tau = { 0.25, 0.5, 0.75 };
 
 // Core lag selection and QARDL estimation.
 { pst, qst } = pqorder(data, 3, 3);
-call assert_true(pst >= 1 and qst >= 1, "pqorder returned invalid lag orders");
+call assert_true(pst >= 1 and qst >= 0, "pqorder returned invalid lag orders");
 { pst_aic, qst_aic } = pqorder(data, 3, 3, "aic");
 { pst_hq, qst_hq } = pqorder(data, 3, 3, "hq");
 { pst_rect, qst_rect } = pqorder(data, 2, 3, "bic");
 { pst_range, qst_range } = pqorderRange(data, 2, 3, 2, 3, "bic");
 ic_grid = pqorderGrid(data, 2, 3, "bic");
 ic_range_grid = pqorderRangeGrid(data, 2, 3, 2, 3, "bic");
-call assert_true(pst_aic >= 1 and qst_aic >= 1, "pqorder AIC returned invalid lag orders");
-call assert_true(pst_hq >= 1 and qst_hq >= 1, "pqorder HQ returned invalid lag orders");
-call assert_true(pst_rect >= 1 and pst_rect <= 2 and qst_rect >= 1 and qst_rect <= 3,
+call assert_true(pst_aic >= 1 and qst_aic >= 0, "pqorder AIC returned invalid lag orders");
+call assert_true(pst_hq >= 1 and qst_hq >= 0, "pqorder HQ returned invalid lag orders");
+call assert_true(pst_rect >= 1 and pst_rect <= 2 and qst_rect >= 0 and qst_rect <= 3,
                  "pqorder rectangular grid returned invalid lag orders");
 call assert_true(pst_range >= 2 and qst_range >= 2,
                  "pqorderRange ignored lower lag bounds");
-call assert_true(rows(ic_grid) == 6 and cols(ic_grid) == 3, "pqorderGrid returned wrong shape");
+call assert_true(rows(ic_grid) == 8 and cols(ic_grid) == 3, "pqorderGrid returned wrong shape");
 call assert_true(rows(ic_range_grid) == 4 and cols(ic_range_grid) == 3, "pqorderRangeGrid returned wrong shape");
 best_idx = minindc(ic_grid[., 3]);
 call assert_true(ic_grid[best_idx, 1] == pst_rect and ic_grid[best_idx, 2] == qst_rect,
@@ -61,6 +61,13 @@ best_idx = minindc(ic_range_grid[., 3]);
 call assert_true(ic_range_grid[best_idx, 1] == pst_range and ic_range_grid[best_idx, 2] == qst_range,
                  "pqorderRangeGrid minimum does not match pqorderRange");
 call assert_true(icmean(data, pst, qst) == icmean(data, pst, qst, "bic"), "icmean default criterion changed");
+{ pst_x, qst_x } = pqorderX(data, 2, 1, "bic");
+ic_x_grid = pqorderXGrid(data, 2, 1, "bic");
+call assert_true(pst_x >= 1 and rows(qst_x) == 2 and minc(qst_x) >= 0 and maxc(qst_x) <= 1,
+                 "pqorderX returned invalid lag orders");
+call assert_true(rows(ic_x_grid) == 8 and cols(ic_x_grid) == 4,
+                 "pqorderXGrid returned wrong shape");
+call assert_true(icmeanX(data, 2, { 1, 0 }) > -1e256, "icmeanX returned invalid IC");
 
 struct qardlOut qaOut;
 qaOut = qardl(data, 2, 1, tau);
@@ -78,6 +85,16 @@ call assert_true(rows(qaOut.tau) == rows(tau) and qaOut.nobs > 0, "qardl tau/nob
 call assert_true(rows(qaOut.alpha) == rows(tau), "qardl alpha has wrong row count");
 call assert_true(rows(qaOut.rho) == rows(tau), "qardl rho has wrong row count");
 call assert_true(rows(qaOut.bt) == 7 and cols(qaOut.bt) == rows(tau), "qardl bt has wrong shape");
+
+struct qardlOut qaQ0Out;
+qaQ0Out = qardl(data, 2, 0, tau);
+call assert_true(qaQ0Out.q == 0 and rows(qaQ0Out.gamma) == 2*rows(tau),
+                 "qardl q=0 output shape changed");
+call assert_true(rows(qaQ0Out.phi_cov) == 2*rows(tau), "qardl q=0 phi covariance shape changed");
+qaQ0Out = qardlX(data, 2, { 1, 0 }, tau);
+call assert_true(qaQ0Out.q == 1 and rows(qaQ0Out.bigbt) == 2*rows(tau),
+                 "qardlX output shape changed");
+call assert_true(rows(qaQ0Out.bigbt_cov) == 2*rows(tau), "qardlX covariance shape changed");
 
 struct qardlOut qaRobustOut;
 qaRobustOut = qardlRobust(data, 2, 1, tau);
@@ -110,6 +127,11 @@ call assert_true(qECMOut.p == 2 and qECMOut.q == 1 and qECMOut.k == 2, "qardlECM
 call assert_true(rows(qECMOut.tau) == rows(tau) and qECMOut.nobs > 0, "qardlECM tau/nobs metadata invalid");
 call assert_true(rows(qECMOut.rho) == rows(tau), "qardlECM rho has wrong row count");
 call assert_true(rows(qECMOut.rho_cov) == rows(tau), "qardlECM rho covariance has wrong row count");
+qECMOut = qardlECM(data, 2, 0, tau);
+call assert_true(qECMOut.q == 0 and rows(qECMOut.rho) == rows(tau), "qardlECM q=0 output changed");
+qECMOut = qardlECMX(data, 2, { 1, 0 }, tau);
+call assert_true(qECMOut.q == 1 and rows(qECMOut.rho) == rows(tau),
+                 "qardlECMX output changed");
 
 struct qardlECMOut qECMRobustOut;
 qECMRobustOut = qardlECMRobust(data, 2, 1, tau);
@@ -141,6 +163,16 @@ call assert_true(tstat_case < 0 and case_id == 3 and q_restrict == 3, "ardlbound
 { fstat_case, tstat_case, cv_case, case_id, q_restrict } = ardlboundsCase(data, 2, 1, 5);
 call assert_true(fstat_case > 0 and tstat_case < 0 and case_id == 5 and rows(cv_case) == 3,
                  "ardlboundsCase Case V output invalid");
+call assert_close(cv_case[2, .]', { 4.87, 5.85 }, 1e-12, "ardlboundsCase Case V critical values changed");
+{ fstat_case, tstat_case, cv_case, case_id, q_restrict } = ardlboundsCase(data, 2, 1, 2);
+call assert_close(cv_case[2, .]', { 3.10, 3.87 }, 1e-12, "ardlboundsCase Case II critical values changed");
+{ fstat_case, tstat_case, cv_case, case_id, q_restrict } = ardlboundsCase(data, 2, 1, 4);
+call assert_close(cv_case[2, .]', { 3.88, 4.61 }, 1e-12, "ardlboundsCase Case IV critical values changed");
+cv_case = ardlboundsCaseSimCV(2, 5, 80, 100, 12345);
+call assert_true(rows(cv_case) == 3 and cols(cv_case) == 2 and cv_case[2, 2] > cv_case[2, 1],
+                 "ardlboundsCaseSimCV output invalid");
+cv_case = ardlboundsCaseCV(2, 5, 80, 100, 12345);
+call assert_true(rows(cv_case) == 3 and cols(cv_case) == 2, "ardlboundsCaseCV simulation output invalid");
 
 { wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi } = wtestconst(qaOut, tau, data);
 call assert_true(wt_beta >= 0 and pv_beta >= 0 and pv_beta <= 1, "wtestconst beta output invalid");
@@ -156,6 +188,8 @@ call assert_true(wt_phi >= 0 and pv_phi >= 0 and pv_phi <= 1, "wtestsym phi outp
 struct qirfOut qiOut;
 qiOut = qirf(qaOut, 2, 1, 8, tau);
 call assert_true(rows(qiOut.irf) == 9 and cols(qiOut.irf) == rows(tau), "qirf output shape changed");
+qiOut = qirf(qaQ0Out, 2, 0, 8, tau);
+call assert_true(rows(qiOut.irf) == 9 and cols(qiOut.irf) == rows(tau), "qirf q=0 output shape changed");
 
 // Small bootstrap smoke checks. Keep B tiny; this validates API/shape, not inference quality.
 boot_data = data[1:250, .];

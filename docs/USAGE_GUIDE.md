@@ -80,7 +80,21 @@ Use `pqorderRange` when you need a restricted lag-search grid. For example,
 1 through 4. Setting the start and end equal fixes a lag order.
 Use `pqorderGrid` or `pqorderRangeGrid` to inspect the full search table. The
 returned matrix has columns `[p, q, IC]`; the selected model is the row with the
-smallest IC value.
+smallest IC value. The default `pqorder`/`pqorderGrid` search includes `q = 0`;
+use `pqorderRange(..., qstart = 1, ...)` when differenced-x lag terms are
+required by design.
+
+When different regressors need different distributed-lag depths, use the vector
+lag-order APIs:
+
+```gauss
+{ pst_x, qvec_x } = pqorderX(data, 4, 2, "bic");
+qaOut = qardlX(data, pst_x, qvec_x, tau);
+qECMOut = qardlECMX(data, pst_x, qvec_x, tau);
+```
+
+`qvec_x` is `k x 1`, ordered the same way as the regressors in `data`.
+`pqorderXGrid` returns columns `[p, q1, ..., qk, IC]`.
 
 ## Formula And Dataframe Workflow
 
@@ -197,28 +211,43 @@ lagged-dependent-level t-statistic:
 ```gauss
 { Fstat, tstat, cv, case_id, q_restrict } = ardlboundsCase(data, 2, 1, 5);
 ardlboundsCase_print(Fstat, tstat, cv, cols(data)-1, case_id);
+{ Fstat, tstat, cv_sim, case_id, q_restrict } =
+    ardlboundsCaseSim(data, 2, 1, 5, 40000, 12345);
 ```
 
 Cases follow the Pesaran, Shin & Smith convention: I no intercept/no trend, II
 restricted intercept/no trend, III unrestricted intercept/no trend, IV
 unrestricted intercept/restricted trend, and V unrestricted
-intercept/unrestricted trend. This package currently ships Case III critical
-values; other cases return missing critical values but still report the F and t
-statistics.
+intercept/unrestricted trend. This package ships tabulated PSS asymptotic F
+critical values for Cases I-V and k=0 through k=10. It also provides
+simulation-based critical values through `ardlboundsCaseSim` and
+`ardlboundsCaseSimCV` for finite samples, non-tabulated significance levels,
+and k values beyond the bundled table. Use a large replication count for
+applied inference.
 
 ## Limitations
 
 - Individual p-values use asymptotic normal approximations.
 - Wald tests use chi-squared asymptotics and depend on correctly specified
-  restriction matrices.
+  restriction matrices. Rank-deficient Wald covariance matrices use a
+  pseudoinverse with rank-adjusted chi-squared degrees of freedom and print a
+  warning.
 - HAC/robust covariance support is available for levels-form beta/gamma/phi
   covariance and two-step ECM alpha/rho covariance. The default estimators
   preserve the original covariance formulas unless an alternate covariance type
   is requested.
-- `ardlboundsCase` computes deterministic Cases I-V and the bounds t-statistic,
-  but tabulated critical values are currently bundled only for Case III with up
-  to 10 regressors.
+- `ardlboundsCase` computes deterministic Cases I-V and the bounds t-statistic.
+  PSS asymptotic F critical values are bundled for Cases I-V with up to 10
+  regressors; simulation-based critical values are available for the wider
+  case/k/sample surface.
 - Rolling window length is fixed internally at 10 percent of the sample.
 - Bootstrap defaults are convenient starting points; applied work should
   report the chosen number of replications, block length, and seed.
-- `p = 0` and `q = 0` models are not currently supported.
+- `p = 0` models are not currently supported. `q = 0` is supported for levels,
+  ECM, lag-selection, QIRF, and ARDL bounds workflows.
+
+## References
+
+See the README references section for the full bibliography covering QARDL,
+ARDL bounds testing, quantile regression, HAC covariance, lag-selection
+criteria, and block/stationary bootstrap methods.

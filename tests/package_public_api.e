@@ -22,19 +22,29 @@ data = data[1:350, 1:3];
 tau = { 0.25, 0.5, 0.75 };
 
 { pst, qst } = pqorder(data, 2, 2);
-call assert_true(pst >= 1 and qst >= 1, "pqorder returned invalid lag orders");
+call assert_true(pst >= 1 and qst >= 0, "pqorder returned invalid lag orders");
 { pst_aic, qst_aic } = pqorder(data, 2, 2, "aic");
-call assert_true(pst_aic >= 1 and qst_aic >= 1, "pqorder AIC returned invalid lag orders");
+call assert_true(pst_aic >= 1 and qst_aic >= 0, "pqorder AIC returned invalid lag orders");
 { pst_range, qst_range } = pqorderRange(data, 2, 2, 2, 2, "bic");
 call assert_true(pst_range == 2 and qst_range == 2, "pqorderRange fixed grid returned invalid lag orders");
 ic_grid = pqorderGrid(data, 2, 2, "bic");
 ic_range_grid = pqorderRangeGrid(data, 2, 2, 2, 2, "bic");
-call assert_true(rows(ic_grid) == 4 and cols(ic_grid) == 3, "pqorderGrid returned wrong shape");
+call assert_true(rows(ic_grid) == 6 and cols(ic_grid) == 3, "pqorderGrid returned wrong shape");
 call assert_true(rows(ic_range_grid) == 1 and cols(ic_range_grid) == 3, "pqorderRangeGrid returned wrong shape");
+{ pst_x, qst_x } = pqorderX(data, 2, 1, "bic");
+ic_x_grid = pqorderXGrid(data, 2, 1, "bic");
+call assert_true(pst_x >= 1 and rows(qst_x) == 2 and rows(ic_x_grid) == 8 and cols(ic_x_grid) == 4,
+                 "pqorderX output invalid");
 
 struct qardlOut qaOut;
 qaOut = qardl(data, pst, qst, tau);
 call assert_true(rows(qaOut.bigbt) == 2*rows(tau), "qardl beta shape changed");
+struct qardlOut qaQ0Out;
+qaQ0Out = qardl(data, 2, 0, tau);
+call assert_true(qaQ0Out.q == 0 and rows(qaQ0Out.bigbt) == 2*rows(tau), "qardl q=0 output changed");
+qaQ0Out = qardlX(data, 2, { 1, 0 }, tau);
+call assert_true(qaQ0Out.q == 1 and rows(qaQ0Out.bigbt) == 2*rows(tau),
+                 "qardlX output changed");
 struct qardlOut qaRobustOut;
 qaRobustOut = qardlRobust(data, pst, qst, tau);
 call assert_true(rows(qaRobustOut.bigbt_cov) == rows(qaOut.bigbt) and cols(qaRobustOut.bigbt_cov) == rows(qaOut.bigbt),
@@ -49,6 +59,11 @@ call assert_true(rows(qaHACOut.bigbt_cov) == rows(qaOut.bigbt), "qardl HAC covar
 struct qardlECMOut qECMOut;
 qECMOut = qardlECM(data, pst, qst, tau);
 call assert_true(rows(qECMOut.rho) == rows(tau), "qardlECM rho shape changed");
+qECMOut = qardlECM(data, 2, 0, tau);
+call assert_true(qECMOut.q == 0 and rows(qECMOut.rho) == rows(tau), "qardlECM q=0 output changed");
+qECMOut = qardlECMX(data, 2, { 1, 0 }, tau);
+call assert_true(qECMOut.q == 1 and rows(qECMOut.rho) == rows(tau),
+                 "qardlECMX output changed");
 struct qardlECMOut qECMRobustOut;
 qECMRobustOut = qardlECMRobust(data, pst, qst, tau);
 call assert_true(rows(qECMRobustOut.rho_cov) == rows(tau) and cols(qECMRobustOut.rho_cov) == rows(tau),
@@ -70,6 +85,12 @@ call assert_true(pv_phi >= 0 and pv_phi <= 1, "wtestconst phi p-value invalid");
 
 { fstat, cv } = ardlbounds(data, pst, qst);
 call assert_true(fstat > 0 and rows(cv) == 3 and cols(cv) == 2, "ardlbounds output invalid");
+{ fstat_case, tstat_case, cv, case_id, q_restrict } = ardlboundsCase(data, 2, 1, 4);
+call assert_true(case_id == 4 and cv[2, 1] == 3.88 and cv[2, 2] == 4.61,
+                 "ardlboundsCase Case IV table lookup invalid");
+cv = ardlboundsCaseSimCV(2, 4, 80, 100, 12345);
+call assert_true(rows(cv) == 3 and cols(cv) == 2 and cv[2, 2] > cv[2, 1],
+                 "ardlboundsCaseSimCV output invalid");
 { fstat_case, tstat_case, cv_case, case_id, q_restrict } = ardlboundsCase(data, pst, qst, 3);
 call assert_true(fstat_case > 0 and tstat_case < 0 and case_id == 3, "ardlboundsCase output invalid");
 
