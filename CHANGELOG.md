@@ -16,6 +16,8 @@
 - One-command source and example smoke-test runners.
 - Usage guide covering API choice, parameter stacking, formula workflows,
   bootstrap, QIRF, and current limitations.
+- Aptech-style documentation landing page and command-reference index with
+  individual command pages for the documented user-facing QARDL API.
 - Published QARDL replication notes and a batch-safe Cho-Kim-Shin
   dividend-policy replication scaffold using bundled Shiller data.
 - IMPLAN QARDL use-case outline for blog or applied-paper development.

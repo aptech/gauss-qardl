@@ -29,7 +29,7 @@ A [GAUSS](https://www.aptech.com) application package implementing the **Quantil
 - [ARDL Bounds Test](#ardl-bounds-test)
 - [Examples](#examples)
 - [Development and Tests](#development-and-tests)
-- [Usage Guide](#usage-guide)
+- [Documentation](#documentation)
 - [References](#references)
 
 ---
@@ -677,9 +677,13 @@ run package_public_api.e;
 
 ---
 
-## Usage Guide
+## Documentation
 
-For guidance on choosing between `qardlFull`, `qardl`, and `qardlECM`, formula dataframe workflows, parameter stacking, bootstrap intervals, QIRF, and current limitations, see [`docs/USAGE_GUIDE.md`](docs/USAGE_GUIDE.md).
+The technical documentation is organized in the standard GAUSS library style:
+
+- [QARDL landing page](docs/qardl-landing.md): package overview, installation, and grouped command list.
+- [Command reference](docs/COMMAND_REFERENCE.md): one page per public procedure, with purpose, format, parameters, returns, examples, source, and related commands.
+- [Usage guide](docs/USAGE_GUIDE.md): workflow guidance, output conventions, bootstrap intervals, QIRF, and current limitations.
 
 For published-example replication notes, see [`docs/PUBLISHED_REPLICATIONS.md`](docs/PUBLISHED_REPLICATIONS.md). For an applied IMPLAN blog/paper design, see [`docs/IMPLAN_QARDL_USE_CASE.md`](docs/IMPLAN_QARDL_USE_CASE.md).
 
