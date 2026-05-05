@@ -81,8 +81,6 @@ style:
   bootstrap intervals, QIRF, and limitations.
 - [Published replication notes](docs/PUBLISHED_REPLICATIONS.md): replication
   targets and the Cho-Kim-Shin dividend-policy scaffold.
-- [IMPLAN use-case outline](docs/IMPLAN_QARDL_USE_CASE.md): applied
-  blog/paper design notes for IMPLAN industry data.
 
 ## Examples
 

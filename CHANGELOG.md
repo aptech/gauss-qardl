@@ -22,7 +22,7 @@
   technical API details to the Aptech-style documentation pages.
 - Published QARDL replication notes and a batch-safe Cho-Kim-Shin
   dividend-policy replication scaffold using bundled Shiller data.
-- IMPLAN QARDL use-case outline for blog or applied-paper development.
+- IMPLAN QARDL use-case outline moved into a separate private-repo scaffold.
 - First-pass validation for plotting, Wald restriction matrices, and rolling
   estimation APIs.
 - Rolling smoke coverage for levels-form QARDL and two-step ECM estimators.

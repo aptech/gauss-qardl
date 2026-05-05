@@ -217,7 +217,6 @@ Exports QARDL-ECM results to CSV files.
 
 - [QARDL Usage Guide](USAGE_GUIDE.md)
 - [Published QARDL Replication Notes](PUBLISHED_REPLICATIONS.md)
-- [IMPLAN QARDL Use-Case Outline](IMPLAN_QARDL_USE_CASE.md)
 - [Release Checklist](../RELEASE_CHECKLIST.md)
 
 ## Reference
