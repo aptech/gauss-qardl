@@ -10,7 +10,8 @@ $examples = @(
     "qardlestimation.e",
     "qardl_est_tests.e",
     "rolling_qardl.e",
-    "sp500.e"
+    "sp500.e",
+    "replicate_cho_dividend_policy.e"
 )
 
 function Invoke-GaussBatch {

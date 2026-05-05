@@ -8,10 +8,17 @@
 - Installed-package release gate for `library qardl`.
 - Statistical benchmark test for a seeded QARDL DGP, scalar/vector q-order
   equivalence, and audited PSS bounds table values.
+- Robust/HAC covariance benchmark replication checks, including hand-computed
+  QR sandwich covariance comparisons and automatic HAC bandwidth equivalence.
+- Additional seeded simulation regression checks for q=0 and heterogeneous
+  per-regressor q-order DGPs.
 - Package manifest verifier for `package.json`/`src` consistency.
 - One-command source and example smoke-test runners.
 - Usage guide covering API choice, parameter stacking, formula workflows,
   bootstrap, QIRF, and current limitations.
+- Published QARDL replication notes and a batch-safe Cho-Kim-Shin
+  dividend-policy replication scaffold using bundled Shiller data.
+- IMPLAN QARDL use-case outline for blog or applied-paper development.
 - First-pass validation for plotting, Wald restriction matrices, and rolling
   estimation APIs.
 - Rolling smoke coverage for levels-form QARDL and two-step ECM estimators.

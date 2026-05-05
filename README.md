@@ -638,6 +638,7 @@ The `examples/` directory contains the following worked programs:
 | `qardl_est_tests.e` | Estimation and inference with formatted print helpers, automatic tests, and custom Wald restrictions |
 | `rolling_qardl.e` | Rolling QARDL and rolling ECM using metadata and modern plot helpers |
 | `sp500.e` | S&P 500 application using dataframe formula support and the integrated workflow |
+| `replicate_cho_dividend_policy.e` | Batch-safe public-data scaffold for the Cho-Kim-Shin U.S. dividend-policy application |
 | `wald_tests_sim.e` | Long Monte Carlo simulation for custom Wald-test distributions |
 
 More discussion of the model and results can be found in the blog post [The Quantile Autoregressive-Distributed Lag Parameter Estimation and Interpretation in GAUSS](https://www.aptech.com/blog/the-quantile-autoregressive-distributed-lag-parameter-estimation-and-interpretation-in-gauss/).
@@ -679,6 +680,8 @@ run package_public_api.e;
 ## Usage Guide
 
 For guidance on choosing between `qardlFull`, `qardl`, and `qardlECM`, formula dataframe workflows, parameter stacking, bootstrap intervals, QIRF, and current limitations, see [`docs/USAGE_GUIDE.md`](docs/USAGE_GUIDE.md).
+
+For published-example replication notes, see [`docs/PUBLISHED_REPLICATIONS.md`](docs/PUBLISHED_REPLICATIONS.md). For an applied IMPLAN blog/paper design, see [`docs/IMPLAN_QARDL_USE_CASE.md`](docs/IMPLAN_QARDL_USE_CASE.md).
 
 ---
 
