@@ -1,3 +1,6 @@
 tests/__run_*.e
 implan-qardl-use-case/
 .claude/
+ROADMAP_3_0_1.md
+GOLD_STANDARD_TODO.md
+gauss-qardl.code-workspace
