@@ -20,6 +20,8 @@
   individual command pages for the documented user-facing QARDL API.
 - Condensed repository README so it acts as a project front door and delegates
   technical API details to the Aptech-style documentation pages.
+- `llms.txt` compact LLM reference for users who want AI assistants to work
+  from the QARDL API, data conventions, examples, and test commands.
 - Published QARDL replication notes and a batch-safe Cho-Kim-Shin
   dividend-policy replication scaffold using bundled Shiller data.
 - IMPLAN QARDL use-case outline moved into a separate private-repo scaffold.

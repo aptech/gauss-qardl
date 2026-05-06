@@ -1,0 +1,222 @@
+# GAUSS QARDL Library LLM Reference
+
+This file is a compact reference for LLM assistants helping users work with the
+GAUSS QARDL package.
+
+## Project
+
+The GAUSS QARDL library implements Quantile Autoregressive Distributed Lag
+models based on Cho, Kim, and Shin (2015). It supports levels-form QARDL,
+two-step QARDL-ECM, ARDL bounds testing, lag selection, Wald tests, robust/HAC
+covariance, bootstrap confidence intervals, rolling estimation, QIRF, plotting,
+and CSV export.
+
+Minimum GAUSS version: GAUSS 26.
+
+Load the package:
+
+```gauss
+library qardl;
+```
+
+## Data Convention
+
+Most procedures expect a numeric matrix:
+
+```text
+column 1      dependent variable y
+columns 2...  regressors x1, x2, ..., xk
+```
+
+Named GAUSS dataframes can be converted with:
+
+```gauss
+data = applyQARDLFormula(df, "y ~ x1 + x2");
+```
+
+`qardlFull` can apply a formula internally:
+
+```gauss
+qfOut = qardlFull(df, 8, 8, tau, "y ~ x1 + x2");
+```
+
+## Recommended Starting Workflow
+
+Use `qardlFull` for applied work:
+
+```gauss
+tau = { 0.25, 0.50, 0.75 };
+qfOut = qardlFull(data, 8, 8, tau, "", 1, "bic", "hac", 0);
+
+printQARDL(qfOut.qa, tau);
+printQARDLECM(qfOut.ecm, tau);
+```
+
+`qardlFull` performs lag selection, ARDL bounds testing, levels-form QARDL, and
+two-step QARDL-ECM estimation.
+
+## Core Commands
+
+Integrated workflow:
+
+- `qardlFull(data, pend, qend, tau, formula, verbose, criterion, cov_type, hac_lags)`
+- `applyQARDLFormula(data, formula)`
+
+Levels-form estimation:
+
+- `qardl(data, ppp, qqq, tau, cov_type, hac_lags)`
+- `qardlRobust(data, ppp, qqq, tau)`
+- `qardlHAC(data, ppp, qqq, tau, hac_lags)`
+- `qardlX(data, ppp, qvec, tau, cov_type, hac_lags)`
+
+Two-step ECM estimation:
+
+- `qardlECM(data, ppp, qqq, tau, cov_type, hac_lags)`
+- `qardlECMRobust(data, ppp, qqq, tau)`
+- `qardlECMHAC(data, ppp, qqq, tau, hac_lags)`
+- `qardlECMX(data, ppp, qvec, tau, cov_type, hac_lags)`
+
+Lag selection:
+
+- `pqorder(data, pend, qend, criterion)`
+- `pqorderRange(data, pstart, pend, qstart, qend, criterion)`
+- `pqorderGrid(data, pend, qend, criterion)`
+- `pqorderX(data, pend, qend, criterion)`
+- `pqorderXGrid(data, pend, qend, criterion)`
+
+ARDL bounds:
+
+- `ardlbounds(data, ppp, qqq)`
+- `ardlboundsCase(data, ppp, qqq, case_id)`
+- `ardlboundsCaseCV(k0, case_id, Tsim, reps, seed)`
+- `ardlboundsCaseSimCV(k0, case_id, Tsim, reps, seed)`
+
+Inference:
+
+- `qardl_pval(qaOut)`
+- `qardl_pval_ecm(qECMOut)`
+- `wtestconst(qaOut, tau, data)`
+- `wtestsym(qaOut, tau, data)`
+- `wtestlrb(beta, cov, R, r, data)`
+- `wtestsrg(gamma, cov, R, r, data)`
+- `wtestsrp(phi, cov, R, r, data)`
+
+Bootstrap, rolling, and dynamics:
+
+- `blockBootstrapQARDL`
+- `blockBootstrapQARDLMethod`
+- `blockBootstrapQARDLDiag`
+- `blockBootstrapQARDLECM`
+- `blockBootstrapQARDLECMMethod`
+- `blockBootstrapQARDLECMDiag`
+- `rollingQardl`
+- `rollingQardlECM`
+- `qirf`
+
+Output helpers:
+
+- `printQARDL`
+- `printQARDLECM`
+- `plotQARDL`
+- `plotQARDLbands`
+- `plotRollingQARDL`
+- `plotRollingQARDLECM`
+- `plotQIRF`
+- `saveQARDLResults`
+- `saveQARDLECMResults`
+
+## Important Options
+
+Lag orders:
+
+- `ppp` is the autoregressive lag order and must be at least 1.
+- `qqq` is the scalar distributed-lag order and may be 0.
+- `qvec` is a per-regressor distributed-lag vector for `qardlX`, `qardlECMX`,
+  `pqorderX`, and `pqorderXGrid`.
+
+Covariance:
+
+- `cov_type = "iid"` preserves the original/default covariance path.
+- `cov_type = "robust"` uses a heteroskedasticity-robust QR sandwich.
+- `cov_type = "hac"` uses Newey-West/Bartlett HAC QR sandwich covariance.
+- `hac_lags = 0` selects the automatic bandwidth.
+
+Lag-selection criteria:
+
+- `"bic"` default.
+- `"aic"`, `"hq"`, and `"hqc"` are also supported.
+
+ARDL bounds cases:
+
+- Case I: no intercept, no trend.
+- Case II: restricted intercept, no trend.
+- Case III: unrestricted intercept, no trend.
+- Case IV: unrestricted intercept, restricted trend.
+- Case V: unrestricted intercept, unrestricted trend.
+
+## Output Structures
+
+`qardlOut` fields:
+
+- `tau`, `p`, `q`, `nobs`, `k`
+- `bigbt`, `bigbt_cov`
+- `phi`, `phi_cov`
+- `gamma`, `gamma_cov`
+- `alpha`, `rho`
+- `bt`
+
+`qardlECMOut` fields:
+
+- `tau`, `p`, `q`, `nobs`, `k`
+- `beta_lr`, `rho_ols`
+- `alpha`, `alpha_cov`
+- `rho`, `rho_cov`
+
+`qardlFullOut` fields:
+
+- `pst`, `qst`, `tau`, `nobs`
+- `ardl_fstat`, `ardl_cv`
+- `qa`
+- `ecm`
+
+## Documentation
+
+Use these files for detailed help:
+
+- `docs/qardl-landing.md`
+- `docs/COMMAND_REFERENCE.md`
+- `docs/USAGE_GUIDE.md`
+- `docs/PUBLISHED_REPLICATIONS.md`
+- `examples/`
+
+## Testing
+
+Source-tree tests:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tests\run_source_tests.ps1
+```
+
+Example smoke tests:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tests\run_examples_smoke.ps1
+```
+
+Installed package test after rebuilding/reinstalling:
+
+```gauss
+run tests/package_public_api.e;
+```
+
+## Guidance For LLM Assistants
+
+- Prefer `qardlFull` for new applied examples.
+- Use the command-reference pages for exact signatures and return fields.
+- Keep examples GAUSS 26 compatible.
+- Do not assume `p = 0` is supported; current workflows require `p >= 1`.
+- Remember that `q = 0` is supported.
+- For inference involving serial dependence, recommend robust or HAC
+  covariance, or block bootstrap intervals where appropriate.
+- Treat QIRFs without confidence bands as descriptive; QIRF bootstrap bands are
+  planned post-release work.

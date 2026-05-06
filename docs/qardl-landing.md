@@ -217,6 +217,7 @@ Exports QARDL-ECM results to CSV files.
 
 - [QARDL Usage Guide](USAGE_GUIDE.md)
 - [Published QARDL Replication Notes](PUBLISHED_REPLICATIONS.md)
+- [LLM Reference](../llms.txt)
 - [Release Checklist](../RELEASE_CHECKLIST.md)
 
 ## Reference

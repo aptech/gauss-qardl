@@ -67,6 +67,7 @@ qOut = qirf(qfOut.qa, qfOut.qa.p, qfOut.qa.q, 10, tau);
 print;
 print "Permanent-shock QIRF";
 print qOut.irf;
+plotQIRF(qOut);
 
 // Small, fast bootstrap demonstration. Use a larger B in applied work.
 { ci_rho, ci_alpha } =

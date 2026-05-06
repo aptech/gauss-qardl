@@ -81,6 +81,8 @@ style:
   bootstrap intervals, QIRF, and limitations.
 - [Published replication notes](docs/PUBLISHED_REPLICATIONS.md): replication
   targets and the Cho-Kim-Shin dividend-policy scaffold.
+- [LLM reference](llms.txt): compact package guide for users who want to point
+  an AI assistant at the QARDL API.
 
 ## Examples
 
