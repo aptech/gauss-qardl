@@ -22,6 +22,7 @@ The software description article is available at:
 
 ```text
 docs/QARDL_RELEASE_ARTICLE.md
+docs/QARDL_RELEASE_ARTICLE.pdf
 ```
 
 ## Methodology Citation

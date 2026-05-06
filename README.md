@@ -139,7 +139,8 @@ The current release-readiness inventory and backlog are in
 If you use this library in academic, policy, consulting, or commercial
 research, please cite the QARDL software release article and the underlying
 QARDL methodology. See [CITATION.md](CITATION.md) and
-[docs/QARDL_RELEASE_ARTICLE.md](docs/QARDL_RELEASE_ARTICLE.md).
+[docs/QARDL_RELEASE_ARTICLE.md](docs/QARDL_RELEASE_ARTICLE.md). A PDF copy is
+also available at [docs/QARDL_RELEASE_ARTICLE.pdf](docs/QARDL_RELEASE_ARTICLE.pdf).
 
 This repository also includes [CITATION.cff](CITATION.cff), which GitHub and
 software archives can use to generate citation metadata.

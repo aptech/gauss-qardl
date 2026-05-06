@@ -6,6 +6,8 @@ Aptech Systems, Inc.
 Release article for QARDL 3.0.0  
 Release date: 2026-05-03
 
+PDF version: [QARDL_RELEASE_ARTICLE.pdf](QARDL_RELEASE_ARTICLE.pdf)
+
 ## Abstract
 
 QARDL for GAUSS is a research software library for estimating Quantile
