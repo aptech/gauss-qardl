@@ -9,7 +9,7 @@ regressor.
 
 ```gauss
 qaOut = qardlX(data, ppp, qvec);
-qaOut = qardlX(data, ppp, qvec, tau, cov_type, hac_lags);
+qaOut = qardlX(data, ppp, qvec, tau, cov_type, hac_lags, print_results);
 ```
 
 ## Parameters
@@ -21,6 +21,8 @@ qaOut = qardlX(data, ppp, qvec, tau, cov_type, hac_lags);
 - `cov_type` (*string*) - `"iid"`, `"robust"`, or `"hac"`. Default is
   `"robust"`.
 - `hac_lags` (*scalar*) - HAC truncation lag. Use `0` for automatic bandwidth.
+- `print_results` (*scalar*) - If `1`, print a formatted table. Default is
+  `1`.
 
 ## Returns
 

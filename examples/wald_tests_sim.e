@@ -91,7 +91,7 @@ do until iii > kkk;
 
     // Parameter estimation
     struct qardlOut qaOut;
-    qaOut = qardl(data, ppp, qqq, tau); 
+    qaOut = qardl(data, ppp, qqq, tau, "iid", 0, 0); 
 
     // Long-run parameter (beta) testing 
     { wtlrb1, pvlrb1 } = wtestlrb(qaOut.bigbt, qaOut.bigbt_cov, ca1, sm1, data);

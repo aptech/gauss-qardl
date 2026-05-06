@@ -9,7 +9,7 @@ for each regressor.
 
 ```gauss
 qECMOut = qardlECMX(data, ppp, qvec);
-qECMOut = qardlECMX(data, ppp, qvec, tau, cov_type, hac_lags);
+qECMOut = qardlECMX(data, ppp, qvec, tau, cov_type, hac_lags, print_results);
 ```
 
 ## Parameters
@@ -21,6 +21,8 @@ qECMOut = qardlECMX(data, ppp, qvec, tau, cov_type, hac_lags);
 - `cov_type` (*string*) - `"iid"`, `"robust"`, or `"hac"`. Default is
   `"robust"`.
 - `hac_lags` (*scalar*) - HAC truncation lag. Use `0` for automatic bandwidth.
+- `print_results` (*scalar*) - If `1`, print a formatted table. Default is
+  `1`.
 
 ## Returns
 

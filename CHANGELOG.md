@@ -9,6 +9,13 @@
   available, including planned QIRF bootstrap bands.
 - LaTeX export helpers for publication-ready QARDL result tables.
 
+### Added
+- Direct levels-form and ECM estimator calls now print GAUSS-style result
+  tables by default, with a final `print_results = 0` option for silent
+  scripts, tests, simulations, rolling windows, and bootstrap workflows.
+- `printQARDL` and `printQARDLECM` now include diagnostic headers,
+  coefficient table bodies, z-statistics, p-values, and 95% confidence limits.
+
 ## 3.0.0 - 2026-05-03
 
 ### Added

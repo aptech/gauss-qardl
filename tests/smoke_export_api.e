@@ -53,8 +53,8 @@ data = loadd(__FILE_DIR $+ "../examples/qardl_data.dat");
 data = data[1:350, 1:3];
 tau = { 0.25, 0.5, 0.75 };
 
-qaOut = qardl(data, 1, 1, tau);
-qECMOut = qardlECM(data, 1, 1, tau);
+qaOut = qardl(data, 1, 1, tau, "iid", 0, 0);
+qECMOut = qardlECM(data, 1, 1, tau, "iid", 0, 0);
 
 saveQARDLResults(qaOut, tau, outdir);
 saveQARDLECMResults(qECMOut, tau, outdir);

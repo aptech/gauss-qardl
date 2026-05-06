@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Prints formatted levels-form QARDL results.
+Prints formatted levels-form QARDL results with a GAUSS-style diagnostic
+header and coefficient table.
 
 ## Format
 
@@ -22,7 +23,9 @@ Nothing. Results are printed to the GAUSS output window.
 
 ## Remarks
 
-Use this as a presentation helper after estimation.
+Direct calls to `qardl`, `qardlRobust`, `qardlHAC`, and `qardlX` print this
+table by default. Pass `print_results = 0` to those estimators when you want to
+return results silently.
 
 ## Examples
 

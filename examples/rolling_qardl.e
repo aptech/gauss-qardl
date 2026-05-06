@@ -17,7 +17,7 @@ tau = seqa(0.1, 0.1, 9);
 { pst, qst } = pqorder(data, 7, 7);
 
 // Fit the full sample once so dimensions can be read from metadata.
-qaOut = qardl(data, pst, qst, tau);
+qaOut = qardl(data, pst, qst, tau, "iid", 0, 0);
 
 print;
 print "Full-sample model metadata";

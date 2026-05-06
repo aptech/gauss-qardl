@@ -65,6 +65,7 @@ Integrated workflow:
 Levels-form estimation:
 
 - `qardl(data, ppp, qqq, tau, cov_type, hac_lags)`
+- `qardl(data, ppp, qqq, tau, cov_type, hac_lags, print_results)`
 - `qardlRobust(data, ppp, qqq, tau)`
 - `qardlHAC(data, ppp, qqq, tau, hac_lags)`
 - `qardlX(data, ppp, qvec, tau, cov_type, hac_lags)`
@@ -72,6 +73,7 @@ Levels-form estimation:
 Two-step ECM estimation:
 
 - `qardlECM(data, ppp, qqq, tau, cov_type, hac_lags)`
+- `qardlECM(data, ppp, qqq, tau, cov_type, hac_lags, print_results)`
 - `qardlECMRobust(data, ppp, qqq, tau)`
 - `qardlECMHAC(data, ppp, qqq, tau, hac_lags)`
 - `qardlECMX(data, ppp, qvec, tau, cov_type, hac_lags)`
@@ -140,6 +142,12 @@ Covariance:
 - `cov_type = "robust"` uses a heteroskedasticity-robust QR sandwich.
 - `cov_type = "hac"` uses Newey-West/Bartlett HAC QR sandwich covariance.
 - `hac_lags = 0` selects the automatic bandwidth.
+
+Printing:
+
+- Direct estimator calls print GAUSS-style result tables by default.
+- Pass final `print_results = 0` to `qardl`, `qardlECM`, `qardlX`, `qardlECMX`,
+  and convenience wrappers when writing tests, simulations, or silent scripts.
 
 Lag-selection criteria:
 

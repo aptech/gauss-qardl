@@ -26,6 +26,15 @@ qaOut = qardl(data, 2, 1, tau);
 printQARDL(qaOut, tau);
 ```
 
+Direct estimator calls print GAUSS-style results tables by default. Add
+`print_results = 0` as the final argument when you only want the returned
+structure:
+
+```gauss
+qaOut = qardl(data, 2, 1, tau, "iid", 0, 0);
+qECMOut = qardlECM(data, 2, 1, tau, "iid", 0, 0);
+```
+
 For levels-form covariance estimates that are robust to heteroskedasticity or
 serial dependence in the quantile score, use the levels covariance variants:
 

@@ -14,8 +14,8 @@ data = data[., 1:3];
 tau = { 0.25, 0.5, 0.75 };
 
 { pst, qst } = pqorder(data, 7, 7);
-qaOut = qardl(data, pst, qst, tau);
-qECMOut = qardlECM(data, pst, qst, tau);
+qaOut = qardl(data, pst, qst, tau, "iid", 0, 0);
+qECMOut = qardlECM(data, pst, qst, tau, "iid", 0, 0);
 
 printQARDL(qaOut, tau);
 printQARDLECM(qECMOut, tau);

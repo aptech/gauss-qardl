@@ -9,7 +9,7 @@ sandwich covariance.
 
 ```gauss
 qaOut = qardlHAC(data, ppp, qqq);
-qaOut = qardlHAC(data, ppp, qqq, tau, hac_lags);
+qaOut = qardlHAC(data, ppp, qqq, tau, hac_lags, print_results);
 ```
 
 ## Parameters
@@ -19,6 +19,8 @@ qaOut = qardlHAC(data, ppp, qqq, tau, hac_lags);
 - `qqq` (*scalar*) - Distributed-lag order.
 - `tau` (*Sx1 vector*) - Quantiles. Default is `{ 0.25, 0.5, 0.75 }`.
 - `hac_lags` (*scalar*) - HAC truncation lag. Use `0` for automatic bandwidth.
+- `print_results` (*scalar*) - If `1`, print a formatted table. Default is
+  `1`.
 
 ## Returns
 
@@ -27,7 +29,7 @@ use the HAC sandwich estimator.
 
 ## Remarks
 
-Equivalent to `qardl(data, ppp, qqq, tau, "hac", hac_lags)`.
+Equivalent to `qardl(data, ppp, qqq, tau, "hac", hac_lags, print_results)`.
 
 ## Examples
 

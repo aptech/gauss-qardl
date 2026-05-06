@@ -37,42 +37,42 @@ call assert_true(pst_x >= 1 and rows(qst_x) == 2 and rows(ic_x_grid) == 8 and co
                  "pqorderX output invalid");
 
 struct qardlOut qaOut;
-qaOut = qardl(data, pst, qst, tau);
+qaOut = qardl(data, pst, qst, tau, "iid", 0, 0);
 call assert_true(rows(qaOut.bigbt) == 2*rows(tau), "qardl beta shape changed");
 struct qardlOut qaQ0Out;
-qaQ0Out = qardl(data, 2, 0, tau);
+qaQ0Out = qardl(data, 2, 0, tau, "iid", 0, 0);
 call assert_true(qaQ0Out.q == 0 and rows(qaQ0Out.bigbt) == 2*rows(tau), "qardl q=0 output changed");
-qaQ0Out = qardlX(data, 2, { 1, 0 }, tau);
+qaQ0Out = qardlX(data, 2, { 1, 0 }, tau, "robust", 0, 0);
 call assert_true(qaQ0Out.q == 1 and rows(qaQ0Out.bigbt) == 2*rows(tau),
                  "qardlX output changed");
 struct qardlOut qaRobustOut;
-qaRobustOut = qardlRobust(data, pst, qst, tau);
+qaRobustOut = qardlRobust(data, pst, qst, tau, 0);
 call assert_true(rows(qaRobustOut.bigbt_cov) == rows(qaOut.bigbt) and cols(qaRobustOut.bigbt_cov) == rows(qaOut.bigbt),
                  "qardlRobust beta covariance shape changed");
 struct qardlOut qaHACOut;
-qaHACOut = qardlHAC(data, pst, qst, tau, 2);
+qaHACOut = qardlHAC(data, pst, qst, tau, 2, 0);
 call assert_true(rows(qaHACOut.bigbt_cov) == rows(qaOut.bigbt) and cols(qaHACOut.bigbt_cov) == rows(qaOut.bigbt),
                  "qardlHAC beta covariance shape changed");
-qaHACOut = qardl(data, pst, qst, tau, "hac", 2);
+qaHACOut = qardl(data, pst, qst, tau, "hac", 2, 0);
 call assert_true(rows(qaHACOut.bigbt_cov) == rows(qaOut.bigbt), "qardl HAC covariance option changed");
 
 struct qardlECMOut qECMOut;
-qECMOut = qardlECM(data, pst, qst, tau);
+qECMOut = qardlECM(data, pst, qst, tau, "iid", 0, 0);
 call assert_true(rows(qECMOut.rho) == rows(tau), "qardlECM rho shape changed");
-qECMOut = qardlECM(data, 2, 0, tau);
+qECMOut = qardlECM(data, 2, 0, tau, "iid", 0, 0);
 call assert_true(qECMOut.q == 0 and rows(qECMOut.rho) == rows(tau), "qardlECM q=0 output changed");
-qECMOut = qardlECMX(data, 2, { 1, 0 }, tau);
+qECMOut = qardlECMX(data, 2, { 1, 0 }, tau, "robust", 0, 0);
 call assert_true(qECMOut.q == 1 and rows(qECMOut.rho) == rows(tau),
                  "qardlECMX output changed");
 struct qardlECMOut qECMRobustOut;
-qECMRobustOut = qardlECMRobust(data, pst, qst, tau);
+qECMRobustOut = qardlECMRobust(data, pst, qst, tau, 0);
 call assert_true(rows(qECMRobustOut.rho_cov) == rows(tau) and cols(qECMRobustOut.rho_cov) == rows(tau),
                  "qardlECMRobust rho covariance shape changed");
 struct qardlECMOut qECMHACOut;
-qECMHACOut = qardlECMHAC(data, pst, qst, tau, 2);
+qECMHACOut = qardlECMHAC(data, pst, qst, tau, 2, 0);
 call assert_true(rows(qECMHACOut.rho_cov) == rows(tau) and cols(qECMHACOut.rho_cov) == rows(tau),
                  "qardlECMHAC rho covariance shape changed");
-qECMHACOut = qardlECM(data, pst, qst, tau, "hac", 2);
+qECMHACOut = qardlECM(data, pst, qst, tau, "hac", 2, 0);
 call assert_true(rows(qECMHACOut.rho_cov) == rows(tau), "qardlECM HAC covariance option changed");
 
 { p_beta, p_phi, p_gamma } = qardl_pval(qaOut);

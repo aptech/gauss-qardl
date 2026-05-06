@@ -5,7 +5,7 @@
 **
 **  Format:     qOut = qardl(data, ppp, qqq);
 **              qOut = qardl(data, ppp, qqq, tau);
-**              qOut = qardl(data, ppp, qqq, tau, cov_type, hac_lags);
+**              qOut = qardl(data, ppp, qqq, tau, cov_type, hac_lags, print_results);
 **
 **  Input:
 **              data:   (n *(1+k)) matrix, where the 1st column is the dependent variable,
@@ -47,7 +47,7 @@
 
 #include qardl.sdf
 
-proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_type = "iid", hac_lags = 0);
+proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_type = "iid", hac_lags = 0, print_results = 1);
 
     local za, nn, yy, xx, mm, ee, Y, X, ONEX, bigbt, psu, midbt,
         tw, bb, qq, eei, xxi, yyi, ii, yyj, xxj, wwj, kk, kkk, tilw, lll,
@@ -217,6 +217,10 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_ty
         qaOutQ0.alpha = bt[1, .]';
         qaOutQ0.rho = -(1 - sumc(bt[2+k0:1+k0+ppp, .]));
         qaOutQ0.bt = bt;
+
+        if print_results;
+            call printQARDL(qaOutQ0, tau);
+        endif;
 
         retp(qaOutQ0);
     endif;
@@ -437,6 +441,10 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_ty
     // Full coefficient matrix for downstream use (e.g., QIRF)
     qaOut.bt = bt;
 
+    if print_results;
+        call printQARDL(qaOut, tau);
+    endif;
+
     retp(qaOut);
 endp;
 
@@ -446,9 +454,9 @@ endp;
 **  Purpose:    Levels-form QARDL with heteroskedasticity-robust QR sandwich
 **              covariance for beta, gamma/theta, and phi.
 */
-proc (struct qardlOut) = qardlRobust(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
+proc (struct qardlOut) = qardlRobust(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, print_results = 1);
     struct qardlOut qaOut;
-    qaOut = qardl(data, ppp, qqq, tau, "robust", 0);
+    qaOut = qardl(data, ppp, qqq, tau, "robust", 0, print_results);
     retp(qaOut);
 endp;
 
@@ -461,9 +469,9 @@ endp;
 **  Input:      hac_lags    scalar non-negative lag truncation. Use 0 for the
 **                          automatic Newey-West bandwidth.
 */
-proc (struct qardlOut) = qardlHAC(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, hac_lags = 0);
+proc (struct qardlOut) = qardlHAC(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, hac_lags = 0, print_results = 1);
     struct qardlOut qaOut;
-    qaOut = qardl(data, ppp, qqq, tau, "hac", hac_lags);
+    qaOut = qardl(data, ppp, qqq, tau, "hac", hac_lags, print_results);
     retp(qaOut);
 endp;
 
@@ -475,12 +483,12 @@ endp;
 **              non-negative integer q_i values.
 **
 **  Format:     qaOut = qardlX(data, ppp, qvec);
-**              qaOut = qardlX(data, ppp, qvec, tau, cov_type, hac_lags);
+**              qaOut = qardlX(data, ppp, qvec, tau, cov_type, hac_lags, print_results);
 **
 **  Notes:      Uses the QR sandwich covariance path for all covariance types.
 **              `qaOut.q` stores max(qvec); keep qvec with your model spec.
 */
-proc (struct qardlOut) = qardlX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }, cov_type = "robust", hac_lags = 0);
+proc (struct qardlOut) = qardlX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }, cov_type = "robust", hac_lags = 0, print_results = 1);
     local nn, k0, ss, za, hb, hs, jj, yy, Y, ONEX, bt, fh, uu;
     local qmax, theta_start, phi_start, D_qr, D_inv_qr, cov_lags, full_cov;
     local midbt, bigbt, midphi, bigphi, midgam, bigam, bigbtmm, bigpi, bigff;
@@ -573,6 +581,10 @@ proc (struct qardlOut) = qardlX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }, cov_
     qaOut.rho = -(1 - sumc(bt[phi_start:phi_start+ppp-1, .]));
     qaOut.bt = bt;
 
+    if print_results;
+        call printQARDL(qaOut, tau);
+    endif;
+
     retp(qaOut);
 endp;
 
@@ -593,7 +605,7 @@ endp;
 **
 **  Format:     qECMOut = qardlECM(data, ppp, qqq);
 **              qECMOut = qardlECM(data, ppp, qqq, tau);
-**              qECMOut = qardlECM(data, ppp, qqq, tau, cov_type, hac_lags);
+**              qECMOut = qardlECM(data, ppp, qqq, tau, cov_type, hac_lags, print_results);
 **
 **  Input:      data        (n x (1+k)) matrix. Column 1 is the dependent variable;
 **                          columns 2:(1+k) are the k regressors.
@@ -633,7 +645,7 @@ endp;
 **  Developed:  March 2026
 */
 
-proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_type = "iid", hac_lags = 0);
+proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_type = "iid", hac_lags = 0, print_results = 1);
     local nn, k0, ss, jj, ii, j;
     local yy, xx, ee;
     local eei, xxi, yyi, X_ols, ONEX_ols, Y_ols;
@@ -821,6 +833,10 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, 
     qECMOut.rho_cov   = rho_cov;
     qECMOut.alpha_cov = alpha_cov;
 
+    if print_results;
+        call printQARDLECM(qECMOut, tau);
+    endif;
+
     retp(qECMOut);
 endp;
 
@@ -830,9 +846,9 @@ endp;
 **  Purpose:    Two-step QARDL-ECM estimation with heteroskedasticity-robust
 **              quantile-regression sandwich covariance for alpha and rho.
 */
-proc (struct qardlECMOut) = qardlECMRobust(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
+proc (struct qardlECMOut) = qardlECMRobust(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, print_results = 1);
     struct qardlECMOut qECMOut;
-    qECMOut = qardlECM(data, ppp, qqq, tau, "robust", 0);
+    qECMOut = qardlECM(data, ppp, qqq, tau, "robust", 0, print_results);
     retp(qECMOut);
 endp;
 
@@ -845,9 +861,9 @@ endp;
 **  Input:      hac_lags    scalar non-negative lag truncation. Use 0 for the
 **                          automatic Newey-West bandwidth.
 */
-proc (struct qardlECMOut) = qardlECMHAC(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, hac_lags = 0);
+proc (struct qardlECMOut) = qardlECMHAC(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, hac_lags = 0, print_results = 1);
     struct qardlECMOut qECMOut;
-    qECMOut = qardlECM(data, ppp, qqq, tau, "hac", hac_lags);
+    qECMOut = qardlECM(data, ppp, qqq, tau, "hac", hac_lags, print_results);
     retp(qECMOut);
 endp;
 
@@ -857,7 +873,7 @@ endp;
 **  Purpose:    Two-step QARDL-ECM with a separate distributed-lag order for
 **              each regressor.
 */
-proc (struct qardlECMOut) = qardlECMX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }, cov_type = "robust", hac_lags = 0);
+proc (struct qardlECMOut) = qardlECMX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }, cov_type = "robust", hac_lags = 0, print_results = 1);
     local nn, k0, ss, yy, xx, Y_ols, ONEX_ols, theta_start, phi_start;
     local bt_ols, rho_ols, beta_lr_ols, qmax, T0, N, N_ecm, Y_ecm, ec_lag;
     local ONEX_ecm, dy_lags, dx_ecm, ii, jj, j, bt_ecm, fh_ecm, uu_ecm;
@@ -984,6 +1000,10 @@ proc (struct qardlECMOut) = qardlECMX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }
     qECMOut.rho = bt_ecm[2, .]';
     qECMOut.rho_cov = rho_cov;
     qECMOut.alpha_cov = alpha_cov;
+
+    if print_results;
+        call printQARDLECM(qECMOut, tau);
+    endif;
 
     retp(qECMOut);
 endp;
@@ -1463,7 +1483,7 @@ proc (struct rollingQardlOut) = rollingQardl(data, pend, qend, tau, struct waldT
         data_subset = data[st:fin_obs, .];
         
         // Parameter estimation
-        qaOut = qardl(data_subset, pst, qst, tau);
+        qaOut = qardl(data_subset, pst, qst, tau, "iid", 0, 0);
         
         // Wald tests
         // Long-run parameter (beta) testing
@@ -1575,7 +1595,7 @@ proc (struct rollingQardlECMOut) = rollingQardlECM(data, ppp, qqq, tau = { 0.25,
 
         data_subset = data[st:fin_obs, .];
 
-        qECMOut = qardlECM(data_subset, ppp, qqq, tau);
+        qECMOut = qardlECM(data_subset, ppp, qqq, tau, "iid", 0, 0);
 
         alpha_mat[st, .]    = qECMOut.alpha';
         rho_mat[st, .]      = qECMOut.rho';
@@ -1718,110 +1738,85 @@ endp;
 */
 
 proc (0) = printQARDL(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
-    local ss, k, p, jj, ii, idx;
+    local ss, k, p, jj, ii, idx, level, alpha_ci, zcrit;
     local se_bt, se_phi, se_gam;
     local z_bt, z_phi, z_gam;
     local pv_bt, pv_phi, pv_gam;
-    local tbl;
+    local lb, ub;
 
     ss = rows(tau);
     k  = rows(qaOut.bigbt) / ss;
     p  = rows(qaOut.phi)   / ss;
+    level = 0.95;
+    alpha_ci = 1 - level;
+    zcrit = cdfni(1 - alpha_ci/2);
 
-    // Standard errors
     se_bt  = sqrt(diag(qaOut.bigbt_cov));
     se_phi = sqrt(diag(qaOut.phi_cov));
     se_gam = sqrt(diag(qaOut.gamma_cov));
 
-    // z-statistics
     z_bt  = qaOut.bigbt  ./ se_bt;
     z_phi = qaOut.phi    ./ se_phi;
     z_gam = qaOut.gamma  ./ se_gam;
 
-    // Two-sided p-values
     pv_bt  = 2 * cdfnc(abs(z_bt));
     pv_phi = 2 * cdfnc(abs(z_phi));
     pv_gam = 2 * cdfnc(abs(z_gam));
 
-    print "===================================================================";
-    print " QARDL Estimation Results";
-    print "===================================================================";
-    print " Columns: tau | var | estimate | SE | z-stat | p-value";
+    print "================================================================================";
+    print "QARDL Levels Estimator";
+    print "================================================================================";
+    sprintf("%-26s%12.0f        %-26s%12.0f", "No. of obs:", qaOut.nobs,
+            "No. regressors:", qaOut.k);
+    sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", qaOut.p,
+            "DL lags (q):", qaOut.q);
+    sprintf("%-26s%12.0f        %-26s%12.4f", "No. quantiles:", ss,
+            "CI level:", level);
+    print "--------------------------------------------------------------------------------";
+    print "Name                  Coeff.       Std. Err.      z-value       P>|z|           lb           ub";
+    print "--------------------------------------------------------------------------------";
 
-    // --- Long-run parameters (Beta) ---
-    print "";
-    print " Long-run parameters (Beta)";
-    print " ------------------------------------------------------------------";
-    tbl = zeros(k*ss, 6);
     jj = 1;
     do until jj > ss;
+        sprintf("Tau = %8.4f", tau[jj]);
+
         ii = 1;
         do until ii > k;
             idx = (jj-1)*k + ii;
-            tbl[idx, 1] = tau[jj];
-            tbl[idx, 2] = ii;
-            tbl[idx, 3] = qaOut.bigbt[idx];
-            tbl[idx, 4] = se_bt[idx];
-            tbl[idx, 5] = z_bt[idx];
-            tbl[idx, 6] = pv_bt[idx];
+            lb = qaOut.bigbt[idx] - zcrit*se_bt[idx];
+            ub = qaOut.bigbt[idx] + zcrit*se_bt[idx];
+            sprintf("  beta_x%-4d%16.6f%15.6f%13.6f%12.6f%13.6f%13.6f",
+                    ii, qaOut.bigbt[idx], se_bt[idx], z_bt[idx], pv_bt[idx], lb, ub);
             ii = ii + 1;
         endo;
-        jj = jj + 1;
-    endo;
-    print tbl;
 
-    // --- Short-run parameters (Phi) ---
-    print "";
-    print " Short-run parameters (Phi — lagged dependent variable)";
-    print " ------------------------------------------------------------------";
-    tbl = zeros(p*ss, 6);
-    jj = 1;
-    do until jj > ss;
+        ii = 1;
+        do until ii > k;
+            idx = (jj-1)*k + ii;
+            lb = qaOut.gamma[idx] - zcrit*se_gam[idx];
+            ub = qaOut.gamma[idx] + zcrit*se_gam[idx];
+            sprintf("  gamma_x%-3d%16.6f%15.6f%13.6f%12.6f%13.6f%13.6f",
+                    ii, qaOut.gamma[idx], se_gam[idx], z_gam[idx], pv_gam[idx], lb, ub);
+            ii = ii + 1;
+        endo;
+
         ii = 1;
         do until ii > p;
             idx = (jj-1)*p + ii;
-            tbl[idx, 1] = tau[jj];
-            tbl[idx, 2] = ii;
-            tbl[idx, 3] = qaOut.phi[idx];
-            tbl[idx, 4] = se_phi[idx];
-            tbl[idx, 5] = z_phi[idx];
-            tbl[idx, 6] = pv_phi[idx];
+            lb = qaOut.phi[idx] - zcrit*se_phi[idx];
+            ub = qaOut.phi[idx] + zcrit*se_phi[idx];
+            sprintf("  phi_l%-5d%16.6f%15.6f%13.6f%12.6f%13.6f%13.6f",
+                    ii, qaOut.phi[idx], se_phi[idx], z_phi[idx], pv_phi[idx], lb, ub);
             ii = ii + 1;
         endo;
+
+        sprintf("  alpha     %16.6f", qaOut.alpha[jj]);
+        sprintf("  rho       %16.6f", qaOut.rho[jj]);
+        print "--------------------------------------------------------------------------------";
         jj = jj + 1;
     endo;
-    print tbl;
 
-    // --- Short-run parameters (Gamma) ---
-    print "";
-    print " Short-run parameters (Gamma — x-level)";
-    print " ------------------------------------------------------------------";
-    tbl = zeros(k*ss, 6);
-    jj = 1;
-    do until jj > ss;
-        ii = 1;
-        do until ii > k;
-            idx = (jj-1)*k + ii;
-            tbl[idx, 1] = tau[jj];
-            tbl[idx, 2] = ii;
-            tbl[idx, 3] = qaOut.gamma[idx];
-            tbl[idx, 4] = se_gam[idx];
-            tbl[idx, 5] = z_gam[idx];
-            tbl[idx, 6] = pv_gam[idx];
-            ii = ii + 1;
-        endo;
-        jj = jj + 1;
-    endo;
-    print tbl;
-
-    // --- ECM parameters (Alpha, Rho) ---
-    print "";
-    print " ECM parameters (Alpha = intercept, Rho = adjustment speed)";
-    print " Columns: tau | alpha | rho";
-    print " ------------------------------------------------------------------";
-    print tau~qaOut.alpha~qaOut.rho;
-
-    print "===================================================================";
+    print "================================================================================";
 
 endp;
 
@@ -1830,8 +1825,8 @@ endp;
 **
 **  Purpose:    Print a formatted results table for a qardlECMOut instance.
 **              Shows OLS long-run coefficients, then quantile-varying alpha(tau)
-**              and rho(tau) with asymptotic standard errors, z-statistics, and
-**              two-sided p-values.
+**              and rho(tau) with asymptotic standard errors, z-statistics,
+**              p-values, and confidence limits.
 **
 **  Format:     printQARDLECM(qECMOut);
 **              printQARDLECM(qECMOut, tau = { 0.25, 0.5, 0.75 });
@@ -1842,62 +1837,74 @@ endp;
 **  Developed:  April 2026
 */
 proc (0) = printQARDLECM(struct qardlECMOut qECMOut, tau = { 0.25, 0.5, 0.75 });
-    local ss, k, jj;
+    local ss, k, jj, level, alpha_ci, zcrit, lb, ub;
     local se_alpha, se_rho;
     local z_alpha, z_rho;
     local pv_alpha, pv_rho;
-    local tbl;
 
     ss = rows(tau);
     k  = rows(qECMOut.beta_lr);
+    level = 0.95;
+    alpha_ci = 1 - level;
+    zcrit = cdfni(1 - alpha_ci/2);
 
-    // Standard errors from diagonal of covariance matrices
     se_alpha = sqrt(diag(qECMOut.alpha_cov));
     se_rho   = sqrt(diag(qECMOut.rho_cov));
 
-    // z-statistics and two-sided p-values
     z_alpha  = qECMOut.alpha ./ se_alpha;
     z_rho    = qECMOut.rho   ./ se_rho;
     pv_alpha = 2 * cdfnc(abs(z_alpha));
     pv_rho   = 2 * cdfnc(abs(z_rho));
 
-    print "===================================================================";
-    print " QARDL-ECM Estimation Results (Two-Step)";
-    print "===================================================================";
+    print "================================================================================";
+    print "QARDL-ECM Estimator (Two-Step)";
+    print "================================================================================";
+    sprintf("%-26s%12.0f        %-26s%12.0f", "No. of obs:", qECMOut.nobs,
+            "No. regressors:", qECMOut.k);
+    sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", qECMOut.p,
+            "DL lags (q):", qECMOut.q);
+    sprintf("%-26s%12.0f        %-26s%12.4f", "No. quantiles:", ss,
+            "CI level:", level);
+    print "--------------------------------------------------------------------------------";
 
-    // OLS long-run coefficients
     print "";
-    print " Step 1 - OLS Long-Run Coefficients";
-    print " ------------------------------------------------------------------";
-    print " Variable | beta_lr";
+    print "Step 1 - OLS Long-Run Coefficients";
+    print "--------------------------------------------------------------------------------";
+    print "Name                  Coeff.";
     jj = 1;
     do until jj > k;
-        sprintf("  x%-3d     | %12.6f", jj, qECMOut.beta_lr[jj]);
+        sprintf("  x%-4d      %16.6f", jj, qECMOut.beta_lr[jj]);
         jj = jj + 1;
     endo;
-    sprintf("  rho_OLS  | %12.6f", qECMOut.rho_ols[1, 1]);
+    sprintf("  rho_OLS   %16.6f", qECMOut.rho_ols[1, 1]);
 
-    // ECM intercept alpha(tau)
     print "";
-    print " Step 2 - ECM Quantile Parameters";
-    print " Columns: tau | estimate | SE | z-stat | p-value";
-    print "";
-    print " alpha(tau) - ECM intercept";
-    print " ------------------------------------------------------------------";
-    tbl = tau~qECMOut.alpha~se_alpha~z_alpha~pv_alpha;
-    print tbl;
+    print "Step 2 - ECM Quantile Parameters";
+    print "--------------------------------------------------------------------------------";
+    print "Name                  Coeff.       Std. Err.      z-value       P>|z|           lb           ub";
+    print "--------------------------------------------------------------------------------";
 
-    // Speed of adjustment rho(tau)
-    print "";
-    print " rho(tau) - Speed of Adjustment";
-    print " ------------------------------------------------------------------";
-    tbl = tau~qECMOut.rho~se_rho~z_rho~pv_rho;
-    print tbl;
+    jj = 1;
+    do until jj > ss;
+        sprintf("Tau = %8.4f", tau[jj]);
 
-    print "===================================================================";
+        lb = qECMOut.alpha[jj] - zcrit*se_alpha[jj];
+        ub = qECMOut.alpha[jj] + zcrit*se_alpha[jj];
+        sprintf("  alpha     %16.6f%15.6f%13.6f%12.6f%13.6f%13.6f",
+                qECMOut.alpha[jj], se_alpha[jj], z_alpha[jj], pv_alpha[jj], lb, ub);
+
+        lb = qECMOut.rho[jj] - zcrit*se_rho[jj];
+        ub = qECMOut.rho[jj] + zcrit*se_rho[jj];
+        sprintf("  rho       %16.6f%15.6f%13.6f%12.6f%13.6f%13.6f",
+                qECMOut.rho[jj], se_rho[jj], z_rho[jj], pv_rho[jj], lb, ub);
+
+        print "--------------------------------------------------------------------------------";
+        jj = jj + 1;
+    endo;
+
+    print "================================================================================";
 
 endp;
-
 /*
 **> saveQARDLECMResults
 **
@@ -2272,7 +2279,7 @@ proc (3) = blockBootstrapQARDL(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, B = 99
 
         boot_data = data[idx, .];
 
-        qa_b = qardl(boot_data, ppp, qqq, tau);
+        qa_b = qardl(boot_data, ppp, qqq, tau, "iid", 0, 0);
 
         boot_beta[bbb, .]  = qa_b.bigbt';
         boot_gamma[bbb, .] = qa_b.gamma';
@@ -2365,7 +2372,7 @@ proc (3) = blockBootstrapQARDLMethod(data, ppp, qqq, tau, B, blk_len, alpha, met
         idx = _qardlBootstrapIndex(T, used_blk_len, method);
         boot_data = data[idx, .];
 
-        qa_b = qardl(boot_data, ppp, qqq, tau);
+        qa_b = qardl(boot_data, ppp, qqq, tau, "iid", 0, 0);
 
         boot_beta[bbb, .]  = qa_b.bigbt';
         boot_gamma[bbb, .] = qa_b.gamma';
@@ -2492,7 +2499,7 @@ proc (4) = blockBootstrapQARDLDiag(data, ppp, qqq, tau, B, blk_len, alpha, seed)
         boot_data = data[idx, .];
 
         if _qardlLevelsDesignOK(boot_data, ppp, qqq);
-            qa_b = qardl(boot_data, ppp, qqq, tau);
+            qa_b = qardl(boot_data, ppp, qqq, tau, "iid", 0, 0);
             completed_reps = completed_reps + 1;
             boot_beta[completed_reps, .]  = qa_b.bigbt';
             boot_gamma[completed_reps, .] = qa_b.gamma';
@@ -2630,7 +2637,7 @@ proc (2) = blockBootstrapQARDLECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, B =
 
         boot_data = data[idx, .];
 
-        qecm_b = qardlECM(boot_data, ppp, qqq, tau);
+        qecm_b = qardlECM(boot_data, ppp, qqq, tau, "iid", 0, 0);
 
         boot_rho[bbb, .]   = qecm_b.rho';
         boot_alpha[bbb, .] = qecm_b.alpha';
@@ -2699,7 +2706,7 @@ proc (2) = blockBootstrapQARDLECMMethod(data, ppp, qqq, tau, B, blk_len, alpha, 
         idx = _qardlBootstrapIndex(T, used_blk_len, method);
         boot_data = data[idx, .];
 
-        qecm_b = qardlECM(boot_data, ppp, qqq, tau);
+        qecm_b = qardlECM(boot_data, ppp, qqq, tau, "iid", 0, 0);
 
         boot_rho[bbb, .]   = qecm_b.rho';
         boot_alpha[bbb, .] = qecm_b.alpha';
@@ -2800,7 +2807,7 @@ proc (3) = blockBootstrapQARDLECMDiag(data, ppp, qqq, tau, B, blk_len, alpha, se
         boot_data = data[idx, .];
 
         if _qardlECMDesignOK(boot_data, ppp, qqq);
-            qecm_b = qardlECM(boot_data, ppp, qqq, tau);
+            qecm_b = qardlECM(boot_data, ppp, qqq, tau, "iid", 0, 0);
             completed_reps = completed_reps + 1;
             boot_rho[completed_reps, .]   = qecm_b.rho';
             boot_alpha[completed_reps, .] = qecm_b.alpha';
@@ -3671,7 +3678,7 @@ proc (struct qardlFullOut) = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75
             print "qardlFull: estimating QARDL (levels form, " $+ upper(cov_type) $+ " covariance) ...";
         endif;
     endif;
-    qa = qardl(data, pst, qst, tau, cov_type, hac_lags);
+    qa = qardl(data, pst, qst, tau, cov_type, hac_lags, 0);
     if verbose;
         printQARDL(qa, tau);
     endif;
@@ -3684,7 +3691,7 @@ proc (struct qardlFullOut) = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75
             print "qardlFull: estimating QARDL-ECM (two-step, " $+ upper(cov_type) $+ " covariance) ...";
         endif;
     endif;
-    ecm = qardlECM(data, pst, qst, tau, cov_type, hac_lags);
+    ecm = qardlECM(data, pst, qst, tau, cov_type, hac_lags, 0);
     if verbose;
         printQARDLECM(ecm, tau);
     endif;

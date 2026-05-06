@@ -70,7 +70,7 @@ call assert_true(rows(ic_x_grid) == 8 and cols(ic_x_grid) == 4,
 call assert_true(icmeanX(data, 2, { 1, 0 }) > -1e256, "icmeanX returned invalid IC");
 
 struct qardlOut qaOut;
-qaOut = qardl(data, 2, 1, tau);
+qaOut = qardl(data, 2, 1, tau, "iid", 0, 0);
 
 expected_beta = { 6.6645846,
                   6.6668972,
@@ -87,17 +87,17 @@ call assert_true(rows(qaOut.rho) == rows(tau), "qardl rho has wrong row count");
 call assert_true(rows(qaOut.bt) == 7 and cols(qaOut.bt) == rows(tau), "qardl bt has wrong shape");
 
 struct qardlOut qaQ0Out;
-qaQ0Out = qardl(data, 2, 0, tau);
+qaQ0Out = qardl(data, 2, 0, tau, "iid", 0, 0);
 call assert_true(qaQ0Out.q == 0 and rows(qaQ0Out.gamma) == 2*rows(tau),
                  "qardl q=0 output shape changed");
 call assert_true(rows(qaQ0Out.phi_cov) == 2*rows(tau), "qardl q=0 phi covariance shape changed");
-qaQ0Out = qardlX(data, 2, { 1, 0 }, tau);
+qaQ0Out = qardlX(data, 2, { 1, 0 }, tau, "robust", 0, 0);
 call assert_true(qaQ0Out.q == 1 and rows(qaQ0Out.bigbt) == 2*rows(tau),
                  "qardlX output shape changed");
 call assert_true(rows(qaQ0Out.bigbt_cov) == 2*rows(tau), "qardlX covariance shape changed");
 
 struct qardlOut qaRobustOut;
-qaRobustOut = qardlRobust(data, 2, 1, tau);
+qaRobustOut = qardlRobust(data, 2, 1, tau, 0);
 call assert_close(qaRobustOut.bigbt, qaOut.bigbt, 1e-12, "qardlRobust changed parameter estimates");
 call assert_true(rows(qaRobustOut.bigbt_cov) == rows(qaOut.bigbt) and cols(qaRobustOut.bigbt_cov) == rows(qaOut.bigbt),
                  "qardlRobust beta covariance shape changed");
@@ -105,13 +105,13 @@ call assert_true(qaRobustOut.bigbt_cov[3, 3] > 0 and qaRobustOut.phi_cov[2, 2] >
                  "qardlRobust covariance diagonal invalid");
 
 struct qardlOut qaHACOut;
-qaHACOut = qardlHAC(data, 2, 1, tau, 2);
+qaHACOut = qardlHAC(data, 2, 1, tau, 2, 0);
 call assert_close(qaHACOut.bigbt, qaOut.bigbt, 1e-12, "qardlHAC changed parameter estimates");
 call assert_true(rows(qaHACOut.bigbt_cov) == rows(qaOut.bigbt) and cols(qaHACOut.bigbt_cov) == rows(qaOut.bigbt),
                  "qardlHAC beta covariance shape changed");
 call assert_true(qaHACOut.bigbt_cov[3, 3] > 0 and qaHACOut.phi_cov[2, 2] > 0 and qaHACOut.gamma_cov[3, 3] > 0,
                  "qardlHAC covariance diagonal invalid");
-qaHACOut = qardl(data, 2, 1, tau, "hac", 2);
+qaHACOut = qardl(data, 2, 1, tau, "hac", 2, 0);
 call assert_true(qaHACOut.bigbt_cov[3, 3] > 0, "qardl HAC covariance option invalid");
 
 // Individual p-values.
@@ -122,31 +122,31 @@ call assert_true(rows(p_gamma) == rows(qaOut.gamma), "qardl_pval gamma p-values 
 
 // Two-step ECM estimator and p-values.
 struct qardlECMOut qECMOut;
-qECMOut = qardlECM(data, 2, 1, tau);
+qECMOut = qardlECM(data, 2, 1, tau, "iid", 0, 0);
 call assert_true(qECMOut.p == 2 and qECMOut.q == 1 and qECMOut.k == 2, "qardlECM metadata changed");
 call assert_true(rows(qECMOut.tau) == rows(tau) and qECMOut.nobs > 0, "qardlECM tau/nobs metadata invalid");
 call assert_true(rows(qECMOut.rho) == rows(tau), "qardlECM rho has wrong row count");
 call assert_true(rows(qECMOut.rho_cov) == rows(tau), "qardlECM rho covariance has wrong row count");
-qECMOut = qardlECM(data, 2, 0, tau);
+qECMOut = qardlECM(data, 2, 0, tau, "iid", 0, 0);
 call assert_true(qECMOut.q == 0 and rows(qECMOut.rho) == rows(tau), "qardlECM q=0 output changed");
-qECMOut = qardlECMX(data, 2, { 1, 0 }, tau);
+qECMOut = qardlECMX(data, 2, { 1, 0 }, tau, "robust", 0, 0);
 call assert_true(qECMOut.q == 1 and rows(qECMOut.rho) == rows(tau),
                  "qardlECMX output changed");
 
 struct qardlECMOut qECMRobustOut;
-qECMRobustOut = qardlECMRobust(data, 2, 1, tau);
+qECMRobustOut = qardlECMRobust(data, 2, 1, tau, 0);
 call assert_true(rows(qECMRobustOut.rho_cov) == rows(tau) and cols(qECMRobustOut.rho_cov) == rows(tau),
                  "qardlECMRobust rho covariance shape changed");
 call assert_true(qECMRobustOut.rho_cov[2, 2] > 0 and qECMRobustOut.alpha_cov[2, 2] > 0,
                  "qardlECMRobust covariance diagonal invalid");
 
 struct qardlECMOut qECMHACOut;
-qECMHACOut = qardlECMHAC(data, 2, 1, tau, 2);
+qECMHACOut = qardlECMHAC(data, 2, 1, tau, 2, 0);
 call assert_true(rows(qECMHACOut.rho_cov) == rows(tau) and cols(qECMHACOut.rho_cov) == rows(tau),
                  "qardlECMHAC rho covariance shape changed");
 call assert_true(qECMHACOut.rho_cov[2, 2] > 0 and qECMHACOut.alpha_cov[2, 2] > 0,
                  "qardlECMHAC covariance diagonal invalid");
-qECMHACOut = qardlECM(data, 2, 1, tau, "hac", 2);
+qECMHACOut = qardlECM(data, 2, 1, tau, "hac", 2, 0);
 call assert_true(qECMHACOut.rho_cov[2, 2] > 0, "qardlECM HAC covariance option invalid");
 
 { p_alpha, p_rho } = qardl_pval_ecm(qECMOut);

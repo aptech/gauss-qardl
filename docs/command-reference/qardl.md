@@ -9,7 +9,7 @@ Estimates the levels-form Quantile Autoregressive Distributed Lag model.
 ```gauss
 qaOut = qardl(data, ppp, qqq);
 qaOut = qardl(data, ppp, qqq, tau);
-qaOut = qardl(data, ppp, qqq, tau, cov_type, hac_lags);
+qaOut = qardl(data, ppp, qqq, tau, cov_type, hac_lags, print_results);
 ```
 
 ## Parameters
@@ -23,6 +23,8 @@ qaOut = qardl(data, ppp, qqq, tau, cov_type, hac_lags);
   `"iid"`.
 - `hac_lags` (*scalar*) - HAC truncation lag. Use `0` for automatic bandwidth.
   Default is `0`.
+- `print_results` (*scalar*) - If `1`, print a formatted GAUSS-style results
+  table after estimation. If `0`, return results silently. Default is `1`.
 
 ## Returns
 
@@ -37,8 +39,11 @@ qaOut = qardl(data, ppp, qqq, tau, cov_type, hac_lags);
 
 ## Remarks
 
-Use `qardlRobust` and `qardlHAC` as convenience wrappers for robust and HAC
-covariance estimates. For per-regressor distributed lags, use `qardlX`.
+Direct calls print results by default. Pass `print_results = 0` for scripts,
+tests, simulations, rolling windows, and other workflows that only need the
+returned structure. Use `qardlRobust` and `qardlHAC` as convenience wrappers
+for robust and HAC covariance estimates. For per-regressor distributed lags,
+use `qardlX`.
 
 ## Examples
 
@@ -48,7 +53,7 @@ library qardl;
 data = loadd("qardl_data.dat");
 tau = { 0.25, 0.50, 0.75 };
 
-qaOut = qardl(data, 2, 1, tau, "robust", 0);
+qaOut = qardl(data, 2, 1, tau, "robust", 0, 1);
 printQARDL(qaOut, tau);
 ```
 

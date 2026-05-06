@@ -57,6 +57,8 @@ qfOut = qardlFull(macro, 8, 8, tau,
 - Levels-form QARDL estimation: `qardl`, `qardlRobust`, `qardlHAC`, `qardlX`.
 - Two-step QARDL-ECM estimation: `qardlECM`, `qardlECMRobust`,
   `qardlECMHAC`, `qardlECMX`.
+- Direct estimator calls print GAUSS-style result tables by default, with a
+  final `print_results = 0` option for silent scripting.
 - Integrated workflow: `qardlFull`.
 - Formula dataframe support: `applyQARDLFormula`.
 - Lag selection with BIC, AIC, HQ, and HQC: `pqorder`, `pqorderRange`,

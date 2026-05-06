@@ -8,7 +8,7 @@ Estimates the two-step QARDL error-correction model.
 
 ```gauss
 qECMOut = qardlECM(data, ppp, qqq);
-qECMOut = qardlECM(data, ppp, qqq, tau, cov_type, hac_lags);
+qECMOut = qardlECM(data, ppp, qqq, tau, cov_type, hac_lags, print_results);
 ```
 
 ## Parameters
@@ -20,6 +20,8 @@ qECMOut = qardlECM(data, ppp, qqq, tau, cov_type, hac_lags);
 - `cov_type` (*string*) - `"iid"`, `"robust"`, or `"hac"`. Default is
   `"iid"`.
 - `hac_lags` (*scalar*) - HAC truncation lag. Use `0` for automatic bandwidth.
+- `print_results` (*scalar*) - If `1`, print a formatted GAUSS-style results
+  table after estimation. If `0`, return results silently. Default is `1`.
 
 ## Returns
 
@@ -34,8 +36,10 @@ qECMOut = qardlECM(data, ppp, qqq, tau, cov_type, hac_lags);
 
 ## Remarks
 
-The ECM estimator uses an OLS first-stage long-run relationship and a quantile
-second-stage error-correction equation.
+Direct calls print results by default. Pass `print_results = 0` for scripts,
+tests, simulations, rolling windows, and other workflows that only need the
+returned structure. The ECM estimator uses an OLS first-stage long-run
+relationship and a quantile second-stage error-correction equation.
 
 ## Examples
 
