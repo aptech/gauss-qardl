@@ -83,6 +83,8 @@ style:
   targets and the Cho-Kim-Shin dividend-policy scaffold.
 - [LLM reference](llms.txt): compact package guide for users who want to point
   an AI assistant at the QARDL API.
+- [3.0.1 roadmap](docs/ROADMAP_3_0_1.md): planned presentation, confidence
+  band, and LaTeX export improvements.
 
 ## Examples
 

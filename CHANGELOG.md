@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.0.1 - Unreleased
+
+### Planned
+- GAUSS-style printed result tables with diagnostic headers and coefficient
+  bodies.
+- Default confidence-band visualization where uncertainty information is
+  available, including planned QIRF bootstrap bands.
+- LaTeX export helpers for publication-ready QARDL result tables.
+
 ## 3.0.0 - 2026-05-03
 
 ### Added
