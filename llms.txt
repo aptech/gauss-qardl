@@ -195,7 +195,24 @@ Use these files for detailed help:
 - `docs/COMMAND_REFERENCE.md`
 - `docs/USAGE_GUIDE.md`
 - `docs/PUBLISHED_REPLICATIONS.md`
+- `docs/QARDL_RELEASE_ARTICLE.md`
+- `CITATION.md`
+- `CITATION.cff`
+- `docs/LICENSING_OPTIONS.md`
 - `examples/`
+
+## Citation
+
+Users who apply the package in research should cite both the QARDL software
+release article and the underlying Cho-Kim-Shin methodology. Prefer
+`CITATION.md` for human-readable citation text and `CITATION.cff` for machine
+readable citation metadata.
+
+## License
+
+Check the current release license before advising users about redistribution,
+ports, or derivative works. If the project adopts a source-available no-port
+license, do not describe that license as OSI open source.
 
 ## Testing
 

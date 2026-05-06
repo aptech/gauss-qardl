@@ -15,6 +15,11 @@
   scripts, tests, simulations, rolling windows, and bootstrap workflows.
 - `printQARDL` and `printQARDLECM` now include diagnostic headers,
   coefficient table bodies, z-statistics, p-values, and 95% confidence limits.
+- `CITATION.cff`, `CITATION.md`, and a QARDL software release article for
+  users who need a preferred citation for the package.
+- Licensing guidance explaining why MIT does not prevent ports/translations
+  and why a reviewed source-available license is a better fit for a no-port
+  release policy.
 
 ## 3.0.0 - 2026-05-03
 

@@ -87,6 +87,11 @@ style:
   an AI assistant at the QARDL API.
 - [3.0.1 roadmap](docs/ROADMAP_3_0_1.md): planned presentation, confidence
   band, and LaTeX export improvements.
+- [Citation guide](CITATION.md) and
+  [release article](docs/QARDL_RELEASE_ARTICLE.md): preferred software
+  citation materials for research users.
+- [Licensing options](docs/LICENSING_OPTIONS.md): notes on choosing the final
+  release license before publication.
 
 ## Examples
 
@@ -128,6 +133,25 @@ run tests/package_public_api.e;
 Release steps are tracked in [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
 The current release-readiness inventory and backlog are in
 [GOLD_STANDARD_TODO.md](GOLD_STANDARD_TODO.md).
+
+## Citation
+
+If you use this library in academic, policy, consulting, or commercial
+research, please cite the QARDL software release article and the underlying
+QARDL methodology. See [CITATION.md](CITATION.md) and
+[docs/QARDL_RELEASE_ARTICLE.md](docs/QARDL_RELEASE_ARTICLE.md).
+
+This repository also includes [CITATION.cff](CITATION.cff), which GitHub and
+software archives can use to generate citation metadata.
+
+## License
+
+The final public release license should be confirmed before publishing. The
+current package metadata lists MIT, but MIT permits redistribution and ports.
+If the intended policy is open GAUSS use while preventing direct translation or
+porting into other languages, use a reviewed source-available custom license
+instead of a standard OSI open-source license. See
+[docs/LICENSING_OPTIONS.md](docs/LICENSING_OPTIONS.md).
 
 ## References
 

@@ -2,6 +2,18 @@
 
 Use this checklist before publishing a GAUSS QARDL release.
 
+## Citation And License
+
+- Confirm `CITATION.cff`, `CITATION.md`, and
+  `docs/QARDL_RELEASE_ARTICLE.md` match the release version, date, URL, and
+  preferred citation.
+- Finalize the public license before publishing. If the intended policy is open
+  GAUSS use without direct ports to R, MATLAB, Python, or other languages,
+  review `docs/LICENSING_OPTIONS.md`, add the final root `LICENSE`, and ensure
+  `package.json` uses the same license identifier.
+
+## Release Steps
+
 1. Confirm `package.json` version matches the intended release artifact.
 2. Run the source-tree release gate:
 

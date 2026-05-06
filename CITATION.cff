@@ -1,0 +1,48 @@
+cff-version: 1.2.0
+message: "If you use the QARDL GAUSS library, please cite it using these metadata and cite the underlying QARDL methodology."
+title: "QARDL for GAUSS: Quantile Autoregressive Distributed Lag Estimation, Inference, and Applied Workflows"
+type: software
+authors:
+  - family-names: Clower
+    given-names: Eric
+    affiliation: "Aptech Systems, Inc."
+version: 3.0.0
+date-released: "2026-05-03"
+repository-code: "https://github.com/aptech/gauss-qardl"
+url: "https://github.com/aptech/gauss-qardl"
+abstract: "GAUSS application package for Quantile Autoregressive Distributed Lag estimation, QARDL-ECM estimation, ARDL bounds testing, robust and HAC covariance, bootstrap tools, rolling estimation, QIRF, plotting, export, and applied econometric workflows."
+keywords:
+  - GAUSS
+  - QARDL
+  - ARDL
+  - quantile regression
+  - cointegration
+  - time series
+  - econometrics
+preferred-citation:
+  type: article
+  title: "QARDL for GAUSS: Quantile Autoregressive Distributed Lag Estimation, Inference, and Applied Workflows"
+  authors:
+    - family-names: Clower
+      given-names: Eric
+      affiliation: "Aptech Systems, Inc."
+  year: 2026
+  url: "https://github.com/aptech/gauss-qardl/blob/main/docs/QARDL_RELEASE_ARTICLE.md"
+  notes: "Software description article for the QARDL GAUSS application package."
+references:
+  - type: article
+    authors:
+      - family-names: Cho
+        given-names: Jin Seo
+      - family-names: Kim
+        given-names: Tae-Hwan
+      - family-names: Shin
+        given-names: Yongcheol
+    title: "Quantile cointegration in the autoregressive distributed-lag modeling framework"
+    journal: "Journal of Econometrics"
+    year: 2015
+    volume: 188
+    issue: 1
+    start: 281
+    end: 300
+    doi: "10.1016/j.jeconom.2015.05.003"
