@@ -263,9 +263,9 @@ endp;
 **  Purpose:    Print a formatted summary of ardlboundsCase() output.
 */
 proc (0) = ardlboundsCase_print(Fstat, tstat, cv, k, case_id);
-    print "=================================================================";
+    print "================================================================================";
     print "  ARDL Bounds Test (Pesaran, Shin & Smith 2001)";
-    print "=================================================================";
+    print "================================================================================";
     print "  Case: " $+ ftos(case_id, "%g", 1, 0) $+ " - " $+ _ardlboundsCaseLabel(case_id);
     print "  Number of regressors k = " $+ ftos(k, "%g", 1, 0);
     print "";
@@ -291,7 +291,7 @@ proc (0) = ardlboundsCase_print(Fstat, tstat, cv, k, case_id);
             print "  Result: INCONCLUSIVE at 5% (F between I(0) and I(1) bounds)";
         endif;
     endif;
-    print "=================================================================";
+    print "================================================================================";
 endp;
 
 proc (0) = _ardlboundsValidateCase(case_id);
