@@ -177,7 +177,9 @@ call assert_true(rows(predictNARDL(nfOut.na, nardl_df, "y ~ x1 + x2")) == nfOut.
                  "predictNARDL formula output changed");
 
 panel = make_package_csardl_panel(4, 60);
-panel_df = asDF(panel, "unit", "y", "x1", "x2");
+panel_time = vec(seqa(1, 1, 60)*ones(1, 4));
+panel_df = asDF(panel[., 1]~panel_time~panel[., 2:4], "unit", "time", "y", "x1", "x2");
+panel_df = dftype(panel_df, META_TYPE_CATEGORY, "unit");
 
 struct csardlOut csaOut;
 csaOut = csardl(panel, 1, 1, 1, "", 0);
@@ -185,15 +187,15 @@ call assert_true(csaOut.nunits == 4 and rows(csaOut.bigbt) == 2,
                  "csardl output changed");
 
 struct csardlFullOut cfOut;
-cfOut = csardlFull(panel_df, 1, 1, 1, "unit + y ~ x1 + x2", 0);
+cfOut = csardlFull(panel_df, 1, 1, 1, "y ~ x1 + x2", 0);
 call assert_true(cfOut.cs_lags == 1 and cfOut.csa.nunits == 4,
-                 "csardlFull formula output changed");
+                 "csardlFull inferred panel formula output changed");
 
 struct csardlDiagOut diagOut;
-diagOut = csardlDiagnostics(panel_df, 1, 1, 1, "unit + y ~ x1 + x2", 0);
+diagOut = csardlDiagnostics(panel_df, 1, 1, 1, "y ~ x1 + x2", 0);
 call assert_true(diagOut.poolability_df == 6 and diagOut.poolability_pv >= 0 and diagOut.poolability_pv <= 1,
                  "csardlDiagnostics output changed");
-call assert_true(rows(forecastCSARDL(cfOut.csa, panel_df, 2, "unit + y ~ x1 + x2")) == 2,
+call assert_true(rows(forecastCSARDL(cfOut.csa, panel_df, 2, "y ~ x1 + x2")) == 2,
                  "forecastCSARDL formula output changed");
 
 printQARDLECM(qECMOut, tau);

@@ -37,7 +37,7 @@ endp;
 
 /*
 ** Formula hooks use the same dataframe parser surface as the rest of the
-** library.  CS-ARDL requires the unit identifier on the formula LHS.
+** library.  CS-ARDL uses GAUSS-style inferred panel id/time variables.
 */
 shiller = loadd(__FILE_DIR $+ "../examples/shiller_stocks_qt.csv",
                 "date($date) + real_price + real_dividend + real_earnings");
@@ -46,10 +46,14 @@ call assert_true(cols(nardl_formula_data) == 3, "applyNARDLFormula did not selec
 call assert_true(maxc(abs(nardl_formula_data[., 1] - shiller[., "real_dividend"])) < 1e-12,
                  "applyNARDLFormula did not place y in column 1");
 
-cs_formula_data = applyCSARDLFormula(shiller, "date + real_dividend ~ real_earnings + real_price");
-call assert_true(cols(cs_formula_data) == 4, "applyCSARDLFormula did not select unit, y, and regressors");
-call assert_true(maxc(abs(cs_formula_data[., 2] - shiller[., "real_dividend"])) < 1e-12,
-                 "applyCSARDLFormula did not place y in column 2");
+cs_formula_df = asDF(("b" $| "b" $| "a" $| "a"), "unit")~
+                asDF(({ 2, 1, 2, 1 }~{ 4, 3, 2, 1 }~{ 40, 30, 20, 10 }),
+                     "time", "y", "x1");
+cs_formula_df = dftype(cs_formula_df, META_TYPE_CATEGORY, "unit");
+cs_formula_data = applyCSARDLFormula(cs_formula_df, "y ~ x1");
+call assert_true(cols(cs_formula_data) == 3, "applyCSARDLFormula did not select unit, y, and regressors");
+call assert_close(cs_formula_data[., 2:3], { 1 10, 2 20, 3 30, 4 40 }, 1e-12,
+                  "applyCSARDLFormula did not infer and sort panel id/time variables");
 
 /*
 ** NARDL deterministic checks.
@@ -135,6 +139,18 @@ endfor;
 
 struct csardlOut csaOut;
 csaOut = csardl(panel, 1, 1, 1, "", 0);
+
+panel_time = vec(seqa(1, 1, TT)*ones(1, nunits));
+panel_df = asDF(panel[., 1]~panel_time~panel[., 2:4], "unit", "time", "y", "x1", "x2");
+panel_df = dftype(panel_df, META_TYPE_CATEGORY, "unit");
+cs_formula_panel = applyCSARDLFormula(panel_df, "y ~ x1 + x2");
+call assert_close(cs_formula_panel[., 2:4], panel[., 2:4], 1e-12,
+                  "applyCSARDLFormula inferred panel formula changed y/x ordering");
+
+struct csardlOut csaFormulaOut;
+csaFormulaOut = csardl(panel_df, 1, 1, 1, "y ~ x1 + x2", 0);
+call assert_close(csaFormulaOut.bigbt, csaOut.bigbt, 1e-10,
+                  "csardl inferred panel formula output changed");
 
 { cY, cX, csavg, unit_ids, unit_nobs } = _csardlBuildDesign(panel, 1, 1, 1);
 expected_cbt = _qardlSafeInv(cX'*cX, "smoke_csardl", "expected CSARDL moment matrix")*cX'*cY;

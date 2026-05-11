@@ -22,7 +22,9 @@ or a GAUSS dataframe used with the formula interface.
 
 `cs_lags` is the scalar cross-sectional-average lag order.
 
-`formula` is an optional string of the form `"unit + y ~ x1 + x2"`.
+`formula` is an optional string. For dataframe input, prefer `"y ~ x1 + x2"`;
+CS-ARDL infers the panel unit and time variables using GAUSS panel-data
+conventions.
 
 `print_results` controls whether `printCSARDLDiagnostics` is called.
 

@@ -26,6 +26,9 @@
 - User-facing OLS ARDL workflow with `ardl`, `ardlFull`, `printARDL`,
   `predictARDL`, `forecastARDL`, `ardlOut`, and `ardlFullOut`.
 - QARDL prediction and forecast hooks: `predictQARDL` and `forecastQARDL`.
+- CS-ARDL dataframe formulas now follow GAUSS panel-data conventions:
+  `y ~ x1 + x2` infers the first string/category column as the unit variable
+  and the first date column, or first numeric fallback, as the time variable.
 - Source-tree NARDL and CS-ARDL examples covering fixed-order estimation,
   formula workflows, lag/model selection, print helpers, output fields,
   prediction/forecast hooks, and supported diagnostics.

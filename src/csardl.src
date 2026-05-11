@@ -12,7 +12,9 @@
 **              ppp       scalar, AR lag order.
 **              qqq       scalar, distributed-lag order.
 **              cs_lags   scalar, cross-sectional-average lag order.
-**              formula   optional formula "unit + y ~ x1 + x2".
+**              formula   optional formula "y ~ x1 + x2". For dataframe
+**                        input, the unit and time variables are inferred
+**                        from GAUSS panel-data metadata conventions.
 **
 **  Output:     csaOut    struct csardlOut.
 */
@@ -489,13 +491,16 @@ endp;
 /*
 **> applyCSARDLFormula
 **
-**  Purpose:    Formula hook for CS-ARDL workflows.  The formula must include
-**              the unit identifier and dependent variable on the left side:
-**              "unit + y ~ x1 + x2".
+**  Purpose:    Formula hook for CS-ARDL workflows.  The preferred dataframe
+**              formula is "y ~ x1 + x2". The unit variable is inferred as
+**              the first string/category column and the time variable is
+**              inferred as the first date column, falling back to the first
+**              numeric column.
 */
 proc (1) = applyCSARDLFormula(data, formula);
-    local tilde_pos, lhs, plus_pos, unit_var, y_var, xvars, n_x;
+    local tilde_pos, lhs, unit_var, y_var, xvars, n_x;
     local colnames, unit_idx, y_idx, x_idx, remaining, pos, part;
+    local time_var;
 
     if strlen(formula) == 0;
         retp(data);
@@ -507,14 +512,19 @@ proc (1) = applyCSARDLFormula(data, formula);
     endif;
 
     lhs = strtrim(strsect(formula, 1, tilde_pos - 1));
-    plus_pos = strindx(lhs, "+", 1);
-    if plus_pos == 0;
-        errorlog "applyCSARDLFormula: formula must use \"unit + y ~ x1 + x2\"";
+    if strindx(lhs, "+", 1) > 0;
+        errorlog "applyCSARDLFormula: formula must use \"y ~ x1 + x2\"; panel id/time variables are inferred from dataframe metadata";
         end;
     endif;
 
-    unit_var = strtrim(strsect(lhs, 1, plus_pos - 1));
-    y_var = strtrim(strsect(lhs, plus_pos + 1, strlen(lhs)));
+    if not hasmetadata(data);
+        errorlog "applyCSARDLFormula: formula \"y ~ x1 + x2\" requires dataframe metadata";
+        end;
+    endif;
+
+    unit_var = _csardlInferPanelIDVar(data, "applyCSARDLFormula");
+    time_var = _csardlInferPanelTimeVar(data, "applyCSARDLFormula");
+    y_var = lhs;
 
     remaining = strtrim(strsect(formula, tilde_pos + 1, strlen(formula)));
     xvars = "";
@@ -537,6 +547,14 @@ proc (1) = applyCSARDLFormula(data, formula);
             n_x = n_x + 1;
         endif;
     endo;
+
+    if n_x == 0;
+        errorlog "applyCSARDLFormula: at least one RHS variable is required";
+        end;
+    endif;
+
+    call _csardlCheckInferredTimeVar(time_var, y_var, xvars, "applyCSARDLFormula");
+    data = sortmc(data, unit_var $| time_var);
 
     colnames = lower(getcolnames(data));
     unit_idx = indsav(lower(unit_var), colnames);
@@ -561,6 +579,53 @@ proc (1) = applyCSARDLFormula(data, formula);
     data = data[., unit_idx | y_idx | x_idx];
 
     retp(data);
+endp;
+
+proc (1) = _csardlInferPanelIDVar(data, caller);
+    local col_types, varnames, idx;
+
+    col_types = getcoltypes(data);
+    varnames = getcolnames(data);
+    idx = packr(indnv(META_TYPE_CATEGORY|META_TYPE_STRING, col_types));
+
+    if ismiss(idx);
+        errorlog caller $+ ": missing panel unit variable; expected the first string or category column";
+        end;
+    endif;
+
+    retp(varnames[idx[1]]);
+endp;
+
+proc (1) = _csardlInferPanelTimeVar(data, caller);
+    local col_types, varnames, idx, used_numeric;
+
+    col_types = getcoltypes(data);
+    varnames = getcolnames(data);
+    used_numeric = 0;
+
+    idx = packr(indnv(META_TYPE_DATE, col_types));
+    if ismiss(idx);
+        idx = packr(indnv(META_TYPE_NUMBER, col_types));
+        used_numeric = 1;
+    endif;
+
+    if ismiss(idx);
+        errorlog caller $+ ": missing panel time variable; expected the first date column or, if none exists, the first numeric column";
+        end;
+    endif;
+
+    if used_numeric;
+        warninglogat sprintf("%s: no date column found. Using numeric column '%s' as time variable.", caller, varnames[idx[1]]);
+    endif;
+
+    retp(varnames[idx[1]]);
+endp;
+
+proc (0) = _csardlCheckInferredTimeVar(time_var, y_var, xvars, caller);
+    if lower(time_var) $== lower(y_var) or not ismiss(indsav(lower(time_var), lower(xvars)));
+        errorlog caller $+ ": inferred panel time variable is also in the model formula; place a date/numeric time column before model variables";
+        end;
+    endif;
 endp;
 
 proc (0) = _csardlValidateEstimatorInputs(data, ppp, qqq, cs_lags, caller);

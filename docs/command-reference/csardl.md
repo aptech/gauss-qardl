@@ -19,7 +19,17 @@ diagOut = csardlDiagnostics(data, ppp, qqq, cs_lags, formula);
 ## Remarks
 
 Matrix input is a balanced panel stacked by unit in `[unit_id, y, x1, ...]`
-order. Formula input uses `"unit + y ~ x1 + x2"`.
+order.
+
+For dataframe input, the preferred formula is `"y ~ x1 + x2"`. CS-ARDL
+infers the panel unit variable as the first string/category column and the
+time variable as the first date column, falling back to the first numeric
+column if no date column exists. The dataframe is sorted by the inferred unit
+and time variables before the estimator matrix is built.
+
+If numeric time fallback is used, put the time column before `y` and the
+regressors so the GAUSS panel-data convention does not infer a model variable
+as the time index.
 
 The levels estimator reports pooled long-run coefficients and delta-method
 long-run covariance. The ECM estimator uses the levels long-run coefficients

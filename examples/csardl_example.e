@@ -5,10 +5,9 @@ cls;
 /*
 ** CS-ARDL estimation example.
 **
-** The panel is balanced and stacked by unit: [unit, y, x1, x2].  The example
-** shows fixed-order pooled estimation, formula strings, lag selection, ECM
-** output, prediction/forecast hooks, and optional mean-group/poolability
-** diagnostics.
+** The matrix panel is balanced and stacked by unit: [unit, y, x1, x2].
+** Dataframe workflows include unit/time metadata so CS-ARDL can infer the
+** panel id and time columns using GAUSS panel-data conventions.
 */
 
 proc (1) = make_csardl_example_panel(nunits, tobs);
@@ -42,8 +41,10 @@ proc (1) = make_csardl_example_panel(nunits, tobs);
 endp;
 
 panel = make_csardl_example_panel(8, 70);
-df = asDF(panel, "unit", "y", "x1", "x2");
-formula = "unit + y ~ x1 + x2";
+time = vec(seqa(1, 1, 70)*ones(1, 8));
+df = asDF(panel[., 1]~time~panel[., 2:4], "unit", "time", "y", "x1", "x2");
+df = dftype(df, META_TYPE_CATEGORY, "unit");
+formula = "y ~ x1 + x2";
 
 // Fixed-order pooled CS-ARDL levels estimator.
 struct csardlOut csaOut;
