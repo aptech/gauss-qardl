@@ -5,8 +5,7 @@
 ### Planned
 - GAUSS-style printed result tables with diagnostic headers and coefficient
   bodies.
-- Default confidence-band visualization where uncertainty information is
-  available, including planned QIRF bootstrap bands.
+- Bootstrap-based QIRF confidence bands once `qirfOut` stores interval data.
 - LaTeX export helpers for publication-ready QARDL result tables.
 
 ### Added
@@ -26,6 +25,15 @@
 - User-facing OLS ARDL workflow with `ardl`, `ardlFull`, `printARDL`,
   `predictARDL`, `forecastARDL`, `ardlOut`, and `ardlFullOut`.
 - QARDL prediction and forecast hooks: `predictQARDL` and `forecastQARDL`.
+- Unified `predictARDL` and `forecastARDL` dispatch for ARDL, QARDL, NARDL,
+  and CS-ARDL output structures, with `predictQARDL` and `forecastQARDL`
+  preserved for backward compatibility.
+- Default maximum lag search bounds of `p = 8` and `q = 8` for `pqorder`,
+  `pqorderX`, `pqorderGrid`, `qardlFull`, `ardlFull`, `nardlFull`,
+  `nardlOrder`, `csardlFull`, and `csardlOrder` when users omit maximum lags.
+- Confidence-band display controls for `plotQARDL`, `plotQARDLbands`,
+  `plotRollingQARDL`, `plotRollingQARDLECM`, and graceful QIRF handling when
+  interval data are not available.
 - CS-ARDL dataframe formulas now follow GAUSS panel-data conventions:
   `y ~ x1 + x2` infers the first string/category column as the unit variable
   and the first date column, or first numeric fallback, as the time variable.

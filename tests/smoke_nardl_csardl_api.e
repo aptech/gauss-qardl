@@ -10,6 +10,7 @@ new;
 #include ../src/qardl.src
 #include ../src/nardl.src
 #include ../src/csardl.src
+#include ../src/ardl_dispatch.src
 #include ../src/wtestlrb.src
 #include ../src/wtestsrp.src
 #include ../src/wtestsrg.src
@@ -91,9 +92,13 @@ call assert_true(naOut.nobs == rows(nY) and naOut.k == 2 and naOut.p == 1 and na
 
 nardl_fit = predictNARDL(naOut, nardl_data);
 call assert_close(nardl_fit, nX*expected_bt, 1e-10, "predictNARDL did not use stored design");
+call assert_close(predictARDL(naOut, nardl_data), nardl_fit, 1e-10,
+                  "predictARDL NARDL dispatch changed fitted values");
 nardl_fcst = forecastNARDL(naOut, nardl_data, 3);
 call assert_true(rows(nardl_fcst) == 3 and cols(nardl_fcst) == 1,
                  "forecastNARDL returned wrong shape");
+call assert_close(forecastARDL(naOut, nardl_data, 3), nardl_fcst, 1e-10,
+                  "forecastARDL NARDL dispatch changed forecasts");
 
 struct nardlECMOut nECMOut;
 nECMOut = nardlECM(nardl_data, 1, 1, "", 0);
@@ -111,6 +116,19 @@ call assert_true(nfOut.pst == nardl_grid[minindc(nardl_grid[., 3]), 1] and
                  nfOut.qst == nardl_grid[minindc(nardl_grid[., 3]), 2] and
                  nfOut.na.nobs == naOut.nobs,
                  "nardlFull metadata invalid");
+
+rndseed 260511;
+n_default = 120;
+x1_default = cumsumc(rndn(n_default, 1));
+x2_default = cumsumc(rndn(n_default, 1));
+y_default = zeros(n_default, 1);
+for tt(2, n_default, 1);
+    y_default[tt] = 0.35*y_default[tt-1] + 0.45*x1_default[tt] - 0.25*x2_default[tt] + 0.10*rndn(1, 1);
+endfor;
+default_nardl_data = y_default~x1_default~x2_default;
+nfOut = nardlFull(default_nardl_data, verbose = 0);
+call assert_true(nfOut.pst >= 1 and nfOut.pst <= 8 and nfOut.qst >= 0 and nfOut.qst <= 8,
+                 "nardlFull default lag bounds invalid");
 
 /*
 ** CS-ARDL deterministic checks.  Panel data are balanced and stacked
@@ -188,9 +206,13 @@ call assert_true(diagOut.poolability_df == (nunits-1)*2 and
 
 cs_fit = predictCSARDL(csaOut, panel);
 call assert_close(cs_fit, cX*expected_cbt, 1e-10, "predictCSARDL did not use stored design");
+call assert_close(predictARDL(csaOut, panel), cs_fit, 1e-10,
+                  "predictARDL CSARDL dispatch changed fitted values");
 cs_fcst = forecastCSARDL(csaOut, panel, 2);
 call assert_true(rows(cs_fcst) == 2 and cols(cs_fcst) == 1,
                  "forecastCSARDL returned wrong shape");
+call assert_close(forecastARDL(csaOut, panel, 2), cs_fcst, 1e-10,
+                  "forecastARDL CSARDL dispatch changed forecasts");
 
 struct csardlECMOut cECMOut;
 cECMOut = csardlECM(panel, 1, 1, 1, "", 0);
@@ -208,5 +230,8 @@ call assert_true(cfOut.pst == csardl_grid[minindc(csardl_grid[., 3]), 1] and
                  cfOut.qst == csardl_grid[minindc(csardl_grid[., 3]), 2] and
                  cfOut.cs_lags == 1,
                  "csardlFull metadata invalid");
+cfOut = csardlFull(panel, cs_lags = 1, verbose = 0);
+call assert_true(cfOut.pst >= 1 and cfOut.pst <= 8 and cfOut.qst >= 0 and cfOut.qst <= 8,
+                 "csardlFull default lag bounds invalid");
 
 print "smoke_nardl_csardl_api.e: PASS";

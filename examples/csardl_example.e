@@ -60,8 +60,9 @@ print csaOut.bigbt;
 printCSARDL(csaOut);
 
 // Formula-string workflow with information-criterion lag selection.
+// Omitting pend/qend uses the package default maximum lag search bounds.
 struct csardlFullOut cfOut;
-cfOut = csardlFull(df, 2, 1, 1, formula, 0, "bic");
+cfOut = csardlFull(df, cs_lags = 1, formula = formula, verbose = 0, criterion = "bic");
 
 struct csardlECMOut cECMOut;
 cECMOut = csardlECM(df, cfOut.pst, cfOut.qst, cfOut.cs_lags, formula, 0);
@@ -80,8 +81,8 @@ struct csardlDiagOut diagOut;
 diagOut = csardlDiagnostics(df, cfOut.pst, cfOut.qst, cfOut.cs_lags, formula, 0);
 printCSARDLDiagnostics(diagOut);
 
-fit = predictCSARDL(cfOut.csa, df, formula);
-fcst = forecastCSARDL(cfOut.csa, df, 3, formula);
+fit = predictARDL(cfOut.csa, df, formula);
+fcst = forecastARDL(cfOut.csa, df, 3, formula);
 
 print;
 print "Prediction rows and 3-step forecast";

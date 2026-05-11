@@ -38,7 +38,8 @@ data = loadd("mydata.csv");
 tau = { 0.25, 0.50, 0.75 };
 
 // Integrated workflow: lag selection, bounds test, QARDL, and QARDL-ECM.
-qfOut = qardlFull(data, 8, 8, tau, "", 1, "bic", "hac", 0);
+qfOut = qardlFull(data, tau = tau, verbose = 1,
+                  criterion = "bic", cov_type = "hac", hac_lags = 0);
 
 printQARDL(qfOut.qa, tau);
 printQARDLECM(qfOut.ecm, tau);
@@ -48,8 +49,8 @@ Named GAUSS dataframes can be used with formula strings:
 
 ```gauss
 macro = loadd("macro.csv");
-qfOut = qardlFull(macro, 8, 8, tau,
-                  "consumption ~ income + wealth", 1);
+qfOut = qardlFull(macro, tau = tau,
+                  formula = "consumption ~ income + wealth");
 ```
 
 ## Main Features
@@ -60,9 +61,12 @@ qfOut = qardlFull(macro, 8, 8, tau,
   `qardlECMHAC`, `qardlECMX`.
 - NARDL and CS-ARDL model families with levels, ECM, full-workflow,
   print, prediction, and forecast hooks.
+- Unified `predictARDL` and `forecastARDL` dispatch for ARDL, QARDL, NARDL,
+  and CS-ARDL outputs; `predictQARDL` and `forecastQARDL` remain available.
 - Direct estimator calls print GAUSS-style result tables by default, with a
   final `print_results = 0` option for silent scripting.
-- Integrated workflows: `ardlFull`, `qardlFull`, `nardlFull`, `csardlFull`.
+- Integrated workflows: `ardlFull`, `qardlFull`, `nardlFull`, `csardlFull`,
+  with default maximum lag search bounds of `8` and `8`.
 - Formula dataframe support: `applyQARDLFormula`.
 - Lag selection with BIC, AIC, HQ, and HQC: `pqorder`, `pqorderRange`,
   `pqorderGrid`, `pqorderX`, `pqorderXGrid`.
@@ -70,7 +74,8 @@ qfOut = qardlFull(macro, 8, 8, tau,
   asymptotic critical values and simulation critical-value APIs.
 - Robust and Newey-West/Bartlett HAC covariance paths.
 - Cross-quantile Wald tests, p-value helpers, QIRF, rolling estimation,
-  block bootstrap confidence intervals, plots, and CSV export.
+  block bootstrap confidence intervals, confidence-band plot options, and CSV
+  export.
 
 ## Documentation
 

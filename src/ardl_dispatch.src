@@ -1,0 +1,58 @@
+#include qardl.sdf
+
+/*
+**> predictARDL
+**
+**  Purpose:    Return in-sample fitted values from an estimated ARDL-family
+**              model. Dispatches on ardlOut, qardlOut, nardlOut, or csardlOut.
+**
+**  Format:     fit = predictARDL(modelOut, data);
+**              fit = predictARDL(modelOut, data, formula);
+**
+**  Input:      modelOut   ardlOut, qardlOut, nardlOut, or csardlOut.
+**              data       estimation data.
+**              formula    optional formula string.
+*/
+proc (1) = predictARDL(modelOut, data, formula = "");
+    if isStructType(modelOut, "ardlOut");
+        retp(_predictARDLLevels(modelOut, data, formula));
+    elseif isStructType(modelOut, "qardlOut");
+        retp(_predictQARDLLevels(modelOut, data, formula));
+    elseif isStructType(modelOut, "nardlOut");
+        retp(_predictNARDLLevels(modelOut, data, formula));
+    elseif isStructType(modelOut, "csardlOut");
+        retp(_predictCSARDLLevels(modelOut, data, formula));
+    endif;
+
+    errorlog "predictARDL: unsupported model output structure";
+    end;
+endp;
+
+/*
+**> forecastARDL
+**
+**  Purpose:    Recursive forecast for an estimated ARDL-family model.
+**              Dispatches on ardlOut, qardlOut, nardlOut, or csardlOut.
+**
+**  Format:     fcst = forecastARDL(modelOut, data);
+**              fcst = forecastARDL(modelOut, data, h, formula);
+**
+**  Input:      modelOut   ardlOut, qardlOut, nardlOut, or csardlOut.
+**              data       estimation data.
+**              h          optional scalar forecast horizon.
+**              formula    optional formula string.
+*/
+proc (1) = forecastARDL(modelOut, data, h = 1, formula = "");
+    if isStructType(modelOut, "ardlOut");
+        retp(_forecastARDLLevels(modelOut, data, h, formula));
+    elseif isStructType(modelOut, "qardlOut");
+        retp(_forecastQARDLLevels(modelOut, data, h, formula));
+    elseif isStructType(modelOut, "nardlOut");
+        retp(_forecastNARDLLevels(modelOut, data, h, formula));
+    elseif isStructType(modelOut, "csardlOut");
+        retp(_forecastCSARDLLevels(modelOut, data, h, formula));
+    endif;
+
+    errorlog "forecastARDL: unsupported model output structure";
+    end;
+endp;

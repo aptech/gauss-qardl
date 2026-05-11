@@ -209,14 +209,24 @@ endp;
 **              0,...,H with a horizontal zero reference line.
 **
 **  Format:     plotQIRF(qirfOut);
+**              plotQIRF(qirfOut, show_bands, alpha);
 **
 **  Input:      qirfOut     struct qirfOut returned by qirf().
+**              show_bands  optional scalar, reserved for confidence band
+**                          display. Bands are plotted only when available.
+**              alpha       optional scalar, nominal band level.
 **
 **  Developed:  April 2026
 */
-proc (0) = plotQIRF(struct qirfOut qOut);
+proc (0) = plotQIRF(struct qirfOut qOut, show_bands = 0, alpha = 0.05);
     local ss, jj, H, horizons, shock_lbl;
     struct plotControl myPlot;
+
+    call _qardlValidatePlotBandInputs(show_bands, alpha, "plotQIRF");
+
+    if show_bands;
+        print "plotQIRF: confidence bands are not available in qirfOut; plotting response paths only.";
+    endif;
 
     ss      = rows(qOut.tau);
     H       = qOut.H;

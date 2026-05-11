@@ -49,8 +49,8 @@ print "Metadata p q k nobs:" qfOut.qa.p~qfOut.qa.q~qfOut.qa.k~qfOut.qa.nobs;
 
 printQARDL(qfOut.qa, tau);
 
-qardl_fit = predictQARDL(qfOut.qa, data);
-qardl_fcst = forecastQARDL(qfOut.qa, data, 3);
+qardl_fit = predictARDL(qfOut.qa, data);
+qardl_fcst = forecastARDL(qfOut.qa, data, 3);
 
 print;
 print "Prediction rows and 3-step QARDL forecast";
@@ -75,7 +75,7 @@ qOut = qirf(qfOut.qa, qfOut.qa.p, qfOut.qa.q, 10, tau);
 print;
 print "Permanent-shock QIRF";
 print qOut.irf;
-plotQIRF(qOut);
+plotQIRF(qOut, 1);
 
 // Small, fast bootstrap demonstration. Use a larger B in applied work.
 { ci_rho, ci_alpha } =

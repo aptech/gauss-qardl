@@ -12,6 +12,7 @@ controls. The source includes `csardl`, `csardlECM`, `csardlFull`,
 
 ```gauss
 csaOut = csardl(data, ppp, qqq);
+cfOut = csardlFull(data);
 cfOut = csardlFull(data, pend, qend, cs_lags, formula);
 diagOut = csardlDiagnostics(data, ppp, qqq, cs_lags, formula);
 ```
@@ -35,6 +36,10 @@ The levels estimator reports pooled long-run coefficients and delta-method
 long-run covariance. The ECM estimator uses the levels long-run coefficients
 to build a pooled error-correction term and includes cross-sectional-average
 changes.
+
+`csardlFull`, `csardlOrder`, and `csardlOrderGrid` support
+information-criterion lag selection. If `pend` and `qend` are omitted, the
+default maximum search bounds are `8` and `8`; `cs_lags` defaults to `0`.
 
 `csardlDiagnostics` estimates the same cross-sectionally augmented equation
 unit-by-unit, reports mean-group long-run coefficients, and computes a

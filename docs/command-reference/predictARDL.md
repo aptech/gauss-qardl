@@ -2,43 +2,47 @@
 
 ## Purpose
 
-Returns in-sample fitted values from an estimated ARDL model.
+Returns in-sample fitted values from an estimated ARDL-family model.
 
 ## Format
 
 ```gauss
-fit = predictARDL(arOut, data);
-fit = predictARDL(arOut, data, formula);
+fit = predictARDL(modelOut, data);
+fit = predictARDL(modelOut, data, formula);
 ```
 
 ## Parameters
 
-- `arOut` (*ardlOut struct*) - Output returned by `ardl` or `ardlFull`.
+- `modelOut` (*structure*) - Output returned by `ardl`, `qardl`, `nardl`,
+  `csardl`, or the corresponding full workflow.
 - `data` (*matrix or dataframe*) - Data used to build the prediction design.
 - `formula` (*string*) - Optional formula string for dataframe input.
 
 ## Returns
 
-`fit` is an `nobs x 1` vector of fitted values.
+`fit` is an `nobs x 1` vector for ARDL, NARDL, and CS-ARDL outputs, and an
+`nobs x S` matrix for QARDL outputs.
 
 ## Remarks
 
-The prediction design is rebuilt from `arOut.p` and `arOut.qvec`, so it
-supports the same lag alignment used during estimation.
+`predictARDL` infers the model family from the output structure and dispatches
+to the matching model-specific prediction logic. `predictQARDL` is preserved as
+a backward-compatible QARDL alias.
 
 ## Examples
 
 ```gauss
 library qardl;
 
-arOut = ardl(data, 2, 1, "", 0);
-fit = predictARDL(arOut, data);
+qfOut = qardlFull(data, tau = { 0.25, 0.5, 0.75 }, verbose = 0);
+fit = predictARDL(qfOut.qa, data);
 ```
 
 ## Source
 
-`qardl.src`
+`ardl_dispatch.src`
 
 ## See Also
 
-[ardl](ardl.md), [forecastARDL](forecastARDL.md)
+[ardl](ardl.md), [qardl](qardl.md), [nardl](nardl.md), [csardl](csardl.md),
+[forecastARDL](forecastARDL.md), [predictQARDL](predictQARDL.md)

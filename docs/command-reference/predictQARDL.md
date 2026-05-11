@@ -28,6 +28,9 @@ quantiles.
 The prediction design is rebuilt from `qaOut.p` and `qaOut.qvec`, preserving
 scalar-q and per-regressor-q QARDL workflows.
 
+`predictQARDL` is retained for backward compatibility. New code may call the
+unified `predictARDL(qaOut, data, ...)` dispatcher instead.
+
 ## Examples
 
 ```gauss
@@ -44,4 +47,5 @@ fit = predictQARDL(qaOut, data);
 
 ## See Also
 
-[qardl](qardl.md), [forecastQARDL](forecastQARDL.md), [qardlX](qardlX.md)
+[qardl](qardl.md), [predictARDL](predictARDL.md),
+[forecastQARDL](forecastQARDL.md), [qardlX](qardlX.md)

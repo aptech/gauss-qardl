@@ -43,8 +43,9 @@ Direct calls print results by default. Pass `print_results = 0` for scripts,
 tests, simulations, rolling windows, and other workflows that only need the
 returned structure. Use `qardlRobust` and `qardlHAC` as convenience wrappers
 for robust and HAC covariance estimates. For per-regressor distributed lags,
-use `qardlX`. Use `predictQARDL` for in-sample fitted values and
-`forecastQARDL` for the current recursive forecast hook.
+use `qardlX`. Use the unified `predictARDL` and `forecastARDL` dispatchers for
+in-sample fitted values and recursive forecast hooks. `predictQARDL` and
+`forecastQARDL` remain available as backward-compatible QARDL names.
 
 ## Examples
 
@@ -57,8 +58,8 @@ tau = { 0.25, 0.50, 0.75 };
 qaOut = qardl(data, 2, 1, tau, "robust", 0, 1);
 printQARDL(qaOut, tau);
 
-fit = predictQARDL(qaOut, data);
-fcst = forecastQARDL(qaOut, data, 4);
+fit = predictARDL(qaOut, data);
+fcst = forecastARDL(qaOut, data, 4);
 ```
 
 ## Source
@@ -69,5 +70,6 @@ fcst = forecastQARDL(qaOut, data, 4);
 
 [qardlFull](qardlFull.md), [qardlRobust](qardlRobust.md),
 [qardlHAC](qardlHAC.md), [qardlX](qardlX.md),
+[predictARDL](predictARDL.md), [forecastARDL](forecastARDL.md),
 [predictQARDL](predictQARDL.md), [forecastQARDL](forecastQARDL.md),
 [qardl_pval](qardl_pval.md)

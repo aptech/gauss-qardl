@@ -11,6 +11,7 @@ decompositions of each regressor. The source includes `nardl`, `nardlECM`,
 
 ```gauss
 naOut = nardl(data, ppp, qqq);
+nfOut = nardlFull(data);
 nfOut = nardlFull(data, pend, qend, formula);
 ```
 
@@ -19,6 +20,10 @@ nfOut = nardlFull(data, pend, qend, formula);
 The levels estimator reports long-run positive and negative coefficients,
 delta-method long-run covariance, a UECM bounds F-statistic, and long-run and
 short-run asymmetry Wald tests.
+
+`nardlFull`, `nardlOrder`, and `nardlOrderGrid` support information-criterion
+lag selection. If `pend` and `qend` are omitted, the default maximum search
+bounds are `8` and `8`.
 
 Published-result validation cases are still TODO until reference datasets and
 specifications are added. The current benchmark coverage uses deterministic

@@ -8,6 +8,9 @@ new;
 
 #include ../src/qardl.sdf
 #include ../src/qardl.src
+#include ../src/nardl.src
+#include ../src/csardl.src
+#include ../src/ardl_dispatch.src
 #include ../src/wtestlrb.src
 #include ../src/wtestsrp.src
 #include ../src/wtestsrg.src
@@ -40,6 +43,9 @@ tau = { 0.25, 0.5, 0.75 };
 // Core lag selection and QARDL estimation.
 { pst, qst } = pqorder(data, 3, 3);
 call assert_true(pst >= 1 and qst >= 0, "pqorder returned invalid lag orders");
+{ pst_default, qst_default } = pqorder(data);
+call assert_true(pst_default >= 1 and pst_default <= 8 and qst_default >= 0 and qst_default <= 8,
+                 "pqorder default lag search returned invalid lag orders");
 { pst_aic, qst_aic } = pqorder(data, 3, 3, "aic");
 { pst_hq, qst_hq } = pqorder(data, 3, 3, "hq");
 { pst_rect, qst_rect } = pqorder(data, 2, 3, "bic");
@@ -91,9 +97,13 @@ call assert_true(rows(qaOut.qvec) == 2 and qaOut.qvec[1] == 1 and qaOut.qvec[2] 
 qardl_fit = predictQARDL(qaOut, data);
 { predY, predX, theta_start, phi_start } = _qardlBuildLevelsDesignX(data, qaOut.p, qaOut.qvec);
 call assert_close(qardl_fit, predX*qaOut.bt, 1e-10, "predictQARDL fitted values changed");
+call assert_close(predictARDL(qaOut, data), qardl_fit, 1e-10,
+                  "predictARDL QARDL dispatch changed fitted values");
 qardl_fcst = forecastQARDL(qaOut, data, 3);
 call assert_true(rows(qardl_fcst) == 3 and cols(qardl_fcst) == rows(tau),
                  "forecastQARDL returned wrong shape");
+call assert_close(forecastARDL(qaOut, data, 3), qardl_fcst, 1e-10,
+                  "forecastARDL QARDL dispatch changed forecasts");
 
 struct ardlOut arOut;
 arOut = ardl(data, 2, 1, "", 0);
@@ -109,6 +119,9 @@ struct ardlFullOut afOut;
 afOut = ardlFull(data, 2, 2, "", 0, "bic");
 call assert_true(afOut.pst >= 1 and afOut.qst >= 0 and afOut.ardl_fstat > 0 and afOut.ar.nobs > 0,
                  "ardlFull output invalid");
+afOut = ardlFull(data, verbose = 0);
+call assert_true(afOut.pst >= 1 and afOut.pst <= 8 and afOut.qst >= 0 and afOut.qst <= 8,
+                 "ardlFull default lag bounds invalid");
 
 struct qardlOut qaQ0Out;
 qaQ0Out = qardl(data, 2, 0, tau, "iid", 0, 0);

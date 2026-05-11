@@ -142,8 +142,13 @@ endp;
 **
 **  Purpose:    Integrated NARDL workflow with information-criterion lag
 **              selection followed by levels and ECM estimation.
+**
+**  Format:     nfOut = nardlFull(data);
+**              nfOut = nardlFull(data, pend, qend, formula, verbose, criterion);
+**
+**  Note:       If omitted, pend and qend default to 8.
 */
-proc (struct nardlFullOut) = nardlFull(data, pend, qend, formula = "", verbose = 1, criterion = "bic");
+proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "", verbose = 1, criterion = "bic");
     local pst, qst;
 
     call _qardlValidateLagScalar(pend, "nardlFull: pend");
@@ -176,7 +181,7 @@ endp;
 **
 **  Purpose:    Select scalar NARDL p and q orders by information criterion.
 */
-proc (2) = nardlOrder(data, pend, qend, criterion = "bic");
+proc (2) = nardlOrder(data, pend = 8, qend = 8, criterion = "bic");
     local grid, idx;
 
     grid = nardlOrderGrid(data, pend, qend, criterion);
@@ -190,7 +195,7 @@ endp;
 **
 **  Purpose:    Return the full NARDL p/q information-criterion table.
 */
-proc (1) = nardlOrderGrid(data, pend, qend, criterion = "bic");
+proc (1) = nardlOrderGrid(data, pend = 8, qend = 8, criterion = "bic");
     local p, q, grid, row, ic;
 
     call _qardlValidateLagScalar(pend, "nardlOrderGrid: pend");
@@ -343,6 +348,10 @@ endp;
 **  Purpose:    Return in-sample fitted values from an estimated NARDL model.
 */
 proc (1) = predictNARDL(struct nardlOut naOut, data, formula = "");
+    retp(_predictNARDLLevels(naOut, data, formula));
+endp;
+
+proc (1) = _predictNARDLLevels(struct nardlOut naOut, data, formula = "");
     local Y, ONEX, x_pos, x_neg;
 
     data = applyNARDLFormula(data, formula);
@@ -357,6 +366,10 @@ endp;
 **              their last observed partial-sum values.
 */
 proc (1) = forecastNARDL(struct nardlOut naOut, data, h = 1, formula = "");
+    retp(_forecastNARDLLevels(naOut, data, h, formula));
+endp;
+
+proc (1) = _forecastNARDLLevels(struct nardlOut naOut, data, h = 1, formula = "");
     local yy, x_pos, x_neg, dx_pos, dx_neg, ybuf, out, ii, jj, yhat;
 
     call _qardlValidateLagScalar(h, "forecastNARDL: h");

@@ -83,4 +83,4 @@ print "beta  " wt_beta~pv_beta;
 print "gamma " wt_gamma~pv_gamma;
 print "phi   " wt_phi~pv_phi;
 
-plotQARDL(qaOut, tau);
+plotQARDL(qaOut, tau, 1);

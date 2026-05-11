@@ -74,5 +74,5 @@ print ci_beta;
 
 // Plot helpers remain separate from estimation, so batch workflows can skip
 // them and interactive workflows can opt in.
-plotQARDLbands(qfOut.qa, tau);
-plotQIRF(qirfOut);
+plotQARDLbands(qfOut.qa, tau, 0.05);
+plotQIRF(qirfOut, 1);

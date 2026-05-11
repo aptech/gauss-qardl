@@ -29,6 +29,9 @@ quantiles.
 Future regressor levels are held fixed at their last observed values and
 future differenced-x terms are set to zero.
 
+`forecastQARDL` is retained for backward compatibility. New code may call the
+unified `forecastARDL(qaOut, data, ...)` dispatcher instead.
+
 TODO: Validate multi-step quantile forecast behavior against external QARDL
 forecast references before using it for publication results.
 
@@ -48,4 +51,5 @@ fcst = forecastQARDL(qaOut, data, 4);
 
 ## See Also
 
-[qardl](qardl.md), [predictQARDL](predictQARDL.md), [qirf](qirf.md)
+[qardl](qardl.md), [forecastARDL](forecastARDL.md),
+[predictQARDL](predictQARDL.md), [qirf](qirf.md)

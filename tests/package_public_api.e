@@ -49,6 +49,9 @@ tau = { 0.25, 0.5, 0.75 };
 
 { pst, qst } = pqorder(data, 2, 2);
 call assert_true(pst >= 1 and qst >= 0, "pqorder returned invalid lag orders");
+{ pst_default, qst_default } = pqorder(data);
+call assert_true(pst_default >= 1 and pst_default <= 8 and qst_default >= 0 and qst_default <= 8,
+                 "pqorder default lag search returned invalid lag orders");
 { pst_aic, qst_aic } = pqorder(data, 2, 2, "aic");
 call assert_true(pst_aic >= 1 and qst_aic >= 0, "pqorder AIC returned invalid lag orders");
 { pst_range, qst_range } = pqorderRange(data, 2, 2, 2, 2, "bic");
@@ -69,6 +72,10 @@ call assert_true(rows(predictQARDL(qaOut, data)) == qaOut.nobs,
                  "predictQARDL output changed");
 call assert_true(rows(forecastQARDL(qaOut, data, 2)) == 2 and cols(forecastQARDL(qaOut, data, 2)) == rows(tau),
                  "forecastQARDL output changed");
+call assert_true(rows(predictARDL(qaOut, data)) == qaOut.nobs,
+                 "predictARDL QARDL dispatch output changed");
+call assert_true(rows(forecastARDL(qaOut, data, 2)) == 2 and cols(forecastARDL(qaOut, data, 2)) == rows(tau),
+                 "forecastARDL QARDL dispatch output changed");
 
 struct ardlOut arOut;
 arOut = ardl(data, pst, qst, "", 0);
@@ -81,6 +88,9 @@ struct ardlFullOut afOut;
 afOut = ardlFull(data, 2, 2, "", 0, "bic");
 call assert_true(afOut.pst >= 1 and afOut.qst >= 0 and afOut.ardl_fstat > 0,
                  "ardlFull output changed");
+afOut = ardlFull(data, verbose = 0);
+call assert_true(afOut.pst >= 1 and afOut.pst <= 8 and afOut.qst >= 0 and afOut.qst <= 8,
+                 "ardlFull default lag bounds invalid");
 struct qardlOut qaQ0Out;
 qaQ0Out = qardl(data, 2, 0, tau, "iid", 0, 0);
 call assert_true(qaQ0Out.q == 0 and rows(qaQ0Out.bigbt) == 2*rows(tau), "qardl q=0 output changed");
@@ -143,6 +153,9 @@ call assert_true(rows(qiOut.irf) == 5 and cols(qiOut.irf) == rows(tau), "qirf ou
 struct qardlFullOut qfOut;
 qfOut = qardlFull(data, 2, 2, tau);
 call assert_true(qfOut.pst >= 1 and qfOut.qst >= 1, "qardlFull returned invalid lag orders");
+qfOut = qardlFull(data, tau = tau, verbose = 0);
+call assert_true(qfOut.pst >= 1 and qfOut.pst <= 8 and qfOut.qst >= 0 and qfOut.qst <= 8,
+                 "qardlFull default lag bounds invalid");
 qfOut = qardlFull(data, 2, 2, tau, "", 0, "hq");
 call assert_true(qfOut.pst >= 1 and qfOut.qst >= 1, "qardlFull HQ returned invalid lag orders");
 qfOut = qardlFull(data, 2, 2, tau, "", 0, "bic", "robust", 0);
@@ -168,11 +181,26 @@ struct nardlOut naOut;
 naOut = nardl(nardl_data, 1, 1, "", 0);
 call assert_true(rows(naOut.beta_pos) == 2 and rows(naOut.asymmetry_pv) == 2,
                  "nardl output changed");
+call assert_true(rows(predictARDL(naOut, nardl_data)) == naOut.nobs and
+                 rows(forecastARDL(naOut, nardl_data, 2)) == 2,
+                 "NARDL unified predict/forecast dispatch changed");
 
 struct nardlFullOut nfOut;
 nfOut = nardlFull(nardl_df, 1, 1, "y ~ x1 + x2", 0);
 call assert_true(nfOut.pst == 1 and nfOut.qst >= 0 and rows(nfOut.na.beta_neg) == 2,
                  "nardlFull formula output changed");
+
+rndseed 260511;
+n_default = 120;
+x1_default = cumsumc(rndn(n_default, 1));
+x2_default = cumsumc(rndn(n_default, 1));
+y_default = zeros(n_default, 1);
+for tt(2, n_default, 1);
+    y_default[tt] = 0.35*y_default[tt-1] + 0.45*x1_default[tt] - 0.25*x2_default[tt] + 0.10*rndn(1, 1);
+endfor;
+nfOut = nardlFull(y_default~x1_default~x2_default, verbose = 0);
+call assert_true(nfOut.pst >= 1 and nfOut.pst <= 8 and nfOut.qst >= 0 and nfOut.qst <= 8,
+                 "nardlFull default lag bounds invalid");
 call assert_true(rows(predictNARDL(nfOut.na, nardl_df, "y ~ x1 + x2")) == nfOut.na.nobs,
                  "predictNARDL formula output changed");
 
@@ -185,11 +213,17 @@ struct csardlOut csaOut;
 csaOut = csardl(panel, 1, 1, 1, "", 0);
 call assert_true(csaOut.nunits == 4 and rows(csaOut.bigbt) == 2,
                  "csardl output changed");
+call assert_true(rows(predictARDL(csaOut, panel)) == csaOut.nobs and
+                 rows(forecastARDL(csaOut, panel, 2)) == 2,
+                 "CSARDL unified predict/forecast dispatch changed");
 
 struct csardlFullOut cfOut;
 cfOut = csardlFull(panel_df, 1, 1, 1, "y ~ x1 + x2", 0);
 call assert_true(cfOut.cs_lags == 1 and cfOut.csa.nunits == 4,
                  "csardlFull inferred panel formula output changed");
+cfOut = csardlFull(panel_df, cs_lags = 1, formula = "y ~ x1 + x2", verbose = 0);
+call assert_true(cfOut.pst >= 1 and cfOut.pst <= 8 and cfOut.qst >= 0 and cfOut.qst <= 8,
+                 "csardlFull default lag bounds invalid");
 
 struct csardlDiagOut diagOut;
 diagOut = csardlDiagnostics(panel_df, 1, 1, 1, "y ~ x1 + x2", 0);

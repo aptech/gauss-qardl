@@ -130,10 +130,13 @@ endp;
 **  Purpose:    Integrated ARDL workflow: lag selection, ARDL bounds test, and
 **              levels-form ARDL estimation.
 **
-**  Format:     afOut = ardlFull(data, pend, qend);
+**  Format:     afOut = ardlFull(data);
+**              afOut = ardlFull(data, pend, qend);
 **              afOut = ardlFull(data, pend, qend, formula, verbose, criterion);
+**
+**  Note:       If omitted, pend and qend default to 8.
 */
-proc (struct ardlFullOut) = ardlFull(data, pend, qend, formula = "", verbose = 1, criterion = "bic");
+proc (struct ardlFullOut) = ardlFull(data, pend = 8, qend = 8, formula = "", verbose = 1, criterion = "bic");
     local pst, qst, fstat, cv;
 
     if verbose /= 0 and verbose /= 1;
@@ -1154,10 +1157,16 @@ proc (2) = qardlAR2Sim(nnn, alpha, phi, rho, the0, the1);
     retp(yyy, xxx);
 endp;
 
-proc (0) = plotQARDL(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
+proc (0) = plotQARDL(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 }, show_bands = 0, alpha = 0.05);
     local _beta, _gamma, _phi, _alpha, _rho, ntau, k, p, nCols;
 
     call _qardlValidateTau(tau, "plotQARDL");
+    call _qardlValidatePlotBandInputs(show_bands, alpha, "plotQARDL");
+
+    if show_bands;
+        call plotQARDLbands(qaOut, tau, alpha);
+        retp;
+    endif;
 
     ntau = rows(tau);
 
@@ -1257,23 +1266,26 @@ endp;
 /*
 **> plotQARDLbands
 **
-**  Purpose:    Plot quantile process curves with 95% asymptotic confidence
+**  Purpose:    Plot quantile process curves with asymptotic confidence
 **              bands for long-run (beta), short-run (gamma), and AR (phi)
-**              parameters.  Bands are point-wise: estimate +/- 1.96 * SE,
+**              parameters.  Bands are point-wise: estimate +/- z(alpha) * SE,
 **              where SE is extracted from the diagonal of the covariance
 **              matrices stored in the qardlOut struct.
 **
 **  Format:     plotQARDLbands(qaOut, tau);
+**              plotQARDLbands(qaOut, tau, alpha);
 **
 **  Input:      qaOut       struct qardlOut returned by qardl().
 **              tau         (ss x 1) vector of quantile indices.
+**              alpha       scalar, significance level. Default is 0.05.
 */
-proc (0) = plotQARDLbands(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
+proc (0) = plotQARDLbands(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 }, alpha = 0.05);
     local _beta, _gamma, _phi, ntau, k, p, nCols;
     local se_beta, se_gamma, se_phi;
-    local lb_beta, ub_beta, lb_gamma, ub_gamma, lb_phi, ub_phi;
+    local lb_beta, ub_beta, lb_gamma, ub_gamma, lb_phi, ub_phi, zcrit;
 
     call _qardlValidateTau(tau, "plotQARDLbands");
+    call _qardlValidatePlotBandInputs(1, alpha, "plotQARDLbands");
 
     ntau = rows(tau);
 
@@ -1300,13 +1312,14 @@ proc (0) = plotQARDLbands(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
     se_phi   = reshape(sqrt(diag(qaOut.phi_cov)),    ntau, p);
     se_gamma = reshape(sqrt(diag(qaOut.gamma_cov)),  ntau, k);
 
-    // 95% pointwise bands
-    lb_beta  = _beta  - 1.96 * se_beta;
-    ub_beta  = _beta  + 1.96 * se_beta;
-    lb_gamma = _gamma - 1.96 * se_gamma;
-    ub_gamma = _gamma + 1.96 * se_gamma;
-    lb_phi   = _phi   - 1.96 * se_phi;
-    ub_phi   = _phi   + 1.96 * se_phi;
+    // Pointwise bands
+    zcrit = cdfni(1 - alpha/2);
+    lb_beta  = _beta  - zcrit * se_beta;
+    ub_beta  = _beta  + zcrit * se_beta;
+    lb_gamma = _gamma - zcrit * se_gamma;
+    ub_gamma = _gamma + zcrit * se_gamma;
+    lb_phi   = _phi   - zcrit * se_phi;
+    ub_phi   = _phi   + zcrit * se_phi;
 
     // Set up graph controls
     struct plotControl myPlot;
@@ -1394,27 +1407,30 @@ endp;
 **> plotRollingQARDLECM
 **
 **  Purpose:    Plot rolling-window QARDL-ECM estimates.  Produces a 2-row
-**              layout: top row shows rho(tau,t) with +/-1.96*SE bands; bottom
+**              layout: top row shows rho(tau,t); bottom
 **              row shows alpha(tau,t) with bands.  One panel per quantile.
 **
 **  Format:     plotRollingQARDLECM(rECMOut);
 **              plotRollingQARDLECM(rECMOut, tau = { 0.25, 0.5, 0.75 });
-**              plotRollingQARDLECM(rECMOut, tau, dates);
+**              plotRollingQARDLECM(rECMOut, tau, dates, show_bands, alpha);
 **
 **  Input:      rECMOut     struct rollingQardlECMOut returned by rollingQardlECM().
 **              tau         (ss x 1) quantile vector.
 **              dates       (num_est x 1) vector of date values for x-axis.
 **                          Pass 0 (default) to use window indices 1, 2, ...
+**              show_bands  optional scalar, 1 = plot stored confidence bands.
+**              alpha       scalar, significance level. Default is 0.05.
 **
 **  Developed:  April 2026
 */
-proc (0) = plotRollingQARDLECM(struct rollingQardlECMOut rECMOut, tau = { 0.25, 0.5, 0.75 }, dates = 0);
+proc (0) = plotRollingQARDLECM(struct rollingQardlECMOut rECMOut, tau = { 0.25, 0.5, 0.75 }, dates = 0, show_bands = 1, alpha = 0.05);
     local ss, num_est, t_axis, jj;
-    local rho_lb, rho_ub, alpha_lb, alpha_ub;
+    local rho_lb, rho_ub, alpha_lb, alpha_ub, zcrit;
     local _font, title_size, axis_size, label_size;
     struct plotControl myPlot;
 
     call _qardlValidateTau(tau, "plotRollingQARDLECM");
+    call _qardlValidatePlotBandInputs(show_bands, alpha, "plotRollingQARDLECM");
 
     ss      = rows(tau);
     num_est = rows(rECMOut.rho);
@@ -1435,11 +1451,11 @@ proc (0) = plotRollingQARDLECM(struct rollingQardlECMOut rECMOut, tau = { 0.25, 
         t_axis = dates;
     endif;
 
-    // 95% pointwise bands
-    rho_lb   = rECMOut.rho   - 1.96 * rECMOut.rho_se;
-    rho_ub   = rECMOut.rho   + 1.96 * rECMOut.rho_se;
-    alpha_lb = rECMOut.alpha - 1.96 * rECMOut.alpha_se;
-    alpha_ub = rECMOut.alpha + 1.96 * rECMOut.alpha_se;
+    zcrit = cdfni(1 - alpha/2);
+    rho_lb   = rECMOut.rho   - zcrit * rECMOut.rho_se;
+    rho_ub   = rECMOut.rho   + zcrit * rECMOut.rho_se;
+    alpha_lb = rECMOut.alpha - zcrit * rECMOut.alpha_se;
+    alpha_ub = rECMOut.alpha + zcrit * rECMOut.alpha_se;
 
     _font      = "Arial";
     title_size = 16 - ss;
@@ -1452,16 +1468,26 @@ proc (0) = plotRollingQARDLECM(struct rollingQardlECMOut rECMOut, tau = { 0.25, 
     plotSetXLabel(&myPlot, "Window", _font, axis_size);
     plotSetTicLabelFont(&myPlot, _font, label_size);
     plotSetYTicCount(&myPlot, 5);
-    plotSetLineStyle(&myPlot, 2|1|2);
+    if show_bands;
+        plotSetLineStyle(&myPlot, 2|1|2);
+    endif;
 
     for jj(1, ss, 1);
         plotLayout(2, ss, jj);
         plotSetTitle(&myPlot, "\\rho(" $+ ntos(tau[jj]) $+ ")");
-        plotXY(myPlot, t_axis, rho_lb[., jj]~rECMOut.rho[., jj]~rho_ub[., jj]);
+        if show_bands;
+            plotXY(myPlot, t_axis, rho_lb[., jj]~rECMOut.rho[., jj]~rho_ub[., jj]);
+        else;
+            plotXY(myPlot, t_axis, rECMOut.rho[., jj]);
+        endif;
 
         plotLayout(2, ss, ss + jj);
         plotSetTitle(&myPlot, "\\alpha(" $+ ntos(tau[jj]) $+ ")");
-        plotXY(myPlot, t_axis, alpha_lb[., jj]~rECMOut.alpha[., jj]~alpha_ub[., jj]);
+        if show_bands;
+            plotXY(myPlot, t_axis, alpha_lb[., jj]~rECMOut.alpha[., jj]~alpha_ub[., jj]);
+        else;
+            plotXY(myPlot, t_axis, rECMOut.alpha[., jj]);
+        endif;
     endfor;
 
     plotClearLayout();
@@ -1470,28 +1496,31 @@ endp;
 /*
 **> plotRollingQARDL
 **
-**  Purpose:    Plot rolling-window QARDL long-run beta estimates with +/-1.96*SE
-**              bands.  Produces a grid with ss rows (one per quantile) and k
+**  Purpose:    Plot rolling-window QARDL long-run beta estimates with optional
+**              stored confidence bands.  Produces a grid with ss rows (one per quantile) and k
 **              columns (one per x variable).
 **
 **  Format:     plotRollingQARDL(rqaOut);
 **              plotRollingQARDL(rqaOut, tau = { 0.25, 0.5, 0.75 });
-**              plotRollingQARDL(rqaOut, tau, dates);
+**              plotRollingQARDL(rqaOut, tau, dates, show_bands, alpha);
 **
 **  Input:      rqaOut      struct rollingQardlOut returned by rollingQardl().
 **              tau         (ss x 1) quantile vector.
 **              dates       (num_est x 1) x-axis values.  Pass 0 for 1..num_est.
+**              show_bands  optional scalar, 1 = plot stored confidence bands.
+**              alpha       scalar, significance level. Default is 0.05.
 **
 **  Developed:  April 2026
 */
-proc (0) = plotRollingQARDL(struct rollingQardlOut rqaOut, tau = { 0.25, 0.5, 0.75 }, dates = 0);
+proc (0) = plotRollingQARDL(struct rollingQardlOut rqaOut, tau = { 0.25, 0.5, 0.75 }, dates = 0, show_bands = 1, alpha = 0.05);
     local ss, num_est, k, t_axis, jj, vv;
-    local beta_v, se_v, lb, ub;
+    local beta_v, se_v, lb, ub, zcrit;
     local _font, title_size, axis_size, label_size;
     struct plotControl myPlot;
 
     local _dims;
     call _qardlValidateTau(tau, "plotRollingQARDL");
+    call _qardlValidatePlotBandInputs(show_bands, alpha, "plotRollingQARDL");
 
     ss  = rows(tau);
     _dims   = getorders(rqaOut.bigbt);  // [k, num_est, num_tau]
@@ -1525,7 +1554,11 @@ proc (0) = plotRollingQARDL(struct rollingQardlOut rqaOut, tau = { 0.25, 0.5, 0.
     plotSetXLabel(&myPlot, "Window", _font, axis_size);
     plotSetTicLabelFont(&myPlot, _font, label_size);
     plotSetYTicCount(&myPlot, 5);
-    plotSetLineStyle(&myPlot, 2|1|2);
+    if show_bands;
+        plotSetLineStyle(&myPlot, 2|1|2);
+    endif;
+
+    zcrit = cdfni(1 - alpha/2);
 
     // Grid: rows = quantiles, cols = x variables
     for jj(1, ss, 1);
@@ -1534,12 +1567,16 @@ proc (0) = plotRollingQARDL(struct rollingQardlOut rqaOut, tau = { 0.25, 0.5, 0.
             // Arrays indexed [variable, window, quantile]
             beta_v = squeeze(rqaOut.bigbt[vv, ., jj]);
             se_v   = squeeze(rqaOut.bigbt_se[vv, ., jj]);
-            lb     = beta_v - 1.96 * se_v;
-            ub     = beta_v + 1.96 * se_v;
+            lb     = beta_v - zcrit * se_v;
+            ub     = beta_v + zcrit * se_v;
 
             plotLayout(ss, k, (jj-1)*k + vv);
             plotSetTitle(&myPlot, "\\beta_" $+ ntos(vv) $+ "(\\tau=" $+ ntos(tau[jj]) $+ ")");
-            plotXY(myPlot, t_axis, lb~beta_v~ub);
+            if show_bands;
+                plotXY(myPlot, t_axis, lb~beta_v~ub);
+            else;
+                plotXY(myPlot, t_axis, beta_v);
+            endif;
         endfor;
     endfor;
 
@@ -2090,12 +2127,7 @@ proc (0) = printQARDLECM(struct qardlECMOut qECMOut, tau = { 0.25, 0.5, 0.75 });
 
 endp;
 
-/*
-**> predictARDL
-**
-**  Purpose:    Return in-sample fitted values from an estimated ARDL model.
-*/
-proc (1) = predictARDL(struct ardlOut arOut, data, formula = "");
+proc (1) = _predictARDLLevels(struct ardlOut arOut, data, formula = "");
     local Y, ONEX, theta_start, phi_start;
 
     data = applyQARDLFormula(data, formula);
@@ -2103,14 +2135,7 @@ proc (1) = predictARDL(struct ardlOut arOut, data, formula = "");
     retp(ONEX*arOut.bt);
 endp;
 
-/*
-**> forecastARDL
-**
-**  Purpose:    Recursive ARDL forecast holding future regressors fixed at
-**              their last observed levels. Future differenced-x terms are set
-**              to zero.
-*/
-proc (1) = forecastARDL(struct ardlOut arOut, data, h = 1, formula = "");
+proc (1) = _forecastARDLLevels(struct ardlOut arOut, data, h = 1, formula = "");
     local yy, xx, xlast, ybuf, out, ii, jj, yhat, dx_count, theta_start, phi_start;
 
     call _qardlValidateLagScalar(h, "forecastARDL: h");
@@ -2149,9 +2174,13 @@ endp;
 /*
 **> predictQARDL
 **
-**  Purpose:    Return in-sample fitted values from an estimated QARDL model.
+**  Purpose:    Backward-compatible QARDL prediction wrapper.
 */
 proc (1) = predictQARDL(struct qardlOut qaOut, data, formula = "");
+    retp(_predictQARDLLevels(qaOut, data, formula));
+endp;
+
+proc (1) = _predictQARDLLevels(struct qardlOut qaOut, data, formula = "");
     local Y, ONEX, theta_start, phi_start;
 
     data = applyQARDLFormula(data, formula);
@@ -2162,14 +2191,16 @@ endp;
 /*
 **> forecastQARDL
 **
-**  Purpose:    Recursive QARDL forecast by quantile, holding future
-**              regressors fixed at their last observed levels. Future
-**              differenced-x terms are set to zero.
+**  Purpose:    Backward-compatible QARDL forecast wrapper.
 **
 **  TODO: Validate multi-step quantile forecast behavior against external
 **        QARDL forecast references before using for publication results.
 */
 proc (1) = forecastQARDL(struct qardlOut qaOut, data, h = 1, formula = "");
+    retp(_forecastQARDLLevels(qaOut, data, h, formula));
+endp;
+
+proc (1) = _forecastQARDLLevels(struct qardlOut qaOut, data, h = 1, formula = "");
     local yy, xx, xlast, ybuf, out, ii, jj, ss, yhat, dx_count, theta_start, phi_start;
 
     call _qardlValidateLagScalar(h, "forecastQARDL: h");
@@ -3928,6 +3959,18 @@ proc (0) = _qardlValidateTau(tau, caller);
     endif;
 endp;
 
+proc (0) = _qardlValidatePlotBandInputs(show_bands, alpha, caller);
+    if rows(show_bands) * cols(show_bands) /= 1 or (show_bands /= 0 and show_bands /= 1);
+        errorlog caller $+ ": show_bands must be 0 or 1";
+        end;
+    endif;
+
+    if rows(alpha) * cols(alpha) /= 1 or alpha <= 0 or alpha >= 1;
+        errorlog caller $+ ": alpha must be a scalar in (0, 1)";
+        end;
+    endif;
+endp;
+
 /*
 **> qardlFull
 **
@@ -3935,14 +3978,15 @@ endp;
 **              QARDL levels estimation, and QARDL-ECM estimation in one call.
 **              Prints a complete results summary to the screen.
 **
-**  Format:     qfOut = qardlFull(data, pend, qend);
+**  Format:     qfOut = qardlFull(data);
+**              qfOut = qardlFull(data, pend, qend);
 **              qfOut = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 },
 **                                formula = "", verbose = 1, criterion = "bic",
 **                                cov_type = "iid", hac_lags = 0);
 **
 **  Input:      data    (T x (1+k)) matrix (or dataframe with formula).
-**              pend    scalar, maximum AR lag to search.
-**              qend    scalar, maximum DL lag to search.
+**              pend    scalar, maximum AR lag to search. Default is 8.
+**              qend    scalar, maximum DL lag to search. Default is 8.
 **              tau     (ss x 1) quantile vector.
 **              formula string, Wilkinson formula for column selection.
 **
@@ -3968,7 +4012,7 @@ endp;
 **
 **  Developed:  April 2026
 */
-proc (struct qardlFullOut) = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 }, formula = "", verbose = 1, criterion = "bic", cov_type = "iid", hac_lags = 0);
+proc (struct qardlFullOut) = qardlFull(data, pend = 8, qend = 8, tau = { 0.25, 0.5, 0.75 }, formula = "", verbose = 1, criterion = "bic", cov_type = "iid", hac_lags = 0);
     local pst, qst, fstat, cv;
 
     struct qardlFullOut qfOut;

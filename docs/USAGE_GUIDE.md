@@ -8,8 +8,8 @@ GAUSS QARDL package.
 Use `qardlFull` when you want the standard applied workflow:
 
 ```gauss
-qfOut = qardlFull(data, 8, 8);
-qfOut = qardlFull(data, 8, 8, tau = { 0.25, 0.5, 0.75 }, formula = "", verbose = 1);
+qfOut = qardlFull(data);
+qfOut = qardlFull(data, tau = { 0.25, 0.5, 0.75 }, formula = "", verbose = 1);
 qfOut = qardlFull(data, 8, 8, tau, "", 0, "bic", "hac", 4);
 ```
 
@@ -17,6 +17,8 @@ It performs information-criterion lag selection, ARDL bounds testing, QARDL
 levels estimation, QARDL-ECM estimation, and optional printing. BIC is the
 default lag-selection criterion. Set `verbose = 0` for scripts that need the
 results without console output.
+When `pend` and `qend` are omitted, full workflows use default maximum lag
+search bounds of `8` and `8`.
 
 Use `qardl` when you already know the lag orders and want levels-form QARDL
 estimates:
@@ -32,7 +34,7 @@ same data ordering, formula workflow, print style, and output conventions:
 ```gauss
 arOut = ardl(data, 2, 1, "", 0);
 printARDL(arOut);
-afOut = ardlFull(data, 8, 8, "", 0, "bic");
+afOut = ardlFull(data, verbose = 0, criterion = "bic");
 ```
 
 Direct estimator calls print GAUSS-style results tables by default. Add
@@ -80,7 +82,7 @@ only `alpha_cov` and `rho_cov` change.
 Use `pqorder` directly when you only need lag selection:
 
 ```gauss
-{ pst, qst } = pqorder(data, pend = 8, qend = 8);
+{ pst, qst } = pqorder(data);
 { pst, qst } = pqorder(data, pend = 8, qend = 8, criterion = "aic");
 { pst, qst } = pqorderRange(data, 2, 8, 1, 4, "bic");
 ic_grid = pqorderGrid(data, 8, 8, "bic");
@@ -90,7 +92,7 @@ Supported lag-selection criteria are `"bic"` (default), `"aic"`, `"hq"`, and
 `"hqc"`. `qardlFull` accepts the same criterion as its final optional argument:
 
 ```gauss
-qfOut = qardlFull(data, 8, 8, tau, "", 0, "hq");
+qfOut = qardlFull(data, tau = tau, verbose = 0, criterion = "hq");
 ```
 
 Use `pqorderRange` when you need a restricted lag-search grid. For example,
@@ -116,21 +118,22 @@ qECMOut = qardlECMX(data, pst_x, qvec_x, tau);
 
 ## Prediction And Forecast Hooks
 
-Levels-form ARDL and QARDL estimates support in-sample prediction and simple
-recursive forecast hooks:
+Levels-form ARDL-family estimates support in-sample prediction and simple
+recursive forecast hooks through the unified dispatcher:
 
 ```gauss
 ar_fit = predictARDL(arOut, data);
 ar_fcst = forecastARDL(arOut, data, 4);
 
-qa_fit = predictQARDL(qaOut, data);
-qa_fcst = forecastQARDL(qaOut, data, 4);
+qa_fit = predictARDL(qaOut, data);
+qa_fcst = forecastARDL(qaOut, data, 4);
 ```
 
-`predictARDL` returns an `nobs x 1` vector. `predictQARDL` returns an
-`nobs x S` matrix, one column per quantile. Forecast helpers hold future
-regressor levels fixed at their last observed values and set future
-differenced-x terms to zero.
+`predictARDL` and `forecastARDL` infer whether the output is ARDL, QARDL,
+NARDL, or CS-ARDL. QARDL returns one column per quantile. `predictQARDL` and
+`forecastQARDL` remain available as backward-compatible QARDL aliases.
+Forecast helpers hold future regressor levels fixed at their last observed
+values and set future differenced-x terms to zero where applicable.
 
 TODO: validate multi-step ARDL/QARDL forecast examples against published
 forecast workflows before using them for publication-grade forecasting.
@@ -149,7 +152,7 @@ qaOut = qardl(data, 2, 1);
 `qardlFull` can apply the formula internally:
 
 ```gauss
-qfOut = qardlFull(df, 8, 8, formula = "consumption ~ income + wealth");
+qfOut = qardlFull(df, formula = "consumption ~ income + wealth");
 ```
 
 Formula variable matching is case-insensitive. The RHS order is preserved in
@@ -161,8 +164,8 @@ Use `nardlFull` for the nonlinear ARDL workflow with positive and negative
 partial-sum decompositions:
 
 ```gauss
-nfOut = nardlFull(data, 2, 2, "", 0, "bic");
-nfOut = nardlFull(df, 2, 2, "y ~ x1 + x2", 0, "bic");
+nfOut = nardlFull(data, verbose = 0, criterion = "bic");
+nfOut = nardlFull(df, formula = "y ~ x1 + x2", verbose = 0, criterion = "bic");
 printNARDL(nfOut.na);
 printNARDLECM(nfOut.ecm);
 ```
@@ -170,14 +173,15 @@ printNARDLECM(nfOut.ecm);
 `nardl` and `nardlECM` are available when lag orders are fixed. The output
 includes long-run positive and negative coefficients, long-run and short-run
 asymmetry Wald tests, a UECM bounds F-statistic, fitted values, residuals, and
-OLS covariance fields. `predictNARDL` and `forecastNARDL` provide the current
-prediction/forecast hooks.
+OLS covariance fields. `predictARDL` and `forecastARDL` infer NARDL output
+structures; `predictNARDL` and `forecastNARDL` remain available.
 
 Use `csardlFull` for pooled cross-sectionally augmented ARDL panels:
 
 ```gauss
-cfOut = csardlFull(panel, 2, 1, 1, "", 0, "bic");
-cfOut = csardlFull(df_panel, 2, 1, 1, "y ~ x1 + x2", 0, "bic");
+cfOut = csardlFull(panel, cs_lags = 1, verbose = 0, criterion = "bic");
+cfOut = csardlFull(df_panel, cs_lags = 1, formula = "y ~ x1 + x2",
+                   verbose = 0, criterion = "bic");
 printCSARDL(cfOut.csa);
 printCSARDLECM(cfOut.ecm);
 ```
@@ -273,6 +277,21 @@ the internal attempt limit.
 The method variants support `"moving"`, `"circular"`, and `"stationary"`
 resampling.
 
+## Plot Confidence Bands
+
+Plot helpers use uncertainty already stored in output structures:
+
+```gauss
+plotQARDL(qaOut, tau, 1, 0.05);
+plotQARDLbands(qaOut, tau, 0.05);
+plotRollingQARDL(rqaOut, tau, 0, 1, 0.05);
+plotRollingQARDLECM(rECMOut, tau, 0, 1, 0.05);
+plotQIRF(qOut, 1);
+```
+
+`plotQIRF` currently has no confidence-band data in `qirfOut`; requesting
+bands prints a message and plots the response paths only.
+
 ## Diagnostic Workflow
 
 The standard QARDL workflow currently includes:
@@ -313,7 +332,7 @@ model-specific diagnostic fields as the currently supported checks.
 
 ```gauss
 qOut = qirf(qaOut, qaOut.p, qaOut.q, 20, qaOut.tau, k_x = 1, permanent = 1);
-plotQIRF(qOut);
+plotQIRF(qOut, 1);
 ```
 
 For a permanent shock, the response should approach the long-run beta when the

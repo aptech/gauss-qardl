@@ -135,8 +135,15 @@ endp;
 **
 **  Purpose:    Integrated CS-ARDL workflow with information-criterion lag
 **              selection followed by levels and ECM estimation.
+**
+**  Format:     cfOut = csardlFull(data);
+**              cfOut = csardlFull(data, pend, qend, cs_lags, formula,
+**                                verbose, criterion);
+**
+**  Note:       If omitted, pend and qend default to 8 and cs_lags defaults
+**              to 0.
 */
-proc (struct csardlFullOut) = csardlFull(data, pend, qend, cs_lags = 0, formula = "", verbose = 1, criterion = "bic");
+proc (struct csardlFullOut) = csardlFull(data, pend = 8, qend = 8, cs_lags = 0, formula = "", verbose = 1, criterion = "bic");
     local pst, qst;
 
     call _qardlValidateLagScalar(pend, "csardlFull: pend");
@@ -171,7 +178,7 @@ endp;
 **
 **  Purpose:    Select scalar CS-ARDL p and q orders by information criterion.
 */
-proc (2) = csardlOrder(data, pend, qend, cs_lags = 0, criterion = "bic");
+proc (2) = csardlOrder(data, pend = 8, qend = 8, cs_lags = 0, criterion = "bic");
     local grid, idx;
 
     grid = csardlOrderGrid(data, pend, qend, cs_lags, criterion);
@@ -185,7 +192,7 @@ endp;
 **
 **  Purpose:    Return the full CS-ARDL p/q information-criterion table.
 */
-proc (1) = csardlOrderGrid(data, pend, qend, cs_lags = 0, criterion = "bic");
+proc (1) = csardlOrderGrid(data, pend = 8, qend = 8, cs_lags = 0, criterion = "bic");
     local p, q, grid, row, ic;
 
     call _qardlValidateLagScalar(pend, "csardlOrderGrid: pend");
@@ -465,6 +472,10 @@ endp;
 **  Purpose:    Return in-sample fitted values from an estimated CS-ARDL model.
 */
 proc (1) = predictCSARDL(struct csardlOut csaOut, data, formula = "");
+    retp(_predictCSARDLLevels(csaOut, data, formula));
+endp;
+
+proc (1) = _predictCSARDLLevels(struct csardlOut csaOut, data, formula = "");
     local Y, ONEX, csavg, unit_ids, unit_nobs;
 
     data = applyCSARDLFormula(data, formula);
@@ -480,10 +491,14 @@ endp;
 **              returns the last fitted value for each requested horizon.
 */
 proc (1) = forecastCSARDL(struct csardlOut csaOut, data, h = 1, formula = "");
+    retp(_forecastCSARDLLevels(csaOut, data, h, formula));
+endp;
+
+proc (1) = _forecastCSARDLLevels(struct csardlOut csaOut, data, h = 1, formula = "");
     local fitted;
 
     call _qardlValidateLagScalar(h, "forecastCSARDL: h");
-    fitted = predictCSARDL(csaOut, data, formula);
+    fitted = _predictCSARDLLevels(csaOut, data, formula);
 
     retp(ones(h, 1)*fitted[rows(fitted)]);
 endp;

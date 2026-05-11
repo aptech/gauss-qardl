@@ -46,8 +46,9 @@ print naOut.asymmetry_wald~naOut.asymmetry_pv;
 printNARDL(naOut);
 
 // Formula-string integrated workflow with information-criterion lag selection.
+// Omitting pend/qend uses the package default maximum lag search bounds.
 struct nardlFullOut nfOut;
-nfOut = nardlFull(df, 2, 2, formula, 0, "bic");
+nfOut = nardlFull(df, formula = formula, verbose = 0, criterion = "bic");
 
 struct nardlECMOut nECMOut;
 nECMOut = nardlECM(df, nfOut.pst, nfOut.qst, formula, 0);
@@ -62,9 +63,9 @@ print nfOut.na.short_run_pv;
 
 printNARDLECM(nECMOut);
 
-// Prediction and forecast hooks use the same formula string.
-fit = predictNARDL(nfOut.na, df, formula);
-fcst = forecastNARDL(nfOut.na, df, 3, formula);
+// Unified prediction and forecast hooks infer the model type.
+fit = predictARDL(nfOut.na, df, formula);
+fcst = forecastARDL(nfOut.na, df, 3, formula);
 
 print;
 print "Prediction rows and 3-step forecast";

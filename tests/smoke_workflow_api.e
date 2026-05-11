@@ -63,6 +63,10 @@ call assert_true(rows(qfOut.ardl_cv) == 3 and cols(qfOut.ardl_cv) == 2, "qardlFu
 call assert_true(rows(qfOut.qa.bigbt) == 2*rows(tau), "qardlFull levels beta shape changed");
 call assert_true(rows(qfOut.ecm.rho) == rows(tau), "qardlFull ECM rho shape changed");
 
+qfOut = qardlFull(data, tau = tau, verbose = 0);
+call assert_true(qfOut.pst >= 1 and qfOut.pst <= 8 and qfOut.qst >= 0 and qfOut.qst <= 8,
+                 "qardlFull default lag bounds invalid");
+
 qfOut = qardlFull(data, 2, 2, tau, "", 0, "hq");
 call assert_true(qfOut.pst >= 1 and qfOut.qst >= 0, "qardlFull HQ returned invalid lag orders");
 qfOut = qardlFull(data, 2, 2, tau, "", 0, "bic", "hac", 2);

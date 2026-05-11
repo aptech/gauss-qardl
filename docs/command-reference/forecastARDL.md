@@ -2,30 +2,36 @@
 
 ## Purpose
 
-Computes recursive ARDL forecasts.
+Computes recursive forecasts for estimated ARDL-family models.
 
 ## Format
 
 ```gauss
-fcst = forecastARDL(arOut, data);
-fcst = forecastARDL(arOut, data, h, formula);
+fcst = forecastARDL(modelOut, data);
+fcst = forecastARDL(modelOut, data, h, formula);
 ```
 
 ## Parameters
 
-- `arOut` (*ardlOut struct*) - Output returned by `ardl` or `ardlFull`.
+- `modelOut` (*structure*) - Output returned by `ardl`, `qardl`, `nardl`,
+  `csardl`, or the corresponding full workflow.
 - `data` (*matrix or dataframe*) - Historical data used for forecast lags.
 - `h` (*scalar*) - Forecast horizon. Default is `1`.
 - `formula` (*string*) - Optional formula string for dataframe input.
 
 ## Returns
 
-`fcst` is an `h x 1` vector of forecasts.
+`fcst` is an `h x 1` vector for ARDL, NARDL, and CS-ARDL outputs, and an
+`h x S` matrix for QARDL outputs.
 
 ## Remarks
 
+`forecastARDL` infers the model family from the output structure and dispatches
+to the matching model-specific forecast logic. `forecastQARDL` is preserved as
+a backward-compatible QARDL alias.
+
 Future regressor levels are held fixed at their last observed values and
-future differenced-x terms are set to zero.
+future differenced-x terms are set to zero where applicable.
 
 TODO: Validate multi-step ARDL forecast examples against published applied
 workflows before using them for publication-grade forecasting.
@@ -35,14 +41,15 @@ workflows before using them for publication-grade forecasting.
 ```gauss
 library qardl;
 
-arOut = ardl(data, 2, 1, "", 0);
-fcst = forecastARDL(arOut, data, 4);
+qfOut = qardlFull(data, tau = { 0.25, 0.5, 0.75 }, verbose = 0);
+fcst = forecastARDL(qfOut.qa, data, 4);
 ```
 
 ## Source
 
-`qardl.src`
+`ardl_dispatch.src`
 
 ## See Also
 
-[ardl](ardl.md), [predictARDL](predictARDL.md)
+[ardl](ardl.md), [qardl](qardl.md), [nardl](nardl.md), [csardl](csardl.md),
+[predictARDL](predictARDL.md), [forecastQARDL](forecastQARDL.md)

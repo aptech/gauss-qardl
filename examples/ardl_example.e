@@ -32,8 +32,9 @@ print arOut.bigbt;
 printARDL(arOut);
 
 // Integrated workflow: lag selection, ARDL bounds test, and ARDL estimation.
+// Omitting pend/qend uses the package default maximum lag search bounds.
 struct ardlFullOut afOut;
-afOut = ardlFull(shiller, 4, 4, formula, 0, "bic");
+afOut = ardlFull(shiller, formula = formula, verbose = 0, criterion = "bic");
 
 print;
 print "ARDL full workflow";

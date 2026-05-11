@@ -47,5 +47,5 @@ print "gamma " wt_gamma~pv_gamma;
 print "phi   " wt_phi~pv_phi;
 
 qOut = qirf(qfOut.qa, qfOut.qa.p, qfOut.qa.q, 20, tau);
-plotQARDLbands(qfOut.qa, tau);
-plotQIRF(qOut);
+plotQARDLbands(qfOut.qa, tau, 0.05);
+plotQIRF(qOut, 1);
