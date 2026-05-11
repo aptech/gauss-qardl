@@ -1,7 +1,8 @@
-# Published QARDL Replication Notes
+# Published Replication Notes
 
 This note tracks published examples that are useful for validating and
-demonstrating the GAUSS QARDL library.
+demonstrating the GAUSS QARDL library and the adjacent NARDL/CS-ARDL
+model families.
 
 ## Replication Inventory
 
@@ -10,6 +11,8 @@ demonstrating the GAUSS QARDL library.
 | Cho, Kim, and Shin (2015), U.S. dividend-policy application | Public-data scaffold added | `examples/replicate_cho_dividend_policy.e` uses the bundled Shiller real dividend and earnings data as a transparent approximation. Exact numerical replication still requires the authors' exact dataset, transformations, sample window, and lag specification. |
 | Cho, Kim, Greenwood-Nimmo, and Shin (2023), asymmetric dividend response to earnings news | Candidate | Closely aligned with the bundled Shiller dividend/earnings example. Add once data and specification are confirmed. |
 | Galvao, Montes-Rojas, and Park (2013), QADL house-price returns | Candidate, adjacent methodology | This is a quantile ARDL model with stationary covariates rather than the Cho-Kim-Shin quantile cointegration setup. Useful as an adjacent validation target if data are public. |
+| Shin, Yu, and Greenwood-Nimmo (2014), NARDL asymmetric cointegration and dynamic multipliers | Target identified | Use as the canonical NARDL validation target. Exact replication requires the unemployment-output datasets, transformations, sample windows, and dynamic-multiplier specification. |
+| Chudik and Pesaran (2015), dynamic CCE/CS-ARDL panel ARDL Monte Carlo designs | Target identified | Use as the canonical CS-ARDL validation target. Exact replication requires the paper's Monte Carlo DGP grid and estimator variants, including cross-sectional-average lag choices and bias corrections. |
 | R `qardlr` simulated QARDL dataset | Benchmark candidate | Not an empirical paper replication, but the documented simulated QARDL(2,2) DGP is useful for cross-implementation testing. |
 
 ## Current Scaffold
@@ -46,6 +49,19 @@ exact table replication until the original data and specification are matched.
 6. Add an expected-results benchmark test with tolerances that reflect
    publication rounding and any implementation differences.
 
+## Synthetic Benchmarks
+
+Run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tests/run_new_model_benchmarks.ps1
+```
+
+This runs deterministic synthetic NARDL and CS-ARDL workloads, including
+CS-ARDL mean-group and poolability diagnostics. These benchmarks are intended
+to detect implementation drift while published replication datasets are still
+being confirmed.
+
 ## Sources
 
 - Cho, J. S., Kim, T.-H., and Shin, Y. (2015). Quantile cointegration in the
@@ -60,3 +76,11 @@ exact table replication until the original data and specification are matched.
   Autoregressive Distributed Lag Model with an Application to House Price
   Returns. Oxford Bulletin of Economics and Statistics, 75(2), 307-321.
   https://ideas.repec.org/a/bla/obuest/v75y2013i2p307-321.html
+- Shin, Y., Yu, B., and Greenwood-Nimmo, M. (2014). Modelling Asymmetric
+  Cointegration and Dynamic Multipliers in a Nonlinear ARDL Framework.
+  Springer book chapter, pp. 281-314.
+  https://doi.org/10.1007/978-1-4899-8008-3_9
+- Chudik, A., and Pesaran, M. H. (2015). Common correlated effects estimation
+  of heterogeneous dynamic panel data models with weakly exogenous regressors.
+  Journal of Econometrics, 188(2), 393-420.
+  https://doi.org/10.1016/j.jeconom.2015.03.007

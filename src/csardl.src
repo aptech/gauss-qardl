@@ -1,0 +1,916 @@
+/*
+**> csardl
+**
+**  Purpose:    Cross-Sectional ARDL (CS-ARDL) pooled levels estimation with
+**              cross-sectional-average controls. Matrix input is a balanced
+**              panel stacked by unit: [unit_id, y, x1, x2, ...].
+**
+**  Format:     csaOut = csardl(data, ppp, qqq);
+**              csaOut = csardl(data, ppp, qqq, cs_lags, formula, print_results);
+**
+**  Input:      data      balanced panel stacked by unit.
+**              ppp       scalar, AR lag order.
+**              qqq       scalar, distributed-lag order.
+**              cs_lags   scalar, cross-sectional-average lag order.
+**              formula   optional formula "unit + y ~ x1 + x2".
+**
+**  Output:     csaOut    struct csardlOut.
+*/
+#include qardl.sdf
+proc (struct csardlOut) = csardl(data, ppp, qqq, cs_lags = 0, formula = "", print_results = 1);
+    local Y, ONEX, csavg, unit_ids, unit_nobs, bt, k0, phi_start, cross_start;
+    local gam, phi, denom, bigbt, cross_avg_coef;
+    local fitted, resid, coef_cov, sigma2, bigbt_cov, phi_cov, gamma_cov;
+
+    data = applyCSARDLFormula(data, formula);
+    call _csardlValidateEstimatorInputs(data, ppp, qqq, cs_lags, "csardl");
+
+    { Y, ONEX, csavg, unit_ids, unit_nobs } = _csardlBuildDesign(data, ppp, qqq, cs_lags);
+    call _qardlCheckFullColumnRank(ONEX, "csardl", "levels design matrix");
+
+    bt = _qardlSafeInv(ONEX'*ONEX, "csardl", "levels moment matrix")*ONEX'*Y;
+    fitted = ONEX*bt;
+    resid = Y - fitted;
+    { coef_cov, sigma2 } = _csardlOLSCov(ONEX, resid, "csardl");
+
+    k0 = cols(data) - 2;
+    gam = bt[2:1+k0];
+    phi_start = 2 + k0;
+    phi = bt[phi_start:phi_start+ppp-1];
+    cross_start = phi_start + ppp + qqq*k0;
+    cross_avg_coef = bt[cross_start:rows(bt)];
+    denom = 1 - sumc(phi);
+    bigbt = gam ./ denom;
+    bigbt_cov = _csardlLongRunCov(bt, coef_cov, ppp, qqq, cs_lags, k0);
+    phi_cov = coef_cov[phi_start:phi_start+ppp-1, phi_start:phi_start+ppp-1];
+    gamma_cov = coef_cov[2:1+k0, 2:1+k0];
+
+    struct csardlOut csaOut;
+    csaOut.p = ppp;
+    csaOut.q = qqq;
+    csaOut.cs_lags = cs_lags;
+    csaOut.nobs = rows(Y);
+    csaOut.k = k0;
+    csaOut.nunits = rows(unit_ids);
+    csaOut.bigbt = bigbt;
+    csaOut.bigbt_cov = bigbt_cov;
+    csaOut.phi = phi;
+    csaOut.phi_cov = phi_cov;
+    csaOut.gamma = gam;
+    csaOut.gamma_cov = gamma_cov;
+    csaOut.alpha = bt[1];
+    csaOut.rho = -(1 - sumc(phi));
+    csaOut.bt = bt;
+    csaOut.cross_avg = csavg;
+    csaOut.cross_avg_coef = cross_avg_coef;
+    csaOut.unit_ids = unit_ids;
+    csaOut.unit_nobs = unit_nobs;
+    csaOut.fitted = fitted;
+    csaOut.resid = resid;
+    csaOut.sigma2 = sigma2;
+    csaOut.coef_cov = coef_cov;
+
+    if print_results;
+        call printCSARDL(csaOut);
+    endif;
+
+    retp(csaOut);
+endp;
+
+/*
+**> csardlECM
+**
+**  Purpose:    Two-step CS-ARDL-ECM estimation using pooled long-run
+**              coefficients from csardl(), with lagged error correction,
+**              lagged Dy/Dx terms, and cross-sectional-average changes.
+*/
+proc (struct csardlECMOut) = csardlECM(data, ppp, qqq, cs_lags = 0, formula = "", print_results = 1);
+    local Y_ecm, ONEX_ecm, bt_ecm, fitted, resid, coef_cov, sigma2;
+
+    data = applyCSARDLFormula(data, formula);
+    call _csardlValidateEstimatorInputs(data, ppp, qqq, cs_lags, "csardlECM");
+
+    struct csardlOut csaOut;
+    csaOut = csardl(data, ppp, qqq, cs_lags, "", 0);
+
+    { Y_ecm, ONEX_ecm } = _csardlBuildECMDesign(data, ppp, qqq, cs_lags, csaOut.bigbt);
+    call _qardlCheckFullColumnRank(ONEX_ecm, "csardlECM", "ECM design matrix");
+
+    bt_ecm = _qardlSafeInv(ONEX_ecm'*ONEX_ecm, "csardlECM", "ECM moment matrix")*ONEX_ecm'*Y_ecm;
+    fitted = ONEX_ecm*bt_ecm;
+    resid = Y_ecm - fitted;
+    { coef_cov, sigma2 } = _csardlOLSCov(ONEX_ecm, resid, "csardlECM");
+
+    struct csardlECMOut cECMOut;
+    cECMOut.p = ppp;
+    cECMOut.q = qqq;
+    cECMOut.cs_lags = cs_lags;
+    cECMOut.nobs = rows(Y_ecm);
+    cECMOut.k = cols(data) - 2;
+    cECMOut.nunits = csaOut.nunits;
+    cECMOut.beta_lr = csaOut.bigbt;
+    cECMOut.rho_ols = csaOut.rho;
+    cECMOut.alpha = bt_ecm[1];
+    cECMOut.rho = bt_ecm[2];
+    cECMOut.alpha_cov = coef_cov[1, 1];
+    cECMOut.rho_cov = coef_cov[2, 2];
+    cECMOut.bt = bt_ecm;
+    cECMOut.cross_avg_coef = csaOut.cross_avg_coef;
+    cECMOut.coef_cov = coef_cov;
+    cECMOut.fitted = fitted;
+    cECMOut.resid = resid;
+    cECMOut.sigma2 = sigma2;
+
+    if print_results;
+        call printCSARDLECM(cECMOut);
+    endif;
+
+    retp(cECMOut);
+endp;
+
+/*
+**> csardlFull
+**
+**  Purpose:    Integrated CS-ARDL workflow with information-criterion lag
+**              selection followed by levels and ECM estimation.
+*/
+proc (struct csardlFullOut) = csardlFull(data, pend, qend, cs_lags = 0, formula = "", verbose = 1, criterion = "bic");
+    local pst, qst;
+
+    call _qardlValidateLagScalar(pend, "csardlFull: pend");
+    call _qardlValidateLagScalarZero(qend, "csardlFull: qend");
+    call _qardlValidateLagScalarZero(cs_lags, "csardlFull: cs_lags");
+
+    data = applyCSARDLFormula(data, formula);
+    { pst, qst } = csardlOrder(data, pend, qend, cs_lags, criterion);
+
+    if verbose;
+        sprintf("csardlFull: %s-selected p = %d, q = %d", upper(criterion), pst, qst);
+    endif;
+
+    struct csardlFullOut cfOut;
+    cfOut.pst = pst;
+    cfOut.qst = qst;
+    cfOut.cs_lags = cs_lags;
+    cfOut.nobs = rows(data);
+    cfOut.csa = csardl(data, pst, qst, cs_lags, "", 0);
+    cfOut.ecm = csardlECM(data, pst, qst, cs_lags, "", 0);
+
+    if verbose;
+        call printCSARDL(cfOut.csa);
+        call printCSARDLECM(cfOut.ecm);
+    endif;
+
+    retp(cfOut);
+endp;
+
+/*
+**> csardlOrder
+**
+**  Purpose:    Select scalar CS-ARDL p and q orders by information criterion.
+*/
+proc (2) = csardlOrder(data, pend, qend, cs_lags = 0, criterion = "bic");
+    local grid, idx;
+
+    grid = csardlOrderGrid(data, pend, qend, cs_lags, criterion);
+    idx = minindc(grid[., 3]);
+
+    retp(grid[idx, 1], grid[idx, 2]);
+endp;
+
+/*
+**> csardlOrderGrid
+**
+**  Purpose:    Return the full CS-ARDL p/q information-criterion table.
+*/
+proc (1) = csardlOrderGrid(data, pend, qend, cs_lags = 0, criterion = "bic");
+    local p, q, grid, row, ic;
+
+    call _qardlValidateLagScalar(pend, "csardlOrderGrid: pend");
+    call _qardlValidateLagScalarZero(qend, "csardlOrderGrid: qend");
+    call _qardlValidateLagScalarZero(cs_lags, "csardlOrderGrid: cs_lags");
+    call _qardlValidateICCriterion(criterion, "csardlOrderGrid");
+
+    grid = zeros(pend*(qend+1), 3);
+    row = 1;
+    p = 1;
+    do until p > pend;
+        q = 0;
+        do until q > qend;
+            ic = csardlICMean(data, p, q, cs_lags, criterion);
+            grid[row, .] = p~q~ic;
+            row = row + 1;
+            q = q + 1;
+        endo;
+        p = p + 1;
+    endo;
+
+    retp(grid);
+endp;
+
+/*
+**> csardlICMean
+**
+**  Purpose:    Compute AIC/BIC/HQ/HQC for a specified CS-ARDL lag order.
+*/
+proc (1) = csardlICMean(data, ppp, qqq, cs_lags = 0, criterion = "bic");
+    local Y, ONEX, csavg, unit_ids, unit_nobs, bt, resid, N, K, s2, ic;
+
+    call _csardlValidateEstimatorInputs(data, ppp, qqq, cs_lags, "csardlICMean");
+    call _qardlValidateICCriterion(criterion, "csardlICMean");
+
+    { Y, ONEX, csavg, unit_ids, unit_nobs } = _csardlBuildDesign(data, ppp, qqq, cs_lags);
+    call _qardlCheckFullColumnRank(ONEX, "csardlICMean", "levels design matrix");
+    bt = _qardlSafeInv(ONEX'*ONEX, "csardlICMean", "levels moment matrix")*ONEX'*Y;
+    resid = Y - ONEX*bt;
+    N = rows(Y);
+    K = cols(ONEX);
+    s2 = (resid'*resid) / N;
+
+    if criterion $== "aic";
+        ic = ln(s2) + 2*K/N;
+    elseif criterion $== "hq" or criterion $== "hqc";
+        ic = ln(s2) + 2*K*ln(ln(N))/N;
+    else;
+        ic = ln(s2) + K*ln(N)/N;
+    endif;
+
+    retp(ic);
+endp;
+
+/*
+**> csardlDiagnostics
+**
+**  Purpose:    Optional mean-group and poolability diagnostics for CS-ARDL.
+**              Estimates the same cross-sectionally augmented ARDL equation
+**              unit-by-unit, reports mean-group long-run coefficients, and
+**              computes a Wald-style poolability diagnostic for equality of
+**              unit long-run coefficients to the pooled CS-ARDL estimate.
+**
+**  Format:     diagOut = csardlDiagnostics(data, ppp, qqq);
+**              diagOut = csardlDiagnostics(data, ppp, qqq, cs_lags, formula, print_results);
+*/
+proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, formula = "", print_results = 1);
+    local unit_ids, T, nunits, k0, max_lag, n_param, unit_nobs;
+    local ii, jj, Y_i, X_i, bt_i, resid_i, cov_i, sigma2_i, beta_i, beta_cov_i;
+    local unit_bigbt, unit_phi, unit_bt, unit_sigma2, mean_group_bigbt, mean_group_se;
+    local pooled_bigbt, poolability_wald, poolability_df, poolability_pv, diff, V_i;
+
+    data = applyCSARDLFormula(data, formula);
+    call _csardlValidateEstimatorInputs(data, ppp, qqq, cs_lags, "csardlDiagnostics");
+
+    { unit_ids, T } = _csardlPanelInfo(data, "csardlDiagnostics");
+    nunits = rows(unit_ids);
+    k0 = cols(data) - 2;
+    max_lag = maxc(ppp|qqq|cs_lags);
+    unit_nobs = T - max_lag;
+    n_param = 1 + k0 + ppp + qqq*k0 + (cs_lags+1)*(k0+1);
+
+    if nunits < 2;
+        errorlog "csardlDiagnostics: at least two units are required for mean-group diagnostics";
+        end;
+    endif;
+
+    if unit_nobs <= n_param;
+        errorlog "csardlDiagnostics: each unit must have more usable observations than regressors";
+        end;
+    endif;
+
+    struct csardlOut csaOut;
+    csaOut = csardl(data, ppp, qqq, cs_lags, "", 0);
+    pooled_bigbt = csaOut.bigbt;
+
+    unit_bigbt = zeros(nunits, k0);
+    unit_phi = zeros(nunits, ppp);
+    unit_bt = zeros(nunits, n_param);
+    unit_sigma2 = zeros(nunits, 1);
+    poolability_wald = 0;
+
+    ii = 1;
+    do until ii > nunits;
+        { Y_i, X_i } = _csardlBuildUnitDesign(data, ppp, qqq, cs_lags, ii);
+        call _qardlCheckFullColumnRank(X_i, "csardlDiagnostics", "unit design matrix");
+
+        bt_i = _qardlSafeInv(X_i'*X_i, "csardlDiagnostics", "unit moment matrix")*X_i'*Y_i;
+        resid_i = Y_i - X_i*bt_i;
+        { cov_i, sigma2_i } = _csardlOLSCov(X_i, resid_i, "csardlDiagnostics");
+        beta_i = _csardlLongRunBeta(bt_i, ppp, k0);
+        beta_cov_i = _csardlLongRunCov(bt_i, cov_i, ppp, qqq, cs_lags, k0);
+
+        unit_bigbt[ii, .] = beta_i';
+        unit_phi[ii, .] = bt_i[2+k0:1+k0+ppp]';
+        unit_bt[ii, .] = bt_i';
+        unit_sigma2[ii] = sigma2_i;
+
+        diff = beta_i - pooled_bigbt;
+        V_i = _qardlSafeInv(beta_cov_i, "csardlDiagnostics", "unit long-run covariance");
+        poolability_wald = poolability_wald + diff'*V_i*diff;
+        ii = ii + 1;
+    endo;
+
+    mean_group_bigbt = zeros(k0, 1);
+    mean_group_se = zeros(k0, 1);
+    jj = 1;
+    do until jj > k0;
+        mean_group_bigbt[jj] = meanc(unit_bigbt[., jj]);
+        mean_group_se[jj] = sqrt(sumc((unit_bigbt[., jj] - mean_group_bigbt[jj])^2) /
+                                  (nunits*(nunits-1)));
+        jj = jj + 1;
+    endo;
+
+    poolability_df = (nunits - 1)*k0;
+    poolability_pv = cdfchic(poolability_wald, poolability_df);
+
+    struct csardlDiagOut diagOut;
+    diagOut.p = ppp;
+    diagOut.q = qqq;
+    diagOut.cs_lags = cs_lags;
+    diagOut.unit_nobs = unit_nobs;
+    diagOut.nobs = unit_nobs*nunits;
+    diagOut.k = k0;
+    diagOut.nunits = nunits;
+    diagOut.unit_ids = unit_ids;
+    diagOut.unit_bigbt = unit_bigbt;
+    diagOut.unit_phi = unit_phi;
+    diagOut.unit_bt = unit_bt;
+    diagOut.unit_sigma2 = unit_sigma2;
+    diagOut.mean_group_bigbt = mean_group_bigbt;
+    diagOut.mean_group_se = mean_group_se;
+    diagOut.pooled_bigbt = pooled_bigbt;
+    diagOut.poolability_wald = poolability_wald;
+    diagOut.poolability_pv = poolability_pv;
+    diagOut.poolability_df = poolability_df;
+
+    if print_results;
+        call printCSARDLDiagnostics(diagOut);
+    endif;
+
+    retp(diagOut);
+endp;
+
+/*
+**> printCSARDLDiagnostics
+**
+**  Purpose:    Print CS-ARDL mean-group and poolability diagnostics.
+*/
+proc (0) = printCSARDLDiagnostics(struct csardlDiagOut diagOut);
+    local ii;
+
+    print "====================================================================================================";
+    print "CS-ARDL Mean-Group / Poolability Diagnostics";
+    print "====================================================================================================";
+    sprintf("%-26s%12.0f        %-26s%12.0f", "No. units:", diagOut.nunits,
+            "Unit obs:", diagOut.unit_nobs);
+    sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", diagOut.p,
+            "DL lags (q):", diagOut.q);
+    sprintf("%-26s%12.0f", "CS lags:", diagOut.cs_lags);
+    print "----------------------------------------------------------------------------------------------------";
+    print "Name                  Pooled       Mean Group       MG Std. Err.";
+    print "----------------------------------------------------------------------------------------------------";
+    ii = 1;
+    do until ii > diagOut.k;
+        sprintf("  beta_x%-7d%16.6f%16.6f%16.6f",
+                ii, diagOut.pooled_bigbt[ii], diagOut.mean_group_bigbt[ii], diagOut.mean_group_se[ii]);
+        ii = ii + 1;
+    endo;
+    print "----------------------------------------------------------------------------------------------------";
+    sprintf("Poolability Wald: %16.6f    df: %8.0f    p-value: %12.6f",
+            diagOut.poolability_wald, diagOut.poolability_df, diagOut.poolability_pv);
+    print "====================================================================================================";
+endp;
+
+/*
+**> printCSARDL
+**
+**  Purpose:    Print formatted CS-ARDL levels output.
+*/
+proc (0) = printCSARDL(struct csardlOut csaOut);
+    local ii, se_beta, se_phi, z_beta, z_phi, pv_beta, pv_phi;
+
+    se_beta = sqrt(diag(csaOut.bigbt_cov));
+    se_phi = sqrt(diag(csaOut.phi_cov));
+    z_beta = csaOut.bigbt ./ se_beta;
+    z_phi = csaOut.phi ./ se_phi;
+    pv_beta = 2*cdfnc(abs(z_beta));
+    pv_phi = 2*cdfnc(abs(z_phi));
+
+    print "====================================================================================================";
+    print "CS-ARDL Levels Estimator";
+    print "====================================================================================================";
+    sprintf("%-26s%12.0f        %-26s%12.0f", "No. of obs:", csaOut.nobs,
+            "No. units:", csaOut.nunits);
+    sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", csaOut.p,
+            "DL lags (q):", csaOut.q);
+    sprintf("%-26s%12.0f        %-26s%12.0f", "CS lags:", csaOut.cs_lags,
+            "No. regressors:", csaOut.k);
+    print "----------------------------------------------------------------------------------------------------";
+    print "Name                  Coeff.       Std. Err.      z-value       P>|z|";
+    print "----------------------------------------------------------------------------------------------------";
+
+    ii = 1;
+    do until ii > csaOut.k;
+        sprintf("  beta_x%-7d%16.6f%15.6f%13.6f%12.6f",
+                ii, csaOut.bigbt[ii], se_beta[ii], z_beta[ii], pv_beta[ii]);
+        ii = ii + 1;
+    endo;
+
+    ii = 1;
+    do until ii > rows(csaOut.phi);
+        sprintf("  phi_l%-8d%16.6f%15.6f%13.6f%12.6f",
+                ii, csaOut.phi[ii], se_phi[ii], z_phi[ii], pv_phi[ii]);
+        ii = ii + 1;
+    endo;
+    sprintf("  alpha       %16.6f", csaOut.alpha[1]);
+    sprintf("  rho         %16.6f", csaOut.rho[1]);
+    print "====================================================================================================";
+endp;
+
+/*
+**> printCSARDLECM
+**
+**  Purpose:    Print formatted CS-ARDL-ECM output.
+*/
+proc (0) = printCSARDLECM(struct csardlECMOut cECMOut);
+    local se_alpha, se_rho, z_alpha, z_rho, pv_alpha, pv_rho;
+
+    se_alpha = sqrt(cECMOut.alpha_cov[1, 1]);
+    se_rho = sqrt(cECMOut.rho_cov[1, 1]);
+    z_alpha = cECMOut.alpha[1] / se_alpha;
+    z_rho = cECMOut.rho[1] / se_rho;
+    pv_alpha = 2*cdfnc(abs(z_alpha));
+    pv_rho = 2*cdfnc(abs(z_rho));
+
+    print "====================================================================================================";
+    print "CS-ARDL-ECM Estimator";
+    print "====================================================================================================";
+    sprintf("%-26s%12.0f        %-26s%12.0f", "No. of obs:", cECMOut.nobs,
+            "No. units:", cECMOut.nunits);
+    sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", cECMOut.p,
+            "DL lags (q):", cECMOut.q);
+    print "----------------------------------------------------------------------------------------------------";
+    print "Name                  Coeff.       Std. Err.      z-value       P>|z|";
+    print "----------------------------------------------------------------------------------------------------";
+    sprintf("  alpha       %16.6f%15.6f%13.6f%12.6f",
+            cECMOut.alpha[1], se_alpha, z_alpha, pv_alpha);
+    sprintf("  rho         %16.6f%15.6f%13.6f%12.6f",
+            cECMOut.rho[1], se_rho, z_rho, pv_rho);
+    print "====================================================================================================";
+endp;
+
+/*
+**> predictCSARDL
+**
+**  Purpose:    Return in-sample fitted values from an estimated CS-ARDL model.
+*/
+proc (1) = predictCSARDL(struct csardlOut csaOut, data, formula = "");
+    local Y, ONEX, csavg, unit_ids, unit_nobs;
+
+    data = applyCSARDLFormula(data, formula);
+    { Y, ONEX, csavg, unit_ids, unit_nobs } = _csardlBuildDesign(data, csaOut.p, csaOut.q, csaOut.cs_lags);
+    retp(ONEX*csaOut.bt);
+endp;
+
+/*
+**> forecastCSARDL
+**
+**  Purpose:    Forecast hook for the CS-ARDL API.  The current forecast holds
+**              future regressors and cross-sectional averages fixed and
+**              returns the last fitted value for each requested horizon.
+*/
+proc (1) = forecastCSARDL(struct csardlOut csaOut, data, h = 1, formula = "");
+    local fitted;
+
+    call _qardlValidateLagScalar(h, "forecastCSARDL: h");
+    fitted = predictCSARDL(csaOut, data, formula);
+
+    retp(ones(h, 1)*fitted[rows(fitted)]);
+endp;
+
+/*
+**> applyCSARDLFormula
+**
+**  Purpose:    Formula hook for CS-ARDL workflows.  The formula must include
+**              the unit identifier and dependent variable on the left side:
+**              "unit + y ~ x1 + x2".
+*/
+proc (1) = applyCSARDLFormula(data, formula);
+    local tilde_pos, lhs, plus_pos, unit_var, y_var, xvars, n_x;
+    local colnames, unit_idx, y_idx, x_idx, remaining, pos, part;
+
+    if strlen(formula) == 0;
+        retp(data);
+    endif;
+
+    tilde_pos = strindx(formula, "~", 1);
+    if tilde_pos == 0;
+        retp(data);
+    endif;
+
+    lhs = strtrim(strsect(formula, 1, tilde_pos - 1));
+    plus_pos = strindx(lhs, "+", 1);
+    if plus_pos == 0;
+        errorlog "applyCSARDLFormula: formula must use \"unit + y ~ x1 + x2\"";
+        end;
+    endif;
+
+    unit_var = strtrim(strsect(lhs, 1, plus_pos - 1));
+    y_var = strtrim(strsect(lhs, plus_pos + 1, strlen(lhs)));
+
+    remaining = strtrim(strsect(formula, tilde_pos + 1, strlen(formula)));
+    xvars = "";
+    n_x = 0;
+    do while strlen(remaining) > 0;
+        pos = strindx(remaining, "+", 1);
+        if pos == 0;
+            part = strtrim(remaining);
+            remaining = "";
+        else;
+            part = strtrim(strsect(remaining, 1, pos - 1));
+            remaining = strtrim(strsect(remaining, pos + 1, strlen(remaining)));
+        endif;
+        if strlen(part) > 0;
+            if n_x == 0;
+                xvars = part;
+            else;
+                xvars = xvars $| part;
+            endif;
+            n_x = n_x + 1;
+        endif;
+    endo;
+
+    colnames = lower(getcolnames(data));
+    unit_idx = indsav(lower(unit_var), colnames);
+    y_idx = indsav(lower(y_var), colnames);
+    x_idx = indsav(lower(xvars), colnames);
+
+    if rows(unit_idx) == 0;
+        errorlog "applyCSARDLFormula: unit variable not found: " $+ unit_var;
+        end;
+    endif;
+
+    if rows(y_idx) == 0;
+        errorlog "applyCSARDLFormula: dependent variable not found: " $+ y_var;
+        end;
+    endif;
+
+    if rows(x_idx) /= n_x;
+        errorlog "applyCSARDLFormula: one or more RHS variables were not found";
+        end;
+    endif;
+
+    data = data[., unit_idx | y_idx | x_idx];
+
+    retp(data);
+endp;
+
+proc (0) = _csardlValidateEstimatorInputs(data, ppp, qqq, cs_lags, caller);
+    local unit_ids, T, max_lag, n_eff, n_param, k0;
+
+    if rows(data) < 1 or cols(data) < 3;
+        errorlog caller $+ ": data must be [unit_id, y, x1, ...]";
+        end;
+    endif;
+
+    if ismiss(data);
+        errorlog caller $+ ": data contains missing values; clean or align the panel before estimation";
+        end;
+    endif;
+
+    call _qardlValidateLagScalar(ppp, caller $+ ": p");
+    call _qardlValidateLagScalarZero(qqq, caller $+ ": q");
+    call _qardlValidateLagScalarZero(cs_lags, caller $+ ": cs_lags");
+
+    { unit_ids, T } = _csardlPanelInfo(data, caller);
+    k0 = cols(data) - 2;
+    max_lag = maxc(ppp|qqq|cs_lags);
+    n_eff = (T - max_lag)*rows(unit_ids);
+    n_param = 1 + k0 + ppp + qqq*k0 + (cs_lags+1)*(k0+1);
+
+    if n_eff <= n_param;
+        errorlog caller $+ ": not enough panel observations for the requested lag orders";
+        end;
+    endif;
+endp;
+
+proc (2) = _csardlPanelInfo(data, caller);
+    local unit_ids, ii, nunits, T, start_row, finish_row;
+
+    unit_ids = data[1, 1];
+    ii = 2;
+    do until ii > rows(data);
+        if sumc(data[ii, 1] .== unit_ids) == 0;
+            unit_ids = unit_ids | data[ii, 1];
+        endif;
+        ii = ii + 1;
+    endo;
+
+    nunits = rows(unit_ids);
+    T = rows(data) / nunits;
+    if round(T) /= T;
+        errorlog caller $+ ": panel must be balanced and stacked by unit";
+        end;
+    endif;
+
+    ii = 1;
+    do until ii > nunits;
+        start_row = (ii-1)*T + 1;
+        finish_row = ii*T;
+        if maxc(abs(data[start_row:finish_row, 1] - unit_ids[ii])) > 0;
+            errorlog caller $+ ": panel must be stacked by unit with equal-length blocks";
+            end;
+        endif;
+        ii = ii + 1;
+    endo;
+
+    retp(unit_ids, T);
+endp;
+
+proc (5) = _csardlBuildDesign(data, ppp, qqq, cs_lags);
+    local unit_ids, T, nunits, k0, max_lag, N, Y, ONEX;
+    local csavg, unit_nobs, x_level, y_lags, x_lags, cs_terms;
+    local ii, jj, kk, tt, rr, start_row, src, col, block_width;
+
+    { unit_ids, T } = _csardlPanelInfo(data, "_csardlBuildDesign");
+    nunits = rows(unit_ids);
+    k0 = cols(data) - 2;
+    max_lag = maxc(ppp|qqq|cs_lags);
+    N = (T - max_lag)*nunits;
+    unit_nobs = T*ones(nunits, 1);
+    csavg = _csardlCrossAverages(data);
+
+    Y = zeros(N, 1);
+    x_level = zeros(N, k0);
+    y_lags = zeros(N, ppp);
+    block_width = (cs_lags+1)*(k0+1);
+    cs_terms = zeros(N, block_width);
+
+    if qqq > 0;
+        x_lags = zeros(N, qqq*k0);
+    endif;
+
+    rr = 1;
+    ii = 1;
+    do until ii > nunits;
+        start_row = (ii-1)*T + 1;
+        tt = max_lag + 1;
+        do until tt > T;
+            src = start_row + tt - 1;
+            Y[rr] = data[src, 2];
+            x_level[rr, .] = data[src, 3:cols(data)];
+
+            jj = 1;
+            do until jj > ppp;
+                y_lags[rr, jj] = data[src-jj, 2];
+                jj = jj + 1;
+            endo;
+
+            if qqq > 0;
+                kk = 1;
+                do until kk > k0;
+                    jj = 1;
+                    do until jj > qqq;
+                        col = (kk-1)*qqq + jj;
+                        x_lags[rr, col] = data[src-jj, 2+kk];
+                        jj = jj + 1;
+                    endo;
+                    kk = kk + 1;
+                endo;
+            endif;
+
+            jj = 0;
+            do until jj > cs_lags;
+                cs_terms[rr, jj*(k0+1)+1:(jj+1)*(k0+1)] = csavg[tt-jj, .];
+                jj = jj + 1;
+            endo;
+
+            rr = rr + 1;
+            tt = tt + 1;
+        endo;
+        ii = ii + 1;
+    endo;
+
+    ONEX = ones(N, 1)~x_level~y_lags;
+    if qqq > 0;
+        ONEX = ONEX~x_lags;
+    endif;
+    ONEX = ONEX~cs_terms;
+
+    retp(Y, ONEX, csavg, unit_ids, unit_nobs);
+endp;
+
+proc (2) = _csardlBuildECMDesign(data, ppp, qqq, cs_lags, beta_lr);
+    local unit_ids, T, nunits, k0, max_lag, N, Y, ONEX, csavg;
+    local ec_lag, dy_lags, dx_lags, cs_diff_terms;
+    local ii, jj, kk, tt, rr, start_row, src, col, block_width;
+
+    { unit_ids, T } = _csardlPanelInfo(data, "_csardlBuildECMDesign");
+    nunits = rows(unit_ids);
+    k0 = cols(data) - 2;
+    max_lag = maxc(ppp|qqq|cs_lags);
+    N = nunits*(T - max_lag - 1);
+    csavg = _csardlCrossAverages(data);
+
+    Y = zeros(N, 1);
+    ec_lag = zeros(N, 1);
+    if ppp > 1;
+        dy_lags = zeros(N, ppp-1);
+    endif;
+    if qqq > 0;
+        dx_lags = zeros(N, qqq*k0);
+    endif;
+    block_width = (cs_lags+1)*(k0+1);
+    cs_diff_terms = zeros(N, block_width);
+
+    rr = 1;
+    ii = 1;
+    do until ii > nunits;
+        start_row = (ii-1)*T + 1;
+        tt = max_lag + 2;
+        do until tt > T;
+            src = start_row + tt - 1;
+            Y[rr] = data[src, 2] - data[src-1, 2];
+            ec_lag[rr] = data[src-1, 2] - data[src-1, 3:cols(data)]*beta_lr;
+
+            if ppp > 1;
+                jj = 1;
+                do until jj > ppp-1;
+                    dy_lags[rr, jj] = data[src-jj, 2] - data[src-jj-1, 2];
+                    jj = jj + 1;
+                endo;
+            endif;
+
+            if qqq > 0;
+                kk = 1;
+                do until kk > k0;
+                    jj = 0;
+                    do until jj > qqq-1;
+                        col = (kk-1)*qqq + jj + 1;
+                        dx_lags[rr, col] = data[src-jj, 2+kk] - data[src-jj-1, 2+kk];
+                        jj = jj + 1;
+                    endo;
+                    kk = kk + 1;
+                endo;
+            endif;
+
+            jj = 0;
+            do until jj > cs_lags;
+                cs_diff_terms[rr, jj*(k0+1)+1:(jj+1)*(k0+1)] =
+                    csavg[tt-jj, .] - csavg[tt-jj-1, .];
+                jj = jj + 1;
+            endo;
+
+            rr = rr + 1;
+            tt = tt + 1;
+        endo;
+        ii = ii + 1;
+    endo;
+
+    ONEX = ones(N, 1)~ec_lag;
+    if ppp > 1;
+        ONEX = ONEX~dy_lags;
+    endif;
+    if qqq > 0;
+        ONEX = ONEX~dx_lags;
+    endif;
+    ONEX = ONEX~cs_diff_terms;
+
+    retp(Y, ONEX);
+endp;
+
+proc (2) = _csardlBuildUnitDesign(data, ppp, qqq, cs_lags, unit_index);
+    local unit_ids, T, nunits, k0, max_lag, N, Y, ONEX;
+    local csavg, x_level, y_lags, x_lags, cs_terms;
+    local jj, kk, tt, rr, start_row, src, col, block_width;
+
+    { unit_ids, T } = _csardlPanelInfo(data, "_csardlBuildUnitDesign");
+    nunits = rows(unit_ids);
+    if unit_index < 1 or unit_index > nunits;
+        errorlog "_csardlBuildUnitDesign: unit_index is outside the available panel units";
+        end;
+    endif;
+
+    k0 = cols(data) - 2;
+    max_lag = maxc(ppp|qqq|cs_lags);
+    N = T - max_lag;
+    csavg = _csardlCrossAverages(data);
+
+    Y = zeros(N, 1);
+    x_level = zeros(N, k0);
+    y_lags = zeros(N, ppp);
+    block_width = (cs_lags+1)*(k0+1);
+    cs_terms = zeros(N, block_width);
+
+    if qqq > 0;
+        x_lags = zeros(N, qqq*k0);
+    endif;
+
+    start_row = (unit_index-1)*T + 1;
+    rr = 1;
+    tt = max_lag + 1;
+    do until tt > T;
+        src = start_row + tt - 1;
+        Y[rr] = data[src, 2];
+        x_level[rr, .] = data[src, 3:cols(data)];
+
+        jj = 1;
+        do until jj > ppp;
+            y_lags[rr, jj] = data[src-jj, 2];
+            jj = jj + 1;
+        endo;
+
+        if qqq > 0;
+            kk = 1;
+            do until kk > k0;
+                jj = 1;
+                do until jj > qqq;
+                    col = (kk-1)*qqq + jj;
+                    x_lags[rr, col] = data[src-jj, 2+kk];
+                    jj = jj + 1;
+                endo;
+                kk = kk + 1;
+            endo;
+        endif;
+
+        jj = 0;
+        do until jj > cs_lags;
+            cs_terms[rr, jj*(k0+1)+1:(jj+1)*(k0+1)] = csavg[tt-jj, .];
+            jj = jj + 1;
+        endo;
+
+        rr = rr + 1;
+        tt = tt + 1;
+    endo;
+
+    ONEX = ones(N, 1)~x_level~y_lags;
+    if qqq > 0;
+        ONEX = ONEX~x_lags;
+    endif;
+    ONEX = ONEX~cs_terms;
+
+    retp(Y, ONEX);
+endp;
+
+proc (1) = _csardlCrossAverages(data);
+    local unit_ids, T, nunits, k0, csavg, tt, ii, src;
+
+    { unit_ids, T } = _csardlPanelInfo(data, "_csardlCrossAverages");
+    nunits = rows(unit_ids);
+    k0 = cols(data) - 2;
+    csavg = zeros(T, k0+1);
+
+    tt = 1;
+    do until tt > T;
+        ii = 1;
+        do until ii > nunits;
+            src = (ii-1)*T + tt;
+            csavg[tt, .] = csavg[tt, .] + data[src, 2:cols(data)];
+            ii = ii + 1;
+        endo;
+        csavg[tt, .] = csavg[tt, .] ./ nunits;
+        tt = tt + 1;
+    endo;
+
+    retp(csavg);
+endp;
+
+proc (2) = _csardlOLSCov(X, resid, caller);
+    local N, K, sigma2, invXX, cov;
+
+    N = rows(X);
+    K = cols(X);
+    sigma2 = (resid'*resid) / (N - K);
+    invXX = _qardlSafeInv(X'*X, caller, "OLS covariance moment matrix");
+    cov = sigma2*invXX;
+
+    retp(cov, sigma2);
+endp;
+
+proc (1) = _csardlLongRunBeta(bt, ppp, k0);
+    local phi_start, denom;
+
+    phi_start = 2 + k0;
+    denom = 1 - sumc(bt[phi_start:phi_start+ppp-1]);
+
+    retp(bt[2:1+k0] ./ denom);
+endp;
+
+proc (1) = _csardlLongRunCov(bt, coef_cov, ppp, qqq, cs_lags, k0);
+    local G, denom, ii, jj, phi_start;
+
+    phi_start = 2 + k0;
+    denom = 1 - sumc(bt[phi_start:phi_start+ppp-1]);
+    G = zeros(k0, rows(bt));
+
+    ii = 1;
+    do until ii > k0;
+        G[ii, 1+ii] = 1 / denom;
+        jj = 1;
+        do until jj > ppp;
+            G[ii, phi_start+jj-1] = bt[1+ii] / (denom^2);
+            jj = jj + 1;
+        endo;
+        ii = ii + 1;
+    endo;
+
+    retp(G*coef_cov*G');
+endp;

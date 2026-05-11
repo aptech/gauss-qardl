@@ -35,7 +35,7 @@ qaOut = qardl(data, ppp, qqq, tau, cov_type, hac_lags, print_results);
 - `gamma`, `gamma_cov` - Current x-level coefficients and covariance.
 - `alpha`, `rho` - Derived intercept and ECM adjustment speed by quantile.
 - `bt` - Full quantile-regression coefficient matrix.
-- `tau`, `p`, `q`, `nobs`, `k` - Estimation metadata.
+- `tau`, `p`, `q`, `qvec`, `nobs`, `k` - Estimation metadata.
 
 ## Remarks
 
@@ -43,7 +43,8 @@ Direct calls print results by default. Pass `print_results = 0` for scripts,
 tests, simulations, rolling windows, and other workflows that only need the
 returned structure. Use `qardlRobust` and `qardlHAC` as convenience wrappers
 for robust and HAC covariance estimates. For per-regressor distributed lags,
-use `qardlX`.
+use `qardlX`. Use `predictQARDL` for in-sample fitted values and
+`forecastQARDL` for the current recursive forecast hook.
 
 ## Examples
 
@@ -55,6 +56,9 @@ tau = { 0.25, 0.50, 0.75 };
 
 qaOut = qardl(data, 2, 1, tau, "robust", 0, 1);
 printQARDL(qaOut, tau);
+
+fit = predictQARDL(qaOut, data);
+fcst = forecastQARDL(qaOut, data, 4);
 ```
 
 ## Source
@@ -64,4 +68,6 @@ printQARDL(qaOut, tau);
 ## See Also
 
 [qardlFull](qardlFull.md), [qardlRobust](qardlRobust.md),
-[qardlHAC](qardlHAC.md), [qardlX](qardlX.md), [qardl_pval](qardl_pval.md)
+[qardlHAC](qardlHAC.md), [qardlX](qardlX.md),
+[predictQARDL](predictQARDL.md), [forecastQARDL](forecastQARDL.md),
+[qardl_pval](qardl_pval.md)

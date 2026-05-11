@@ -85,6 +85,30 @@ call assert_true(rows(qaOut.tau) == rows(tau) and qaOut.nobs > 0, "qardl tau/nob
 call assert_true(rows(qaOut.alpha) == rows(tau), "qardl alpha has wrong row count");
 call assert_true(rows(qaOut.rho) == rows(tau), "qardl rho has wrong row count");
 call assert_true(rows(qaOut.bt) == 7 and cols(qaOut.bt) == rows(tau), "qardl bt has wrong shape");
+call assert_true(rows(qaOut.qvec) == 2 and qaOut.qvec[1] == 1 and qaOut.qvec[2] == 1,
+                 "qardl qvec metadata invalid");
+
+qardl_fit = predictQARDL(qaOut, data);
+{ predY, predX, theta_start, phi_start } = _qardlBuildLevelsDesignX(data, qaOut.p, qaOut.qvec);
+call assert_close(qardl_fit, predX*qaOut.bt, 1e-10, "predictQARDL fitted values changed");
+qardl_fcst = forecastQARDL(qaOut, data, 3);
+call assert_true(rows(qardl_fcst) == 3 and cols(qardl_fcst) == rows(tau),
+                 "forecastQARDL returned wrong shape");
+
+struct ardlOut arOut;
+arOut = ardl(data, 2, 1, "", 0);
+{ arY, arX, ar_theta_start, ar_phi_start } = _qardlBuildLevelsDesignX(data, 2, ones(2, 1));
+expected_ar_bt = _qardlSafeInv(arX'*arX, "smoke_public_api", "expected ARDL moment matrix")*arX'*arY;
+call assert_close(arOut.bt, expected_ar_bt, 1e-10, "ardl bt does not match OLS design");
+call assert_close(predictARDL(arOut, data), arX*expected_ar_bt, 1e-10,
+                  "predictARDL fitted values changed");
+call assert_true(rows(forecastARDL(arOut, data, 3)) == 3 and cols(forecastARDL(arOut, data, 3)) == 1,
+                 "forecastARDL returned wrong shape");
+
+struct ardlFullOut afOut;
+afOut = ardlFull(data, 2, 2, "", 0, "bic");
+call assert_true(afOut.pst >= 1 and afOut.qst >= 0 and afOut.ardl_fstat > 0 and afOut.ar.nobs > 0,
+                 "ardlFull output invalid");
 
 struct qardlOut qaQ0Out;
 qaQ0Out = qardl(data, 2, 0, tau, "iid", 0, 0);
@@ -94,6 +118,8 @@ call assert_true(rows(qaQ0Out.phi_cov) == 2*rows(tau), "qardl q=0 phi covariance
 qaQ0Out = qardlX(data, 2, { 1, 0 }, tau, "robust", 0, 0);
 call assert_true(qaQ0Out.q == 1 and rows(qaQ0Out.bigbt) == 2*rows(tau),
                  "qardlX output shape changed");
+call assert_true(rows(qaQ0Out.qvec) == 2 and qaQ0Out.qvec[1] == 1 and qaQ0Out.qvec[2] == 0,
+                 "qardlX qvec metadata invalid");
 call assert_true(rows(qaQ0Out.bigbt_cov) == 2*rows(tau), "qardlX covariance shape changed");
 
 struct qardlOut qaRobustOut;

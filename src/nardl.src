@@ -1,0 +1,768 @@
+#include qardl.sdf
+
+/*
+**> nardl
+**
+**  Purpose:    Nonlinear ARDL (NARDL) levels estimation using positive and
+**              negative partial-sum decompositions of each regressor.
+**
+**  Format:     naOut = nardl(data, ppp, qqq);
+**              naOut = nardl(data, ppp, qqq, formula, print_results);
+**
+**  Input:      data      matrix or dataframe. Matrix order is [y, x1, x2, ...].
+**              ppp       scalar, AR lag order.
+**              qqq       scalar, distributed-lag order for partial-sum changes.
+**              formula   optional Wilkinson formula, e.g. "y ~ x1 + x2".
+**
+**  Output:     naOut     struct nardlOut.
+*/
+proc (struct nardlOut) = nardl(data, ppp, qqq, formula = "", print_results = 1);
+    local Y, ONEX, x_pos, x_neg, bt, denom, k0, phi_start;
+    local theta_pos, theta_neg, phi, beta_pos, beta_neg;
+    local fitted, resid, coef_cov, sigma2, bigbt_cov, phi_cov, gamma_cov;
+    local asym_wald, asym_pv, sr_wald, sr_pv, bounds_fstat;
+
+    data = applyNARDLFormula(data, formula);
+    call _nardlValidateEstimatorInputs(data, ppp, qqq, "nardl");
+
+    { Y, ONEX, x_pos, x_neg } = _nardlBuildDesign(data, ppp, qqq);
+    call _qardlCheckFullColumnRank(ONEX, "nardl", "levels design matrix");
+
+    bt = _qardlSafeInv(ONEX'*ONEX, "nardl", "levels moment matrix")*ONEX'*Y;
+    fitted = ONEX*bt;
+    resid = Y - fitted;
+    { coef_cov, sigma2 } = _nardlOLSCov(ONEX, resid, "nardl");
+
+    k0 = cols(data) - 1;
+    theta_pos = bt[2:1+k0];
+    theta_neg = bt[2+k0:1+2*k0];
+    phi_start = 2 + 2*k0;
+    phi = bt[phi_start:phi_start+ppp-1];
+    denom = 1 - sumc(phi);
+
+    beta_pos = theta_pos ./ denom;
+    beta_neg = theta_neg ./ denom;
+
+    bigbt_cov = _nardlLongRunCov(bt, coef_cov, ppp, qqq, k0);
+    phi_cov = coef_cov[phi_start:phi_start+ppp-1, phi_start:phi_start+ppp-1];
+    gamma_cov = coef_cov[2:1+2*k0, 2:1+2*k0];
+    { asym_wald, asym_pv } = _nardlLongRunAsymmetry(beta_pos, beta_neg, bigbt_cov);
+    { sr_wald, sr_pv } = _nardlShortRunAsymmetry(bt, coef_cov, ppp, qqq, k0);
+    bounds_fstat = _nardlBoundsFstat(data, ppp, qqq);
+
+    struct nardlOut naOut;
+    naOut.p = ppp;
+    naOut.q = qqq;
+    naOut.nobs = rows(Y);
+    naOut.k = k0;
+    naOut.bigbt = beta_pos | beta_neg;
+    naOut.bigbt_cov = bigbt_cov;
+    naOut.phi = phi;
+    naOut.phi_cov = phi_cov;
+    naOut.gamma = theta_pos | theta_neg;
+    naOut.gamma_cov = gamma_cov;
+    naOut.alpha = bt[1];
+    naOut.rho = -(1 - sumc(phi));
+    naOut.bt = bt;
+    naOut.beta_pos = beta_pos;
+    naOut.beta_neg = beta_neg;
+    naOut.theta_pos = theta_pos;
+    naOut.theta_neg = theta_neg;
+    naOut.asymmetry_wald = asym_wald;
+    naOut.asymmetry_pv = asym_pv;
+    naOut.short_run_wald = sr_wald;
+    naOut.short_run_pv = sr_pv;
+    naOut.bounds_fstat = bounds_fstat;
+    naOut.fitted = fitted;
+    naOut.resid = resid;
+    naOut.sigma2 = sigma2;
+    naOut.coef_cov = coef_cov;
+
+    if print_results;
+        call printNARDL(naOut);
+    endif;
+
+    retp(naOut);
+endp;
+
+/*
+**> nardlECM
+**
+**  Purpose:    Two-step NARDL-ECM estimation.  The levels NARDL estimates
+**              provide beta_pos and beta_neg, then the ECM includes the
+**              lagged error-correction term, lagged Dy terms, and positive
+**              and negative partial-sum change terms.
+*/
+proc (struct nardlECMOut) = nardlECM(data, ppp, qqq, formula = "", print_results = 1);
+    local Y_ecm, ONEX_ecm, bt_ecm, fitted, resid, coef_cov, sigma2;
+
+    data = applyNARDLFormula(data, formula);
+    call _nardlValidateEstimatorInputs(data, ppp, qqq, "nardlECM");
+
+    struct nardlOut naOut;
+    naOut = nardl(data, ppp, qqq, "", 0);
+
+    { Y_ecm, ONEX_ecm } = _nardlBuildECMDesign(data, ppp, qqq, naOut.beta_pos, naOut.beta_neg);
+    call _qardlCheckFullColumnRank(ONEX_ecm, "nardlECM", "ECM design matrix");
+
+    bt_ecm = _qardlSafeInv(ONEX_ecm'*ONEX_ecm, "nardlECM", "ECM moment matrix")*ONEX_ecm'*Y_ecm;
+    fitted = ONEX_ecm*bt_ecm;
+    resid = Y_ecm - fitted;
+    { coef_cov, sigma2 } = _nardlOLSCov(ONEX_ecm, resid, "nardlECM");
+
+    struct nardlECMOut nECMOut;
+    nECMOut.p = ppp;
+    nECMOut.q = qqq;
+    nECMOut.nobs = rows(Y_ecm);
+    nECMOut.k = cols(data) - 1;
+    nECMOut.beta_pos = naOut.beta_pos;
+    nECMOut.beta_neg = naOut.beta_neg;
+    nECMOut.rho_ols = naOut.rho;
+    nECMOut.alpha = bt_ecm[1];
+    nECMOut.rho = bt_ecm[2];
+    nECMOut.alpha_cov = coef_cov[1, 1];
+    nECMOut.rho_cov = coef_cov[2, 2];
+    nECMOut.bt = bt_ecm;
+    nECMOut.asymmetry_wald = naOut.asymmetry_wald;
+    nECMOut.asymmetry_pv = naOut.asymmetry_pv;
+    nECMOut.coef_cov = coef_cov;
+    nECMOut.fitted = fitted;
+    nECMOut.resid = resid;
+    nECMOut.sigma2 = sigma2;
+
+    if print_results;
+        call printNARDLECM(nECMOut);
+    endif;
+
+    retp(nECMOut);
+endp;
+
+/*
+**> nardlFull
+**
+**  Purpose:    Integrated NARDL workflow with information-criterion lag
+**              selection followed by levels and ECM estimation.
+*/
+proc (struct nardlFullOut) = nardlFull(data, pend, qend, formula = "", verbose = 1, criterion = "bic");
+    local pst, qst;
+
+    call _qardlValidateLagScalar(pend, "nardlFull: pend");
+    call _qardlValidateLagScalarZero(qend, "nardlFull: qend");
+
+    data = applyNARDLFormula(data, formula);
+    { pst, qst } = nardlOrder(data, pend, qend, criterion);
+
+    if verbose;
+        sprintf("nardlFull: %s-selected p = %d, q = %d", upper(criterion), pst, qst);
+    endif;
+
+    struct nardlFullOut nfOut;
+    nfOut.pst = pst;
+    nfOut.qst = qst;
+    nfOut.nobs = rows(data);
+    nfOut.na = nardl(data, pst, qst, "", 0);
+    nfOut.ecm = nardlECM(data, pst, qst, "", 0);
+
+    if verbose;
+        call printNARDL(nfOut.na);
+        call printNARDLECM(nfOut.ecm);
+    endif;
+
+    retp(nfOut);
+endp;
+
+/*
+**> nardlOrder
+**
+**  Purpose:    Select scalar NARDL p and q orders by information criterion.
+*/
+proc (2) = nardlOrder(data, pend, qend, criterion = "bic");
+    local grid, idx;
+
+    grid = nardlOrderGrid(data, pend, qend, criterion);
+    idx = minindc(grid[., 3]);
+
+    retp(grid[idx, 1], grid[idx, 2]);
+endp;
+
+/*
+**> nardlOrderGrid
+**
+**  Purpose:    Return the full NARDL p/q information-criterion table.
+*/
+proc (1) = nardlOrderGrid(data, pend, qend, criterion = "bic");
+    local p, q, grid, row, ic;
+
+    call _qardlValidateLagScalar(pend, "nardlOrderGrid: pend");
+    call _qardlValidateLagScalarZero(qend, "nardlOrderGrid: qend");
+    call _qardlValidateICCriterion(criterion, "nardlOrderGrid");
+
+    grid = zeros(pend*(qend+1), 3);
+    row = 1;
+    p = 1;
+    do until p > pend;
+        q = 0;
+        do until q > qend;
+            ic = nardlICMean(data, p, q, criterion);
+            grid[row, .] = p~q~ic;
+            row = row + 1;
+            q = q + 1;
+        endo;
+        p = p + 1;
+    endo;
+
+    retp(grid);
+endp;
+
+/*
+**> nardlICMean
+**
+**  Purpose:    Compute AIC/BIC/HQ/HQC for a specified NARDL lag order.
+*/
+proc (1) = nardlICMean(data, ppp, qqq, criterion = "bic");
+    local Y, ONEX, x_pos, x_neg, bt, resid, N, K, s2, ic;
+
+    call _nardlValidateEstimatorInputs(data, ppp, qqq, "nardlICMean");
+    call _qardlValidateICCriterion(criterion, "nardlICMean");
+
+    { Y, ONEX, x_pos, x_neg } = _nardlBuildDesign(data, ppp, qqq);
+    call _qardlCheckFullColumnRank(ONEX, "nardlICMean", "levels design matrix");
+
+    bt = _qardlSafeInv(ONEX'*ONEX, "nardlICMean", "levels moment matrix")*ONEX'*Y;
+    resid = Y - ONEX*bt;
+    N = rows(Y);
+    K = cols(ONEX);
+    s2 = (resid'*resid) / N;
+
+    if criterion $== "aic";
+        ic = ln(s2) + 2*K/N;
+    elseif criterion $== "hq" or criterion $== "hqc";
+        ic = ln(s2) + 2*K*ln(ln(N))/N;
+    else;
+        ic = ln(s2) + K*ln(N)/N;
+    endif;
+
+    retp(ic);
+endp;
+
+/*
+**> printNARDL
+**
+**  Purpose:    Print formatted NARDL levels output.
+*/
+proc (0) = printNARDL(struct nardlOut naOut);
+    local ii, se_beta, se_phi, z_beta, z_phi, pv_beta, pv_phi;
+
+    se_beta = sqrt(diag(naOut.bigbt_cov));
+    se_phi = sqrt(diag(naOut.phi_cov));
+    z_beta = naOut.bigbt ./ se_beta;
+    z_phi = naOut.phi ./ se_phi;
+    pv_beta = 2*cdfnc(abs(z_beta));
+    pv_phi = 2*cdfnc(abs(z_phi));
+
+    print "====================================================================================================";
+    print "NARDL Levels Estimator";
+    print "====================================================================================================";
+    sprintf("%-26s%12.0f        %-26s%12.0f", "No. of obs:", naOut.nobs,
+            "No. regressors:", naOut.k);
+    sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", naOut.p,
+            "DL lags (q):", naOut.q);
+    sprintf("%-26s%12.4f", "Bounds F-stat:", naOut.bounds_fstat);
+    print "----------------------------------------------------------------------------------------------------";
+    print "Name                  Coeff.       Std. Err.      z-value       P>|z|";
+    print "----------------------------------------------------------------------------------------------------";
+
+    ii = 1;
+    do until ii > naOut.k;
+        sprintf("  beta_pos_x%-4d%16.6f%15.6f%13.6f%12.6f",
+                ii, naOut.beta_pos[ii], se_beta[ii], z_beta[ii], pv_beta[ii]);
+        ii = ii + 1;
+    endo;
+
+    ii = 1;
+    do until ii > naOut.k;
+        sprintf("  beta_neg_x%-4d%16.6f%15.6f%13.6f%12.6f",
+                ii, naOut.beta_neg[ii], se_beta[naOut.k+ii],
+                z_beta[naOut.k+ii], pv_beta[naOut.k+ii]);
+        ii = ii + 1;
+    endo;
+
+    ii = 1;
+    do until ii > rows(naOut.phi);
+        sprintf("  phi_l%-8d%16.6f%15.6f%13.6f%12.6f",
+                ii, naOut.phi[ii], se_phi[ii], z_phi[ii], pv_phi[ii]);
+        ii = ii + 1;
+    endo;
+    sprintf("  alpha       %16.6f", naOut.alpha[1]);
+    sprintf("  rho         %16.6f", naOut.rho[1]);
+    print "----------------------------------------------------------------------------------------------------";
+    print "Long-run asymmetry tests: statistic | p-value";
+    ii = 1;
+    do until ii > rows(naOut.asymmetry_wald);
+        sprintf("  x%-4d      %16.6f%15.6f", ii, naOut.asymmetry_wald[ii], naOut.asymmetry_pv[ii]);
+        ii = ii + 1;
+    endo;
+    print "====================================================================================================";
+endp;
+
+/*
+**> printNARDLECM
+**
+**  Purpose:    Print formatted NARDL-ECM output.
+*/
+proc (0) = printNARDLECM(struct nardlECMOut nECMOut);
+    local se_alpha, se_rho, z_alpha, z_rho, pv_alpha, pv_rho;
+
+    se_alpha = sqrt(nECMOut.alpha_cov[1, 1]);
+    se_rho = sqrt(nECMOut.rho_cov[1, 1]);
+    z_alpha = nECMOut.alpha[1] / se_alpha;
+    z_rho = nECMOut.rho[1] / se_rho;
+    pv_alpha = 2*cdfnc(abs(z_alpha));
+    pv_rho = 2*cdfnc(abs(z_rho));
+
+    print "====================================================================================================";
+    print "NARDL-ECM Estimator";
+    print "====================================================================================================";
+    sprintf("%-26s%12.0f        %-26s%12.0f", "No. of obs:", nECMOut.nobs,
+            "No. regressors:", nECMOut.k);
+    sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", nECMOut.p,
+            "DL lags (q):", nECMOut.q);
+    print "----------------------------------------------------------------------------------------------------";
+    print "Name                  Coeff.       Std. Err.      z-value       P>|z|";
+    print "----------------------------------------------------------------------------------------------------";
+    sprintf("  alpha       %16.6f%15.6f%13.6f%12.6f",
+            nECMOut.alpha[1], se_alpha, z_alpha, pv_alpha);
+    sprintf("  rho         %16.6f%15.6f%13.6f%12.6f",
+            nECMOut.rho[1], se_rho, z_rho, pv_rho);
+    print "====================================================================================================";
+endp;
+
+/*
+**> predictNARDL
+**
+**  Purpose:    Return in-sample fitted values from an estimated NARDL model.
+*/
+proc (1) = predictNARDL(struct nardlOut naOut, data, formula = "");
+    local Y, ONEX, x_pos, x_neg;
+
+    data = applyNARDLFormula(data, formula);
+    { Y, ONEX, x_pos, x_neg } = _nardlBuildDesign(data, naOut.p, naOut.q);
+    retp(ONEX*naOut.bt);
+endp;
+
+/*
+**> forecastNARDL
+**
+**  Purpose:    Recursive NARDL forecast holding future regressors fixed at
+**              their last observed partial-sum values.
+*/
+proc (1) = forecastNARDL(struct nardlOut naOut, data, h = 1, formula = "");
+    local yy, x_pos, x_neg, dx_pos, dx_neg, ybuf, out, ii, jj, yhat;
+
+    call _qardlValidateLagScalar(h, "forecastNARDL: h");
+    data = applyNARDLFormula(data, formula);
+    yy = data[., 1];
+    { x_pos, x_neg, dx_pos, dx_neg } = _nardlPartialSumsWithDiffs(data);
+
+    ybuf = zeros(naOut.p, 1);
+    jj = 1;
+    do until jj > naOut.p;
+        ybuf[jj] = yy[rows(yy)+1-jj];
+        jj = jj + 1;
+    endo;
+
+    out = zeros(h, 1);
+    ii = 1;
+    do until ii > h;
+        yhat = naOut.alpha[1]
+             + x_pos[rows(x_pos), .]*naOut.theta_pos
+             + x_neg[rows(x_neg), .]*naOut.theta_neg
+             + naOut.phi'*ybuf;
+        out[ii] = yhat;
+        if naOut.p > 1;
+            ybuf[2:naOut.p] = ybuf[1:naOut.p-1];
+        endif;
+        ybuf[1] = yhat;
+        ii = ii + 1;
+    endo;
+
+    retp(out);
+endp;
+
+/*
+**> applyNARDLFormula
+**
+**  Purpose:    Formula hook for NARDL workflows.  Uses the same Wilkinson
+**              parser as applyQARDLFormula().
+*/
+proc (1) = applyNARDLFormula(data, formula);
+    retp(_applyFormula(data, formula));
+endp;
+
+proc (0) = _nardlValidateEstimatorInputs(data, ppp, qqq, caller);
+    local max_lag, n_eff, n_param, k0;
+
+    if rows(data) < 1 or cols(data) < 2;
+        errorlog caller $+ ": data must have at least one dependent variable and one regressor column";
+        end;
+    endif;
+
+    if ismiss(data);
+        errorlog caller $+ ": data contains missing values; clean or align the sample before estimation";
+        end;
+    endif;
+
+    call _qardlValidateLagScalar(ppp, caller $+ ": p");
+    call _qardlValidateLagScalarZero(qqq, caller $+ ": q");
+
+    k0 = cols(data) - 1;
+    max_lag = maxc(ppp|qqq);
+    n_eff = rows(data) - max_lag;
+    n_param = 1 + 2*k0 + ppp + 2*qqq*k0;
+
+    if n_eff <= n_param;
+        errorlog caller $+ ": not enough observations for the requested lag orders";
+        end;
+    endif;
+endp;
+
+proc (4) = _nardlBuildDesign(data, ppp, qqq);
+    local nn, k0, max_lag, N, yy, Y, ONEX;
+    local x_pos, x_neg, dx_pos, dx_neg;
+    local pos_level, neg_level, y_lags, dx_pos_lags, dx_neg_lags;
+    local ii, jj, src, col;
+
+    nn = rows(data);
+    k0 = cols(data) - 1;
+    max_lag = maxc(ppp|qqq);
+    N = nn - max_lag;
+    yy = data[., 1];
+
+    { x_pos, x_neg, dx_pos, dx_neg } = _nardlPartialSumsWithDiffs(data);
+
+    Y = yy[max_lag+1:nn];
+    pos_level = zeros(N, k0);
+    neg_level = zeros(N, k0);
+    y_lags = zeros(N, ppp);
+
+    ii = 1;
+    do until ii > N;
+        src = max_lag + ii;
+        pos_level[ii, .] = x_pos[src, .];
+        neg_level[ii, .] = x_neg[src, .];
+        jj = 1;
+        do until jj > ppp;
+            y_lags[ii, jj] = yy[src-jj];
+            jj = jj + 1;
+        endo;
+        ii = ii + 1;
+    endo;
+
+    ONEX = ones(N, 1)~pos_level~neg_level~y_lags;
+
+    if qqq > 0;
+        dx_pos_lags = zeros(N, qqq*k0);
+        dx_neg_lags = zeros(N, qqq*k0);
+        ii = 1;
+        do until ii > k0;
+            jj = 0;
+            do until jj > qqq-1;
+                col = (ii-1)*qqq + jj + 1;
+                dx_pos_lags[., col] = dx_pos[max_lag+1-jj:nn-jj, ii];
+                dx_neg_lags[., col] = dx_neg[max_lag+1-jj:nn-jj, ii];
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+        ONEX = ONEX~dx_pos_lags~dx_neg_lags;
+    endif;
+
+    retp(Y, ONEX, x_pos, x_neg);
+endp;
+
+proc (2) = _nardlBuildECMDesign(data, ppp, qqq, beta_pos, beta_neg);
+    local nn, k0, max_lag, N, yy, x_pos, x_neg, dx_pos, dx_neg;
+    local Y, ec_lag, ONEX, dy_lags, dx_pos_lags, dx_neg_lags;
+    local ii, jj, src, col;
+
+    nn = rows(data);
+    k0 = cols(data) - 1;
+    max_lag = maxc(ppp|qqq);
+    N = nn - max_lag - 1;
+    yy = data[., 1];
+    { x_pos, x_neg, dx_pos, dx_neg } = _nardlPartialSumsWithDiffs(data);
+
+    Y = zeros(N, 1);
+    ec_lag = zeros(N, 1);
+
+    ii = 1;
+    do until ii > N;
+        src = max_lag + 1 + ii;
+        Y[ii] = yy[src] - yy[src-1];
+        ec_lag[ii] = yy[src-1] - x_pos[src-1, .]*beta_pos - x_neg[src-1, .]*beta_neg;
+        ii = ii + 1;
+    endo;
+
+    ONEX = ones(N, 1)~ec_lag;
+
+    if ppp > 1;
+        dy_lags = zeros(N, ppp-1);
+        ii = 1;
+        do until ii > N;
+            src = max_lag + 1 + ii;
+            jj = 1;
+            do until jj > ppp-1;
+                dy_lags[ii, jj] = yy[src-jj] - yy[src-jj-1];
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+        ONEX = ONEX~dy_lags;
+    endif;
+
+    if qqq > 0;
+        dx_pos_lags = zeros(N, qqq*k0);
+        dx_neg_lags = zeros(N, qqq*k0);
+        ii = 1;
+        do until ii > k0;
+            jj = 0;
+            do until jj > qqq-1;
+                col = (ii-1)*qqq + jj + 1;
+                dx_pos_lags[., col] = dx_pos[max_lag+2-jj:nn-jj, ii];
+                dx_neg_lags[., col] = dx_neg[max_lag+2-jj:nn-jj, ii];
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+        ONEX = ONEX~dx_pos_lags~dx_neg_lags;
+    endif;
+
+    retp(Y, ONEX);
+endp;
+
+proc (1) = _nardlBoundsFstat(data, ppp, qqq);
+    local Y, XU, XR, bt_u, bt_r, resid_u, resid_r, rss_u, rss_r;
+    local k0, q_restrict, N, K_total, rest_start;
+
+    { Y, XU } = _nardlBuildUECMDesign(data, ppp, qqq);
+    call _qardlCheckFullColumnRank(XU, "nardl", "UECM bounds design matrix");
+
+    k0 = cols(data) - 1;
+    q_restrict = 1 + 2*k0;
+    rest_start = 3 + 2*k0;
+    if cols(XU) >= rest_start;
+        XR = XU[., 1]~XU[., rest_start:cols(XU)];
+    else;
+        XR = XU[., 1];
+    endif;
+    call _qardlCheckFullColumnRank(XR, "nardl", "restricted UECM bounds design matrix");
+
+    bt_u = _qardlSafeInv(XU'*XU, "nardl", "UECM bounds moment matrix")*XU'*Y;
+    bt_r = _qardlSafeInv(XR'*XR, "nardl", "restricted UECM bounds moment matrix")*XR'*Y;
+    resid_u = Y - XU*bt_u;
+    resid_r = Y - XR*bt_r;
+    rss_u = resid_u'*resid_u;
+    rss_r = resid_r'*resid_r;
+    N = rows(Y);
+    K_total = cols(XU);
+
+    retp(((rss_r - rss_u) / q_restrict) / (rss_u / (N - K_total)));
+endp;
+
+proc (2) = _nardlBuildUECMDesign(data, ppp, qqq);
+    local nn, k0, max_lag, N, yy, x_pos, x_neg, dx_pos, dx_neg;
+    local Y, y_lag, pos_lag, neg_lag, ONEX, dy_lags, dx_pos_lags, dx_neg_lags;
+    local ii, jj, src, col;
+
+    nn = rows(data);
+    k0 = cols(data) - 1;
+    max_lag = maxc(ppp|qqq);
+    N = nn - max_lag - 1;
+    yy = data[., 1];
+    { x_pos, x_neg, dx_pos, dx_neg } = _nardlPartialSumsWithDiffs(data);
+
+    Y = zeros(N, 1);
+    y_lag = zeros(N, 1);
+    pos_lag = zeros(N, k0);
+    neg_lag = zeros(N, k0);
+
+    ii = 1;
+    do until ii > N;
+        src = max_lag + 1 + ii;
+        Y[ii] = yy[src] - yy[src-1];
+        y_lag[ii] = yy[src-1];
+        pos_lag[ii, .] = x_pos[src-1, .];
+        neg_lag[ii, .] = x_neg[src-1, .];
+        ii = ii + 1;
+    endo;
+
+    ONEX = ones(N, 1)~y_lag~pos_lag~neg_lag;
+
+    if ppp > 1;
+        dy_lags = zeros(N, ppp-1);
+        ii = 1;
+        do until ii > N;
+            src = max_lag + 1 + ii;
+            jj = 1;
+            do until jj > ppp-1;
+                dy_lags[ii, jj] = yy[src-jj] - yy[src-jj-1];
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+        ONEX = ONEX~dy_lags;
+    endif;
+
+    if qqq > 0;
+        dx_pos_lags = zeros(N, qqq*k0);
+        dx_neg_lags = zeros(N, qqq*k0);
+        ii = 1;
+        do until ii > k0;
+            jj = 0;
+            do until jj > qqq-1;
+                col = (ii-1)*qqq + jj + 1;
+                dx_pos_lags[., col] = dx_pos[max_lag+2-jj:nn-jj, ii];
+                dx_neg_lags[., col] = dx_neg[max_lag+2-jj:nn-jj, ii];
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+        ONEX = ONEX~dx_pos_lags~dx_neg_lags;
+    endif;
+
+    retp(Y, ONEX);
+endp;
+
+proc (2) = _nardlPartialSums(data);
+    local x_pos, x_neg, dx_pos, dx_neg;
+    { x_pos, x_neg, dx_pos, dx_neg } = _nardlPartialSumsWithDiffs(data);
+    retp(x_pos, x_neg);
+endp;
+
+proc (4) = _nardlPartialSumsWithDiffs(data);
+    local nn, k0, xx, x_pos, x_neg, dx_pos, dx_neg, delta, ii, jj;
+
+    nn = rows(data);
+    k0 = cols(data) - 1;
+    xx = data[., 2:cols(data)];
+    x_pos = zeros(nn, k0);
+    x_neg = zeros(nn, k0);
+    dx_pos = zeros(nn, k0);
+    dx_neg = zeros(nn, k0);
+
+    ii = 2;
+    do until ii > nn;
+        jj = 1;
+        do until jj > k0;
+            delta = xx[ii, jj] - xx[ii-1, jj];
+            x_pos[ii, jj] = x_pos[ii-1, jj];
+            x_neg[ii, jj] = x_neg[ii-1, jj];
+            if delta > 0;
+                dx_pos[ii, jj] = delta;
+                x_pos[ii, jj] = x_pos[ii, jj] + delta;
+            elseif delta < 0;
+                dx_neg[ii, jj] = delta;
+                x_neg[ii, jj] = x_neg[ii, jj] + delta;
+            endif;
+            jj = jj + 1;
+        endo;
+        ii = ii + 1;
+    endo;
+
+    retp(x_pos, x_neg, dx_pos, dx_neg);
+endp;
+
+proc (2) = _nardlOLSCov(X, resid, caller);
+    local N, K, sigma2, invXX, cov;
+
+    N = rows(X);
+    K = cols(X);
+    sigma2 = (resid'*resid) / (N - K);
+    invXX = _qardlSafeInv(X'*X, caller, "OLS covariance moment matrix");
+    cov = sigma2*invXX;
+
+    retp(cov, sigma2);
+endp;
+
+proc (1) = _nardlLongRunCov(bt, coef_cov, ppp, qqq, k0);
+    local G, denom, row, ii, jj, phi_start;
+
+    phi_start = 2 + 2*k0;
+    denom = 1 - sumc(bt[phi_start:phi_start+ppp-1]);
+    G = zeros(2*k0, rows(bt));
+
+    ii = 1;
+    do until ii > k0;
+        row = ii;
+        G[row, 1+ii] = 1 / denom;
+        jj = 1;
+        do until jj > ppp;
+            G[row, phi_start+jj-1] = bt[1+ii] / (denom^2);
+            jj = jj + 1;
+        endo;
+
+        row = k0 + ii;
+        G[row, 1+k0+ii] = 1 / denom;
+        jj = 1;
+        do until jj > ppp;
+            G[row, phi_start+jj-1] = bt[1+k0+ii] / (denom^2);
+            jj = jj + 1;
+        endo;
+        ii = ii + 1;
+    endo;
+
+    retp(G*coef_cov*G');
+endp;
+
+proc (2) = _nardlLongRunAsymmetry(beta_pos, beta_neg, bigbt_cov);
+    local k0, wald, pv, ii, R, diff, V;
+
+    k0 = rows(beta_pos);
+    wald = zeros(k0, 1);
+    pv = zeros(k0, 1);
+
+    ii = 1;
+    do until ii > k0;
+        R = zeros(1, 2*k0);
+        R[1, ii] = 1;
+        R[1, k0+ii] = -1;
+        diff = R*(beta_pos|beta_neg);
+        V = R*bigbt_cov*R';
+        wald[ii] = (diff^2) / V;
+        pv[ii] = cdfchic(wald[ii], 1);
+        ii = ii + 1;
+    endo;
+
+    retp(wald, pv);
+endp;
+
+proc (2) = _nardlShortRunAsymmetry(bt, coef_cov, ppp, qqq, k0);
+    local wald, pv, ii, jj, R, diff, V, pos_start, neg_start;
+
+    if qqq == 0;
+        retp(error(0), error(0));
+    endif;
+
+    wald = zeros(k0, 1);
+    pv = zeros(k0, 1);
+    pos_start = 2 + 2*k0 + ppp;
+    neg_start = pos_start + qqq*k0;
+
+    ii = 1;
+    do until ii > k0;
+        R = zeros(1, rows(bt));
+        jj = 1;
+        do until jj > qqq;
+            R[1, pos_start + (ii-1)*qqq + jj - 1] = 1;
+            R[1, neg_start + (ii-1)*qqq + jj - 1] = -1;
+            jj = jj + 1;
+        endo;
+        diff = R*bt;
+        V = R*coef_cov*R';
+        wald[ii] = (diff^2) / V;
+        pv[ii] = cdfchic(wald[ii], 1);
+        ii = ii + 1;
+    endo;
+
+    retp(wald, pv);
+endp;

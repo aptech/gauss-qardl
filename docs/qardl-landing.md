@@ -5,9 +5,10 @@
 The GAUSS QARDL library implements Quantile Autoregressive Distributed Lag
 models for quantile cointegration, asymmetric long-run relationships, and
 heterogeneous short-run dynamics. The package includes levels-form QARDL,
-two-step QARDL-ECM estimation, ARDL bounds testing, lag selection, Wald tests,
-bootstrap confidence intervals, rolling estimation, quantile impulse responses,
-plotting helpers, and CSV export tools.
+two-step QARDL-ECM estimation, OLS ARDL, NARDL, CS-ARDL, ARDL bounds testing,
+lag selection, Wald tests, bootstrap confidence intervals, rolling estimation,
+quantile impulse responses, prediction/forecast hooks, plotting helpers, and
+CSV export tools.
 
 The minimum supported GAUSS version is GAUSS 26.
 
@@ -24,6 +25,11 @@ library qardl;
 
 ### Integrated Workflow
 
+[ardlFull](command-reference/ardlFull.md)
+
+Runs lag selection, ARDL bounds testing, and levels-form ARDL estimation in
+one workflow.
+
 [qardlFull](command-reference/qardlFull.md)
 
 Runs lag selection, ARDL bounds testing, levels-form QARDL, and two-step
@@ -35,6 +41,10 @@ Converts a named GAUSS dataframe and formula string into the numeric matrix
 ordering expected by QARDL estimators.
 
 ### Estimation
+
+[ardl](command-reference/ardl.md)
+
+Estimates the levels-form ARDL model by OLS.
 
 [qardl](command-reference/qardl.md)
 
@@ -70,6 +80,15 @@ Estimates QARDL-ECM with Newey-West/Bartlett HAC covariance for alpha and rho.
 [qardlECMX](command-reference/qardlECMX.md)
 
 Estimates QARDL-ECM with per-regressor distributed-lag orders.
+
+[nardl](command-reference/nardl.md)
+
+Estimates nonlinear ARDL models with positive and negative partial-sum
+decompositions.
+
+[csardl](command-reference/csardl.md)
+
+Estimates pooled cross-sectionally augmented ARDL panel models.
 
 ### Lag Selection
 
@@ -185,6 +204,10 @@ Computes quantile impulse response functions.
 
 ### Output, Plotting, And Export
 
+[printARDL](command-reference/printARDL.md)
+
+Prints formatted levels-form ARDL results.
+
 [printQARDL](command-reference/printQARDL.md)
 
 Prints formatted levels-form QARDL results.
@@ -192,6 +215,22 @@ Prints formatted levels-form QARDL results.
 [printQARDLECM](command-reference/printQARDLECM.md)
 
 Prints formatted two-step QARDL-ECM results.
+
+[predictARDL](command-reference/predictARDL.md)
+
+Returns in-sample fitted values from an estimated ARDL model.
+
+[forecastARDL](command-reference/forecastARDL.md)
+
+Computes recursive ARDL forecasts.
+
+[predictQARDL](command-reference/predictQARDL.md)
+
+Returns in-sample fitted values from an estimated QARDL model.
+
+[forecastQARDL](command-reference/forecastQARDL.md)
+
+Computes recursive QARDL forecasts by quantile.
 
 [plotQARDL](command-reference/plotQARDL.md)
 

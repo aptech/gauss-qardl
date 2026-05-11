@@ -3,20 +3,9 @@ param(
     [string]$GaussExe = "C:\gauss26\tgauss.exe"
 )
 
-$examplesDir = Join-Path $RepoRoot "examples"
-
-$examples = @(
-    "demo.e",
-    "ardl_example.e",
-    "qardlestimation.e",
-    "qardl_est_tests.e",
-    "rolling_qardl.e",
-    "sp500.e",
-    "nardl_example.e",
-    "csardl_example.e",
-    "replicate_cho_dividend_policy.e",
-    "wald_tests_sim.e"
-)
+$testsDir = Join-Path $RepoRoot "tests"
+$srcDir = Join-Path $RepoRoot "src"
+$benchmark = "benchmark_nardl_csardl.e"
 
 function Invoke-GaussBatch {
     param(
@@ -61,25 +50,29 @@ function Remove-TemporaryFile {
     }
 }
 
-foreach ($example in $examples) {
-    $wrapper = Join-Path ([System.IO.Path]::GetTempPath()) ("qardl_example_" + [System.Guid]::NewGuid().ToString("N") + ".e")
-    $gaussExamplesDir = $examplesDir -replace "\\", "/"
-    Set-Content -Path $wrapper -Value @(
-        "new;",
-        "chdir `"$gaussExamplesDir`";",
-        "run $example;"
-    )
+$wrapper = Join-Path ([System.IO.Path]::GetTempPath()) ("qardl_bench_" + [System.Guid]::NewGuid().ToString("N") + ".e")
+$gaussTestsDir = $testsDir -replace "\\", "/"
+$gaussSrcDir = $srcDir -replace "\\", "/"
+Set-Content -Path $wrapper -Value @(
+    "new;",
+    "chdir `"$gaussSrcDir`";",
+    "run `"$gaussTestsDir/$benchmark`";"
+)
 
-    try {
-        $result = Invoke-GaussBatch -Exe $GaussExe -Arguments @("-nb", "-b", "-x", $wrapper)
-        $output = $result.Output
-        $output
-        if ($result.ExitCode -ne 0 -or ($output -match "Program execute failed|error G[0-9]+|Program compile failed")) {
-            exit 1
-        }
-    } finally {
-        Remove-TemporaryFile -Path $wrapper
+$watch = [System.Diagnostics.Stopwatch]::StartNew()
+try {
+    $result = Invoke-GaussBatch -Exe $GaussExe -Arguments @("-nb", "-b", "-x", $wrapper)
+    $watch.Stop()
+    $output = $result.Output
+    $output
+    if ($result.ExitCode -ne 0 -or ($output -match "Program execute failed|error G[0-9]+|Program compile failed")) {
+        exit 1
     }
+} finally {
+    if ($watch.IsRunning) {
+        $watch.Stop()
+    }
+    Remove-TemporaryFile -Path $wrapper
 }
 
-Write-Host "run_examples_smoke.ps1: PASS"
+Write-Host ("run_new_model_benchmarks.ps1: PASS in {0:N3} seconds" -f $watch.Elapsed.TotalSeconds)

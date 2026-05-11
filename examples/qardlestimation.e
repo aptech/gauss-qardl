@@ -49,6 +49,14 @@ print "Metadata p q k nobs:" qfOut.qa.p~qfOut.qa.q~qfOut.qa.k~qfOut.qa.nobs;
 
 printQARDL(qfOut.qa, tau);
 
+qardl_fit = predictQARDL(qfOut.qa, data);
+qardl_fcst = forecastQARDL(qfOut.qa, data, 3);
+
+print;
+print "Prediction rows and 3-step QARDL forecast";
+print rows(qardl_fit);
+print qardl_fcst;
+
 { p_beta, p_phi, p_gamma } = qardl_pval(qfOut.qa);
 print;
 print "Long-run beta estimates and p-values";

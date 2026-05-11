@@ -19,6 +19,8 @@
     "src": [
         "qardl.sdf",
         "qardl.src",
+        "nardl.src",
+        "csardl.src",
         "wtestlrb.src",
         "wtestsrp.src",
         "wtestsrg.src",

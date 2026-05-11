@@ -13,7 +13,7 @@ cls;
 data = loadd(__FILE_DIR $+ "qardl_data.dat");
 data = data[1:1000, 1:3];
 
-tau = seqa(0.1, 0.1, 9);
+tau = seqa(0.1, 0.2, 5);
 { pst, qst } = pqorder(data, 7, 7);
 
 // Fit the full sample once so dimensions can be read from metadata.

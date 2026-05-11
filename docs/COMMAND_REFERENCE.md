@@ -7,11 +7,13 @@ sections.
 
 ## Core Workflow
 
+- [ardlFull](command-reference/ardlFull.md)
 - [qardlFull](command-reference/qardlFull.md)
 - [applyQARDLFormula](command-reference/applyQARDLFormula.md)
 
 ## Estimation
 
+- [ardl](command-reference/ardl.md)
 - [qardl](command-reference/qardl.md)
 - [qardlRobust](command-reference/qardlRobust.md)
 - [qardlHAC](command-reference/qardlHAC.md)
@@ -20,6 +22,8 @@ sections.
 - [qardlECMRobust](command-reference/qardlECMRobust.md)
 - [qardlECMHAC](command-reference/qardlECMHAC.md)
 - [qardlECMX](command-reference/qardlECMX.md)
+- [nardl](command-reference/nardl.md)
+- [csardl](command-reference/csardl.md)
 
 ## Lag Selection
 
@@ -29,6 +33,8 @@ sections.
 - [pqorderRangeGrid](command-reference/pqorderRangeGrid.md)
 - [pqorderX](command-reference/pqorderX.md)
 - [pqorderXGrid](command-reference/pqorderXGrid.md)
+- nardlOrder / nardlOrderGrid
+- csardlOrder / csardlOrderGrid
 - [icmean](command-reference/icmean.md)
 
 ## ARDL Bounds Testing
@@ -50,6 +56,7 @@ sections.
 - [wtestsrg](command-reference/wtestsrg.md)
 - [wtestconst](command-reference/wtestconst.md)
 - [wtestsym](command-reference/wtestsym.md)
+- [csardlDiagnostics](command-reference/csardlDiagnostics.md)
 
 ## Bootstrap, Rolling, And Dynamics
 
@@ -65,8 +72,13 @@ sections.
 
 ## Output, Plotting, And Export
 
+- [printARDL](command-reference/printARDL.md)
+- [predictARDL](command-reference/predictARDL.md)
+- [forecastARDL](command-reference/forecastARDL.md)
 - [printQARDL](command-reference/printQARDL.md)
 - [printQARDLECM](command-reference/printQARDLECM.md)
+- [predictQARDL](command-reference/predictQARDL.md)
+- [forecastQARDL](command-reference/forecastQARDL.md)
 - [plotQARDL](command-reference/plotQARDL.md)
 - [plotQARDLbands](command-reference/plotQARDLbands.md)
 - [plotRollingQARDL](command-reference/plotRollingQARDL.md)

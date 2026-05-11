@@ -20,11 +20,11 @@ new;
 library qardl;
 
 
-// Sample size
-nnn = 2000;   
+// Sample size. Increase for serious Monte Carlo work.
+nnn = 500;
 
-// Number of iterations
-kkk = 2000;           
+// Number of iterations. Kept small so the example runner stays batch-friendly.
+kkk = 25;
 
 // Quantile levels
 tau = { 0.2, 0.4, 0.6, 0.8 }; 

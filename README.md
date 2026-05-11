@@ -9,7 +9,7 @@ conditional quantiles.
 This library is based on original GAUSS code by
 [Jin Seo Cho](https://web.yonsei.ac.kr/jinseocho/qardl.htm), updated for
 GAUSS 26 with structures, `quantileFit`, modern workflow helpers, robust/HAC
-inference, ARDL bounds testing, bootstrap tools, and release tests.
+inference, ARDL/NARDL/CS-ARDL workflows, bootstrap tools, and release tests.
 
 ## Requirements
 
@@ -54,12 +54,15 @@ qfOut = qardlFull(macro, 8, 8, tau,
 
 ## Main Features
 
-- Levels-form QARDL estimation: `qardl`, `qardlRobust`, `qardlHAC`, `qardlX`.
+- Levels-form ARDL and QARDL estimation: `ardl`, `qardl`, `qardlRobust`,
+  `qardlHAC`, `qardlX`.
 - Two-step QARDL-ECM estimation: `qardlECM`, `qardlECMRobust`,
   `qardlECMHAC`, `qardlECMX`.
+- NARDL and CS-ARDL model families with levels, ECM, full-workflow,
+  print, prediction, and forecast hooks.
 - Direct estimator calls print GAUSS-style result tables by default, with a
   final `print_results = 0` option for silent scripting.
-- Integrated workflow: `qardlFull`.
+- Integrated workflows: `ardlFull`, `qardlFull`, `nardlFull`, `csardlFull`.
 - Formula dataframe support: `applyQARDLFormula`.
 - Lag selection with BIC, AIC, HQ, and HQC: `pqorder`, `pqorderRange`,
   `pqorderGrid`, `pqorderX`, `pqorderXGrid`.
@@ -100,8 +103,11 @@ The `examples/` directory contains runnable GAUSS programs:
 | File | Description |
 | --- | --- |
 | `demo.e` | Modern end-to-end workflow with `qardlFull`, tests, QIRF, bootstrap, and plots |
+| `ardl_example.e` | OLS ARDL estimation, formula input, full workflow, prediction, and forecast |
 | `qardlestimation.e` | Simulated-data workflow with p-values, QIRF, and ECM bootstrap |
 | `qardl_est_tests.e` | Estimation, formatted output, automatic tests, and custom Wald restrictions |
+| `nardl_example.e` | NARDL fixed-order, formula, lag-selection, prediction, and forecast workflow |
+| `csardl_example.e` | CS-ARDL panel workflow with formula input, prediction, forecast, and diagnostics |
 | `rolling_qardl.e` | Rolling QARDL and rolling QARDL-ECM workflows |
 | `sp500.e` | Shiller dividend/earnings application using formula support |
 | `replicate_cho_dividend_policy.e` | Public-data scaffold for the Cho-Kim-Shin dividend-policy application |

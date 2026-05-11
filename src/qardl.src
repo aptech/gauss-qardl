@@ -47,6 +47,126 @@
 
 #include qardl.sdf
 
+/*
+**> ardl
+**
+**  Purpose:    Perform levels-form ARDL estimation by OLS.
+**
+**  Format:     arOut = ardl(data, ppp, qqq);
+**              arOut = ardl(data, ppp, qqq, formula, print_results);
+**
+**  Input:      data    (n x (1+k)) matrix or dataframe. Matrix order is
+**                      [y, x1, x2, ...].
+**              ppp     scalar AR lag order.
+**              qqq     scalar distributed-lag order.
+**              formula optional formula string "y ~ x1 + x2".
+**
+**  Output:     arOut   struct ardlOut.
+*/
+proc (struct ardlOut) = ardl(data, ppp, qqq, formula = "", print_results = 1);
+    local Y, ONEX, theta_start, phi_start, qvec, k0, bt, fitted, resid;
+    local coef_cov, sigma2, theta, phi, denom, bigbt, bigbt_cov;
+    local dx_count, dx_coef, gamma_cov, phi_cov;
+
+    data = applyQARDLFormula(data, formula);
+    call _qardlValidateEstimatorInputs(data, ppp, qqq, { 0.5 }, "ardl");
+
+    k0 = cols(data) - 1;
+    qvec = qqq*ones(k0, 1);
+    { Y, ONEX, theta_start, phi_start } = _qardlBuildLevelsDesignX(data, ppp, qvec);
+    call _qardlCheckFullColumnRank(ONEX, "ardl", "levels design matrix");
+
+    bt = _qardlSafeInv(ONEX'*ONEX, "ardl", "levels moment matrix")*ONEX'*Y;
+    fitted = ONEX*bt;
+    resid = Y - fitted;
+    { coef_cov, sigma2 } = _ardlOLSCov(ONEX, resid, "ardl");
+
+    theta = bt[theta_start:theta_start+k0-1];
+    phi = bt[phi_start:phi_start+ppp-1];
+    denom = 1 - sumc(phi);
+    bigbt = theta ./ denom;
+    bigbt_cov = _ardlLongRunCov(bt, coef_cov, theta_start, phi_start, k0, ppp);
+    phi_cov = coef_cov[phi_start:phi_start+ppp-1, phi_start:phi_start+ppp-1];
+    gamma_cov = coef_cov[theta_start:theta_start+k0-1, theta_start:theta_start+k0-1];
+
+    dx_count = theta_start - 2;
+    if dx_count > 0;
+        dx_coef = bt[2:theta_start-1];
+    else;
+        dx_coef = error(0);
+    endif;
+
+    struct ardlOut arOut;
+    arOut.p = ppp;
+    arOut.q = qqq;
+    arOut.qvec = qvec;
+    arOut.nobs = rows(Y);
+    arOut.k = k0;
+    arOut.bigbt = bigbt;
+    arOut.bigbt_cov = bigbt_cov;
+    arOut.phi = phi;
+    arOut.phi_cov = phi_cov;
+    arOut.gamma = theta;
+    arOut.gamma_cov = gamma_cov;
+    arOut.dx_coef = dx_coef;
+    arOut.alpha = bt[1];
+    arOut.rho = -denom;
+    arOut.bt = bt;
+    arOut.fitted = fitted;
+    arOut.resid = resid;
+    arOut.sigma2 = sigma2;
+    arOut.coef_cov = coef_cov;
+
+    if print_results;
+        call printARDL(arOut);
+    endif;
+
+    retp(arOut);
+endp;
+
+/*
+**> ardlFull
+**
+**  Purpose:    Integrated ARDL workflow: lag selection, ARDL bounds test, and
+**              levels-form ARDL estimation.
+**
+**  Format:     afOut = ardlFull(data, pend, qend);
+**              afOut = ardlFull(data, pend, qend, formula, verbose, criterion);
+*/
+proc (struct ardlFullOut) = ardlFull(data, pend, qend, formula = "", verbose = 1, criterion = "bic");
+    local pst, qst, fstat, cv;
+
+    if verbose /= 0 and verbose /= 1;
+        errorlog "ardlFull: verbose must be 0 or 1";
+        end;
+    endif;
+
+    data = applyQARDLFormula(data, formula);
+    call _qardlValidateSearchInputs(data, pend, qend, { 0.5 }, "ardlFull");
+    call _qardlValidateICCriterion(criterion, "ardlFull");
+
+    { pst, qst } = pqorder(data, pend, qend, criterion);
+    if verbose;
+        sprintf("ardlFull: %s-selected p = %d, q = %d", upper(criterion), pst, qst);
+        print "ardlFull: running ARDL bounds test ...";
+    endif;
+
+    { fstat, cv } = ardlbounds(data, pst, qst);
+    if verbose;
+        call ardlbounds_print(fstat, cv, cols(data) - 1);
+    endif;
+
+    struct ardlFullOut afOut;
+    afOut.pst = pst;
+    afOut.qst = qst;
+    afOut.nobs = rows(data);
+    afOut.ardl_fstat = fstat;
+    afOut.ardl_cv = cv;
+    afOut.ar = ardl(data, pst, qst, "", verbose);
+
+    retp(afOut);
+endp;
+
 proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_type = "iid", hac_lags = 0, print_results = 1);
 
     local za, nn, yy, xx, mm, ee, Y, X, ONEX, bigbt, psu, midbt,
@@ -422,6 +542,7 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_ty
     qaOut.tau = tau;
     qaOut.p = ppp;
     qaOut.q = qqq;
+    qaOut.qvec = qqq*ones(k0, 1);
     qaOut.nobs = rows(Y);
     qaOut.k = k0;
     qaOut.bigbt = bigbt;
@@ -569,6 +690,7 @@ proc (struct qardlOut) = qardlX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }, cov_
     qaOut.tau = tau;
     qaOut.p = ppp;
     qaOut.q = qmax;
+    qaOut.qvec = qvec;
     qaOut.nobs = rows(Y);
     qaOut.k = k0;
     qaOut.bigbt = bigbt;
@@ -1730,12 +1852,67 @@ endp;
 **  Output:     Prints to screen only. No return value.
 **
 **  Note:       The printed table has columns [tau, variable, estimate, SE,
-**              z-stat, p-value]. For alpha and rho, the variable index is
-**              replaced by a label column. P-values use the asymptotic
-**              standard normal (z-test) as in qardl_pval().
+**              z-stat, p-value, significance, lower CI, upper CI].
+**              Significance codes are *** p < 0.01, ** p < 0.05,
+**              and * p < 0.10. P-values use the asymptotic standard normal
+**              (z-test) as in qardl_pval().
 **
 **  Developed:  March 2026
 */
+
+proc (1) = _qardlSignifStars(pval);
+    if scalmiss(pval);
+        retp("");
+    elseif pval < 0.01;
+        retp("***");
+    elseif pval < 0.05;
+        retp("**");
+    elseif pval < 0.10;
+        retp("*");
+    endif;
+
+    retp("");
+endp;
+
+proc (0) = printARDL(struct ardlOut arOut);
+    local ii, se_beta, se_phi, z_beta, z_phi, pv_beta, pv_phi;
+
+    se_beta = sqrt(diag(arOut.bigbt_cov));
+    se_phi = sqrt(diag(arOut.phi_cov));
+    z_beta = arOut.bigbt ./ se_beta;
+    z_phi = arOut.phi ./ se_phi;
+    pv_beta = 2*cdfnc(abs(z_beta));
+    pv_phi = 2*cdfnc(abs(z_phi));
+
+    print "====================================================================================================";
+    print "ARDL Levels Estimator";
+    print "====================================================================================================";
+    sprintf("%-26s%12.0f        %-26s%12.0f", "No. of obs:", arOut.nobs,
+            "No. regressors:", arOut.k);
+    sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", arOut.p,
+            "DL lags (q):", arOut.q);
+    print "----------------------------------------------------------------------------------------------------";
+    print "Name                  Coeff.       Std. Err.      z-value       P>|z|";
+    print "----------------------------------------------------------------------------------------------------";
+
+    ii = 1;
+    do until ii > arOut.k;
+        sprintf("  beta_x%-7d%16.6f%15.6f%13.6f%12.6f%s",
+                ii, arOut.bigbt[ii], se_beta[ii], z_beta[ii], pv_beta[ii], _qardlSignifStars(pv_beta[ii]));
+        ii = ii + 1;
+    endo;
+
+    ii = 1;
+    do until ii > arOut.p;
+        sprintf("  phi_l%-8d%16.6f%15.6f%13.6f%12.6f%s",
+                ii, arOut.phi[ii], se_phi[ii], z_phi[ii], pv_phi[ii], _qardlSignifStars(pv_phi[ii]));
+        ii = ii + 1;
+    endo;
+
+    sprintf("  alpha        %16.6f", arOut.alpha);
+    sprintf("  rho          %16.6f", arOut.rho);
+    print "====================================================================================================";
+endp;
 
 proc (0) = printQARDL(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
     local ss, k, p, jj, ii, idx, level, alpha_ci, zcrit;
@@ -1773,7 +1950,7 @@ proc (0) = printQARDL(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
     sprintf("%-26s%12.0f        %-26s%12.4f", "No. quantiles:", ss,
             "CI level:", level);
     print "----------------------------------------------------------------------------------------------------";
-    print "Name                  Coeff.       Std. Err.      z-value       P>|z|           lb           ub";
+    print "Name                  Coeff.       Std. Err.      z-value       P>|z|    Sig.          lb           ub";
     print "----------------------------------------------------------------------------------------------------";
 
     jj = 1;
@@ -1785,8 +1962,9 @@ proc (0) = printQARDL(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
             idx = (jj-1)*k + ii;
             lb = qaOut.bigbt[idx] - zcrit*se_bt[idx];
             ub = qaOut.bigbt[idx] + zcrit*se_bt[idx];
-            sprintf("  beta_x%-4d%16.6f%15.6f%13.6f%12.6f%13.6f%13.6f",
-                    ii, qaOut.bigbt[idx], se_bt[idx], z_bt[idx], pv_bt[idx], lb, ub);
+            sprintf("  beta_x%-4d%16.6f%15.6f%13.6f%12.6f%7s%13.6f%13.6f",
+                    ii, qaOut.bigbt[idx], se_bt[idx], z_bt[idx], pv_bt[idx],
+                    _qardlSignifStars(pv_bt[idx]), lb, ub);
             ii = ii + 1;
         endo;
 
@@ -1795,8 +1973,9 @@ proc (0) = printQARDL(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
             idx = (jj-1)*k + ii;
             lb = qaOut.gamma[idx] - zcrit*se_gam[idx];
             ub = qaOut.gamma[idx] + zcrit*se_gam[idx];
-            sprintf("  gamma_x%-3d%16.6f%15.6f%13.6f%12.6f%13.6f%13.6f",
-                    ii, qaOut.gamma[idx], se_gam[idx], z_gam[idx], pv_gam[idx], lb, ub);
+            sprintf("  gamma_x%-3d%16.6f%15.6f%13.6f%12.6f%7s%13.6f%13.6f",
+                    ii, qaOut.gamma[idx], se_gam[idx], z_gam[idx], pv_gam[idx],
+                    _qardlSignifStars(pv_gam[idx]), lb, ub);
             ii = ii + 1;
         endo;
 
@@ -1805,8 +1984,9 @@ proc (0) = printQARDL(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
             idx = (jj-1)*p + ii;
             lb = qaOut.phi[idx] - zcrit*se_phi[idx];
             ub = qaOut.phi[idx] + zcrit*se_phi[idx];
-            sprintf("  phi_l%-5d%16.6f%15.6f%13.6f%12.6f%13.6f%13.6f",
-                    ii, qaOut.phi[idx], se_phi[idx], z_phi[idx], pv_phi[idx], lb, ub);
+            sprintf("  phi_l%-5d%16.6f%15.6f%13.6f%12.6f%7s%13.6f%13.6f",
+                    ii, qaOut.phi[idx], se_phi[idx], z_phi[idx], pv_phi[idx],
+                    _qardlSignifStars(pv_phi[idx]), lb, ub);
             ii = ii + 1;
         endo;
 
@@ -1817,6 +1997,7 @@ proc (0) = printQARDL(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
     endo;
 
     print "====================================================================================================";
+    print "Signif. codes: *** p < 0.01, ** p < 0.05, * p < 0.10";
 
 endp;
 
@@ -1826,7 +2007,7 @@ endp;
 **  Purpose:    Print a formatted results table for a qardlECMOut instance.
 **              Shows OLS long-run coefficients, then quantile-varying alpha(tau)
 **              and rho(tau) with asymptotic standard errors, z-statistics,
-**              p-values, and confidence limits.
+**              p-values, significance codes, and confidence limits.
 **
 **  Format:     printQARDLECM(qECMOut);
 **              printQARDLECM(qECMOut, tau = { 0.25, 0.5, 0.75 });
@@ -1881,7 +2062,7 @@ proc (0) = printQARDLECM(struct qardlECMOut qECMOut, tau = { 0.25, 0.5, 0.75 });
     print "";
     print "Step 2 - ECM Quantile Parameters";
     print "----------------------------------------------------------------------------------------------------";
-    print "Name                  Coeff.       Std. Err.      z-value       P>|z|           lb           ub";
+    print "Name                  Coeff.       Std. Err.      z-value       P>|z|    Sig.          lb           ub";
     print "----------------------------------------------------------------------------------------------------";
 
     jj = 1;
@@ -1890,20 +2071,143 @@ proc (0) = printQARDLECM(struct qardlECMOut qECMOut, tau = { 0.25, 0.5, 0.75 });
 
         lb = qECMOut.alpha[jj] - zcrit*se_alpha[jj];
         ub = qECMOut.alpha[jj] + zcrit*se_alpha[jj];
-        sprintf("  alpha     %16.6f%15.6f%13.6f%12.6f%13.6f%13.6f",
-                qECMOut.alpha[jj], se_alpha[jj], z_alpha[jj], pv_alpha[jj], lb, ub);
+        sprintf("  alpha     %16.6f%15.6f%13.6f%12.6f%7s%13.6f%13.6f",
+                qECMOut.alpha[jj], se_alpha[jj], z_alpha[jj], pv_alpha[jj],
+                _qardlSignifStars(pv_alpha[jj]), lb, ub);
 
         lb = qECMOut.rho[jj] - zcrit*se_rho[jj];
         ub = qECMOut.rho[jj] + zcrit*se_rho[jj];
-        sprintf("  rho       %16.6f%15.6f%13.6f%12.6f%13.6f%13.6f",
-                qECMOut.rho[jj], se_rho[jj], z_rho[jj], pv_rho[jj], lb, ub);
+        sprintf("  rho       %16.6f%15.6f%13.6f%12.6f%7s%13.6f%13.6f",
+                qECMOut.rho[jj], se_rho[jj], z_rho[jj], pv_rho[jj],
+                _qardlSignifStars(pv_rho[jj]), lb, ub);
 
         print "----------------------------------------------------------------------------------------------------";
         jj = jj + 1;
     endo;
 
     print "====================================================================================================";
+    print "Signif. codes: *** p < 0.01, ** p < 0.05, * p < 0.10";
 
+endp;
+
+/*
+**> predictARDL
+**
+**  Purpose:    Return in-sample fitted values from an estimated ARDL model.
+*/
+proc (1) = predictARDL(struct ardlOut arOut, data, formula = "");
+    local Y, ONEX, theta_start, phi_start;
+
+    data = applyQARDLFormula(data, formula);
+    { Y, ONEX, theta_start, phi_start } = _qardlBuildLevelsDesignX(data, arOut.p, arOut.qvec);
+    retp(ONEX*arOut.bt);
+endp;
+
+/*
+**> forecastARDL
+**
+**  Purpose:    Recursive ARDL forecast holding future regressors fixed at
+**              their last observed levels. Future differenced-x terms are set
+**              to zero.
+*/
+proc (1) = forecastARDL(struct ardlOut arOut, data, h = 1, formula = "");
+    local yy, xx, xlast, ybuf, out, ii, jj, yhat, dx_count, theta_start, phi_start;
+
+    call _qardlValidateLagScalar(h, "forecastARDL: h");
+    data = applyQARDLFormula(data, formula);
+    yy = data[., 1];
+    xx = data[., 2:cols(data)];
+    xlast = xx[rows(xx), .];
+    dx_count = sumc(arOut.qvec);
+    theta_start = 2 + dx_count;
+    phi_start = theta_start + arOut.k;
+
+    ybuf = zeros(arOut.p, 1);
+    jj = 1;
+    do until jj > arOut.p;
+        ybuf[jj] = yy[rows(yy)+1-jj];
+        jj = jj + 1;
+    endo;
+
+    out = zeros(h, 1);
+    ii = 1;
+    do until ii > h;
+        yhat = arOut.bt[1] +
+               xlast*arOut.bt[theta_start:theta_start+arOut.k-1] +
+               arOut.bt[phi_start:phi_start+arOut.p-1]'*ybuf;
+        out[ii] = yhat;
+        if arOut.p > 1;
+            ybuf[2:arOut.p] = ybuf[1:arOut.p-1];
+        endif;
+        ybuf[1] = yhat;
+        ii = ii + 1;
+    endo;
+
+    retp(out);
+endp;
+
+/*
+**> predictQARDL
+**
+**  Purpose:    Return in-sample fitted values from an estimated QARDL model.
+*/
+proc (1) = predictQARDL(struct qardlOut qaOut, data, formula = "");
+    local Y, ONEX, theta_start, phi_start;
+
+    data = applyQARDLFormula(data, formula);
+    { Y, ONEX, theta_start, phi_start } = _qardlBuildLevelsDesignX(data, qaOut.p, qaOut.qvec);
+    retp(ONEX*qaOut.bt);
+endp;
+
+/*
+**> forecastQARDL
+**
+**  Purpose:    Recursive QARDL forecast by quantile, holding future
+**              regressors fixed at their last observed levels. Future
+**              differenced-x terms are set to zero.
+**
+**  TODO: Validate multi-step quantile forecast behavior against external
+**        QARDL forecast references before using for publication results.
+*/
+proc (1) = forecastQARDL(struct qardlOut qaOut, data, h = 1, formula = "");
+    local yy, xx, xlast, ybuf, out, ii, jj, ss, yhat, dx_count, theta_start, phi_start;
+
+    call _qardlValidateLagScalar(h, "forecastQARDL: h");
+    data = applyQARDLFormula(data, formula);
+    yy = data[., 1];
+    xx = data[., 2:cols(data)];
+    xlast = xx[rows(xx), .];
+    dx_count = sumc(qaOut.qvec);
+    theta_start = 2 + dx_count;
+    phi_start = theta_start + qaOut.k;
+    ss = cols(qaOut.bt);
+
+    out = zeros(h, ss);
+    jj = 1;
+    do until jj > ss;
+        ybuf = zeros(qaOut.p, 1);
+        ii = 1;
+        do until ii > qaOut.p;
+            ybuf[ii] = yy[rows(yy)+1-ii];
+            ii = ii + 1;
+        endo;
+
+        ii = 1;
+        do until ii > h;
+            yhat = qaOut.bt[1, jj] +
+                   xlast*qaOut.bt[theta_start:theta_start+qaOut.k-1, jj] +
+                   qaOut.bt[phi_start:phi_start+qaOut.p-1, jj]'*ybuf;
+            out[ii, jj] = yhat;
+            if qaOut.p > 1;
+                ybuf[2:qaOut.p] = ybuf[1:qaOut.p-1];
+            endif;
+            ybuf[1] = yhat;
+            ii = ii + 1;
+        endo;
+        jj = jj + 1;
+    endo;
+
+    retp(out);
 endp;
 /*
 **> saveQARDLECMResults
@@ -3150,6 +3454,38 @@ proc (4) = _qardlBuildLevelsDesignX(data, ppp, qvec);
     phi_start = theta_start + k0;
 
     retp(Y, ONEX, theta_start, phi_start);
+endp;
+
+proc (2) = _ardlOLSCov(X, resid, caller);
+    local N, K, sigma2, invXX, cov;
+
+    N = rows(X);
+    K = cols(X);
+    sigma2 = (resid'*resid) / (N - K);
+    invXX = _qardlSafeInv(X'*X, caller, "OLS covariance moment matrix");
+    cov = sigma2*invXX;
+
+    retp(cov, sigma2);
+endp;
+
+proc (1) = _ardlLongRunCov(bt, coef_cov, theta_start, phi_start, k0, ppp);
+    local G, denom, ii, jj;
+
+    denom = 1 - sumc(bt[phi_start:phi_start+ppp-1]);
+    G = zeros(k0, rows(bt));
+
+    ii = 1;
+    do until ii > k0;
+        G[ii, theta_start+ii-1] = 1 / denom;
+        jj = 1;
+        do until jj > ppp;
+            G[ii, phi_start+jj-1] = bt[theta_start+ii-1] / (denom^2);
+            jj = jj + 1;
+        endo;
+        ii = ii + 1;
+    endo;
+
+    retp(G*coef_cov*G');
 endp;
 
 proc (1) = _qardlECMDesignOK(data, ppp, qqq);

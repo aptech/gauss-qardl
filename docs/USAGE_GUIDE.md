@@ -26,6 +26,15 @@ qaOut = qardl(data, 2, 1, tau);
 printQARDL(qaOut, tau);
 ```
 
+Use `ardl` when you want the standard OLS ARDL companion estimator with the
+same data ordering, formula workflow, print style, and output conventions:
+
+```gauss
+arOut = ardl(data, 2, 1, "", 0);
+printARDL(arOut);
+afOut = ardlFull(data, 8, 8, "", 0, "bic");
+```
+
 Direct estimator calls print GAUSS-style results tables by default. Add
 `print_results = 0` as the final argument when you only want the returned
 structure:
@@ -105,6 +114,27 @@ qECMOut = qardlECMX(data, pst_x, qvec_x, tau);
 `qvec_x` is `k x 1`, ordered the same way as the regressors in `data`.
 `pqorderXGrid` returns columns `[p, q1, ..., qk, IC]`.
 
+## Prediction And Forecast Hooks
+
+Levels-form ARDL and QARDL estimates support in-sample prediction and simple
+recursive forecast hooks:
+
+```gauss
+ar_fit = predictARDL(arOut, data);
+ar_fcst = forecastARDL(arOut, data, 4);
+
+qa_fit = predictQARDL(qaOut, data);
+qa_fcst = forecastQARDL(qaOut, data, 4);
+```
+
+`predictARDL` returns an `nobs x 1` vector. `predictQARDL` returns an
+`nobs x S` matrix, one column per quantile. Forecast helpers hold future
+regressor levels fixed at their last observed values and set future
+differenced-x terms to zero.
+
+TODO: validate multi-step ARDL/QARDL forecast examples against published
+forecast workflows before using them for publication-grade forecasting.
+
 ## Formula And Dataframe Workflow
 
 Matrix-based procedures expect data ordered as `[y, x1, x2, ...]`. For named
@@ -125,18 +155,58 @@ qfOut = qardlFull(df, 8, 8, formula = "consumption ~ income + wealth");
 Formula variable matching is case-insensitive. The RHS order is preserved in
 the output data, so `"y ~ x2 + x1"` intentionally produces `[y, x2, x1]`.
 
+## NARDL And CS-ARDL Workflows
+
+Use `nardlFull` for the nonlinear ARDL workflow with positive and negative
+partial-sum decompositions:
+
+```gauss
+nfOut = nardlFull(data, 2, 2, "", 0, "bic");
+nfOut = nardlFull(df, 2, 2, "y ~ x1 + x2", 0, "bic");
+printNARDL(nfOut.na);
+printNARDLECM(nfOut.ecm);
+```
+
+`nardl` and `nardlECM` are available when lag orders are fixed. The output
+includes long-run positive and negative coefficients, long-run and short-run
+asymmetry Wald tests, a UECM bounds F-statistic, fitted values, residuals, and
+OLS covariance fields. `predictNARDL` and `forecastNARDL` provide the current
+prediction/forecast hooks.
+
+Use `csardlFull` for pooled cross-sectionally augmented ARDL panels:
+
+```gauss
+cfOut = csardlFull(panel, 2, 1, 1, "", 0, "bic");
+cfOut = csardlFull(df_panel, 2, 1, 1, "unit + y ~ x1 + x2", 0, "bic");
+printCSARDL(cfOut.csa);
+printCSARDLECM(cfOut.ecm);
+```
+
+CS-ARDL matrix input must be a balanced panel stacked by unit in
+`[unit_id, y, x1, ...]` order. Formula input uses `"unit + y ~ x1 + x2"`.
+Use `csardlDiagnostics` for the optional mean-group and poolability diagnostic
+layer:
+
+```gauss
+diagOut = csardlDiagnostics(df_panel, cfOut.pst, cfOut.qst, cfOut.cs_lags,
+                            "unit + y ~ x1 + x2", 0);
+printCSARDLDiagnostics(diagOut);
+```
+
 ## Metadata
 
 Core output structures carry enough metadata for downstream code:
 
 ```gauss
 print qaOut.tau;
+print arOut.p~arOut.q~arOut.k~arOut.nobs;
 print qaOut.p~qaOut.q~qaOut.k~qaOut.nobs;
+print qaOut.qvec;
 print qECMOut.p~qECMOut.q~qECMOut.k~qECMOut.nobs;
 ```
 
-`qardlFullOut` stores selected lag orders as `pst` and `qst`, plus the input
-sample size in `nobs`.
+`ardlFullOut` and `qardlFullOut` store selected lag orders as `pst` and `qst`,
+plus the input sample size in `nobs`.
 
 ## Parameter Stacking
 
@@ -199,6 +269,40 @@ the internal attempt limit.
 The method variants support `"moving"`, `"circular"`, and `"stationary"`
 resampling.
 
+## Diagnostic Workflow
+
+The standard QARDL workflow currently includes:
+
+- Information-criterion lag selection through `pqorder`/`pqorderGrid` and
+  `ardlFull`/`qardlFull`.
+- ARDL bounds testing through `ardlbounds`, `ardlboundsCase`, `ardlFull`, and
+  `qardlFull`.
+- Parameter p-values through `qardl_pval` and `qardl_pval_ecm`.
+- Quantile constancy and symmetry Wald tests through `wtestconst` and
+  `wtestsym`, plus custom Wald restrictions through `wtestlrb`, `wtestsrp`,
+  and `wtestsrg`.
+- Robust and HAC covariance options for QARDL levels and ECM estimators.
+- Bootstrap diagnostic wrappers that report requested, completed, and failed
+  replications.
+- Rolling QARDL and QARDL-ECM workflows for exploratory stability analysis.
+
+The standard ARDL workflow currently includes OLS covariance output, fitted
+values, residuals, residual variance, ARDL bounds-test integration through
+`ardlFull`, and `predictARDL`/`forecastARDL` hooks.
+
+The standard NARDL workflow currently includes long-run and short-run
+asymmetry Wald tests, a UECM bounds F-statistic, fitted values, residuals, and
+residual variance fields.
+
+The standard CS-ARDL workflow currently includes pooled coefficient
+diagnostics, cross-sectional-average controls, fitted values, residuals,
+residual variance fields, and optional mean-group/poolability diagnostics.
+
+TODO: standalone residual serial-correlation, heteroskedasticity, normality,
+and classical structural-stability tests are not implemented yet. Use robust
+or HAC covariance estimates, bootstrap diagnostics, rolling workflows, and
+model-specific diagnostic fields as the currently supported checks.
+
 ## Quantile Impulse Responses
 
 `qirf` traces the dynamic response of `y` to a unit shock in an x variable:
@@ -252,6 +356,8 @@ applied inference.
 - Rolling window length is fixed internally at 10 percent of the sample.
 - Bootstrap defaults are convenient starting points; applied work should
   report the chosen number of replications, block length, and seed.
+- Standalone residual serial-correlation, heteroskedasticity, normality, and
+  classical structural-stability diagnostic tests are TODO.
 - `p = 0` models are not currently supported. `q = 0` is supported for levels,
   ECM, lag-selection, QIRF, and ARDL bounds workflows.
 

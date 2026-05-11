@@ -4,12 +4,14 @@ param(
 )
 
 $testsDir = Join-Path $RepoRoot "tests"
+$srcDir = Join-Path $RepoRoot "src"
 
 & powershell -ExecutionPolicy Bypass -File (Join-Path $testsDir "verify_package_manifest.ps1") -RepoRoot $RepoRoot
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $gaussTests = @(
     "smoke_public_api.e",
+    "smoke_nardl_csardl_api.e",
     "statistical_benchmark.e",
     "smoke_workflow_api.e",
     "smoke_export_api.e"
@@ -61,10 +63,11 @@ function Remove-TemporaryFile {
 foreach ($test in $gaussTests) {
     $wrapper = Join-Path ([System.IO.Path]::GetTempPath()) ("qardl_" + [System.Guid]::NewGuid().ToString("N") + ".e")
     $gaussTestsDir = $testsDir -replace "\\", "/"
+    $gaussSrcDir = $srcDir -replace "\\", "/"
     Set-Content -Path $wrapper -Value @(
         "new;",
-        "chdir `"$gaussTestsDir`";",
-        "run $test;"
+        "chdir `"$gaussSrcDir`";",
+        "run `"$gaussTestsDir/$test`";"
     )
 
     try {

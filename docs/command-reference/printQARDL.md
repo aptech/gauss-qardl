@@ -27,6 +27,9 @@ Direct calls to `qardl`, `qardlRobust`, `qardlHAC`, and `qardlX` print this
 table by default. Pass `print_results = 0` to those estimators when you want to
 return results silently.
 
+The table includes a `Sig.` column for coefficient significance:
+`***` for `p < 0.01`, `**` for `p < 0.05`, and `*` for `p < 0.10`.
+
 ## Examples
 
 ```gauss

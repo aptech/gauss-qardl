@@ -1,3 +1,52 @@
+struct ardlOut {
+    // Lag orders used in estimation
+    scalar p;
+    scalar q;
+
+    // Per-regressor distributed-lag orders
+    matrix qvec;
+
+    // Effective estimation sample size after lag alignment
+    scalar nobs;
+
+    // Number of regressors
+    scalar k;
+
+    // Long-run parameter
+    matrix bigbt;
+
+    // Delta-method covariance of long-run parameter
+    matrix bigbt_cov;
+
+    // Short-run autoregressive parameters
+    matrix phi;
+
+    // Covariance of short-run phi
+    matrix phi_cov;
+
+    // Current x-level coefficients before long-run normalization
+    matrix gamma;
+
+    // Covariance of gamma/theta parameters
+    matrix gamma_cov;
+
+    // Differenced-x lag coefficients, if q > 0
+    matrix dx_coef;
+
+    // Intercept and speed of adjustment rho = -(1 - sum_j phi_j)
+    matrix alpha;
+    matrix rho;
+
+    // Full OLS coefficient vector from the levels estimator
+    matrix bt;
+
+    // In-sample diagnostics
+    matrix fitted;
+    matrix resid;
+    scalar sigma2;
+    matrix coef_cov;
+};
+
 struct qardlOut {
     // Quantile vector used in estimation
     matrix tau;
@@ -5,6 +54,10 @@ struct qardlOut {
     // Lag orders used in estimation
     scalar p;
     scalar q;
+
+    // Per-regressor distributed-lag orders. For qardl(), all entries equal q.
+    // For qardlX(), this stores the heterogeneous q vector needed downstream.
+    matrix qvec;
 
     // Effective estimation sample size after lag alignment
     scalar nobs;
@@ -74,6 +127,305 @@ struct qardlECMOut {
 
     // Asymptotic covariance of alpha estimates across quantiles (ss x ss)
     matrix alpha_cov;
+};
+
+
+/*
+** ardlFullOut -- returned by ardlFull().
+** Bundles lag-order selection, bounds test, and levels-form ARDL.
+*/
+struct ardlFullOut {
+    // Lag orders selected by the requested information criterion
+    scalar pst;
+    scalar qst;
+
+    // Number of observations in the input sample
+    scalar nobs;
+
+    // ARDL bounds test (Pesaran, Shin & Smith 2001)
+    scalar ardl_fstat;
+    matrix ardl_cv;
+
+    // ARDL levels estimates
+    struct ardlOut ar;
+};
+
+struct nardlOut {
+    // Lag orders used in estimation
+    scalar p;
+    scalar q;
+
+    // Effective estimation sample size after lag alignment
+    scalar nobs;
+
+    // Number of original regressors
+    scalar k;
+
+    // Long-run positive and negative parameters stacked [beta_pos; beta_neg]
+    matrix bigbt;
+
+    // Delta-method covariance of the long-run parameter
+    matrix bigbt_cov;
+
+    // Short-run autoregressive parameters
+    matrix phi;
+
+    // Covariance of short-run phi
+    matrix phi_cov;
+
+    // Positive and negative level coefficients stacked [theta_pos; theta_neg]
+    matrix gamma;
+
+    // Covariance of gamma/theta parameters
+    matrix gamma_cov;
+
+    // Intercept
+    matrix alpha;
+
+    // Speed of adjustment rho = -(1 - sum_j phi_j)
+    matrix rho;
+
+    // Full coefficient vector from the levels estimator
+    matrix bt;
+
+    // Model-specific long-run positive partial-sum coefficients
+    matrix beta_pos;
+
+    // Model-specific long-run negative partial-sum coefficients
+    matrix beta_neg;
+
+    // Model-specific level coefficients before long-run normalization
+    matrix theta_pos;
+    matrix theta_neg;
+
+    // Long-run nonlinear asymmetry tests, one row per original regressor
+    matrix asymmetry_wald;
+    matrix asymmetry_pv;
+
+    // Short-run nonlinear asymmetry tests, one row per original regressor
+    matrix short_run_wald;
+    matrix short_run_pv;
+
+    // UECM bounds F-statistic for y(-1), x_pos(-1), x_neg(-1)
+    scalar bounds_fstat;
+
+    // In-sample diagnostics
+    matrix fitted;
+    matrix resid;
+    scalar sigma2;
+    matrix coef_cov;
+};
+
+struct nardlECMOut {
+    // Lag orders used in estimation
+    scalar p;
+    scalar q;
+
+    // Effective ECM sample size after lag alignment
+    scalar nobs;
+
+    // Number of original regressors
+    scalar k;
+
+    // Long-run positive and negative coefficients from the levels estimator
+    matrix beta_pos;
+    matrix beta_neg;
+
+    // OLS speed of adjustment from the levels estimator
+    matrix rho_ols;
+
+    // ECM intercept and speed of adjustment
+    matrix alpha;
+    matrix rho;
+
+    // Covariance matrices for alpha and rho
+    matrix alpha_cov;
+    matrix rho_cov;
+
+    // Full ECM coefficient vector
+    matrix bt;
+
+    // Long-run nonlinear asymmetry tests inherited from levels estimates
+    matrix asymmetry_wald;
+    matrix asymmetry_pv;
+
+    // In-sample diagnostics
+    matrix coef_cov;
+    matrix fitted;
+    matrix resid;
+    scalar sigma2;
+};
+
+struct nardlFullOut {
+    // Lag orders selected by the workflow
+    scalar pst;
+    scalar qst;
+
+    // Number of observations in the input sample
+    scalar nobs;
+
+    // Levels and ECM estimates
+    struct nardlOut na;
+    struct nardlECMOut ecm;
+};
+
+struct csardlOut {
+    // Lag orders used in estimation
+    scalar p;
+    scalar q;
+
+    // Cross-sectional-average lag order
+    scalar cs_lags;
+
+    // Effective pooled estimation sample size after lag alignment
+    scalar nobs;
+
+    // Number of original regressors
+    scalar k;
+
+    // Number of cross-sectional units
+    scalar nunits;
+
+    // Long-run pooled coefficients
+    matrix bigbt;
+
+    // Delta-method covariance of long-run coefficients
+    matrix bigbt_cov;
+
+    // Autoregressive parameters
+    matrix phi;
+
+    // Covariance of phi
+    matrix phi_cov;
+
+    // Current-regressor coefficients
+    matrix gamma;
+
+    // Covariance of gamma
+    matrix gamma_cov;
+
+    // Intercept and speed of adjustment
+    matrix alpha;
+    matrix rho;
+
+    // Full coefficient vector from the levels estimator
+    matrix bt;
+
+    // Cross-sectional averages used by the design
+    matrix cross_avg;
+
+    // Coefficients on cross-sectional-average regressors
+    matrix cross_avg_coef;
+
+    // Unit identifiers and balanced unit sample size
+    matrix unit_ids;
+    matrix unit_nobs;
+
+    // In-sample diagnostics
+    matrix fitted;
+    matrix resid;
+    scalar sigma2;
+    matrix coef_cov;
+};
+
+struct csardlECMOut {
+    // Lag orders used in estimation
+    scalar p;
+    scalar q;
+
+    // Cross-sectional-average lag order
+    scalar cs_lags;
+
+    // Effective ECM sample size after lag alignment
+    scalar nobs;
+
+    // Number of original regressors and cross-sectional units
+    scalar k;
+    scalar nunits;
+
+    // Long-run coefficients from the levels estimator
+    matrix beta_lr;
+
+    // OLS speed of adjustment from the levels estimator
+    matrix rho_ols;
+
+    // ECM intercept and speed of adjustment
+    matrix alpha;
+    matrix rho;
+
+    // Covariance matrices for alpha and rho
+    matrix alpha_cov;
+    matrix rho_cov;
+
+    // Full ECM coefficient vector
+    matrix bt;
+
+    // Coefficients on cross-sectional-average regressors from levels estimator
+    matrix cross_avg_coef;
+
+    // In-sample diagnostics
+    matrix coef_cov;
+    matrix fitted;
+    matrix resid;
+    scalar sigma2;
+};
+
+struct csardlDiagOut {
+    // Lag orders used in diagnostics
+    scalar p;
+    scalar q;
+    scalar cs_lags;
+
+    // Effective per-unit and total observations
+    scalar unit_nobs;
+    scalar nobs;
+
+    // Number of original regressors and units
+    scalar k;
+    scalar nunits;
+
+    // Unit identifiers
+    matrix unit_ids;
+
+    // Unit-specific long-run coefficients, one row per unit
+    matrix unit_bigbt;
+
+    // Unit-specific AR coefficients, one row per unit
+    matrix unit_phi;
+
+    // Unit-specific full coefficient vectors, one row per unit
+    matrix unit_bt;
+
+    // Unit-specific residual variances
+    matrix unit_sigma2;
+
+    // Mean-group long-run coefficients and cross-unit standard errors
+    matrix mean_group_bigbt;
+    matrix mean_group_se;
+
+    // Pooled long-run coefficients from csardl()
+    matrix pooled_bigbt;
+
+    // Wald-style poolability diagnostic for unit long-run coefficients
+    scalar poolability_wald;
+    scalar poolability_pv;
+    scalar poolability_df;
+};
+
+struct csardlFullOut {
+    // Lag orders selected by the workflow
+    scalar pst;
+    scalar qst;
+
+    // Cross-sectional-average lag order
+    scalar cs_lags;
+
+    // Number of observations in the input panel
+    scalar nobs;
+
+    // Levels and ECM estimates
+    struct csardlOut csa;
+    struct csardlECMOut ecm;
 };
 
 struct rollingWaldTests {

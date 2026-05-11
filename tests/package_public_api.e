@@ -17,6 +17,32 @@ proc (0) = assert_true(ok, msg);
     endif;
 endp;
 
+proc (1) = make_package_csardl_panel(nunits, tobs);
+    local panel, rr, ii, tidx, x1_prev, x2_prev, y_prev, x1v, x2v, yv;
+
+    rndseed 260522;
+    panel = zeros(nunits*tobs, 4);
+    rr = 1;
+
+    for ii(1, nunits, 1);
+        x1_prev = 0;
+        x2_prev = 0;
+        y_prev = 0;
+        for tidx(1, tobs, 1);
+            x1v = 0.50*x1_prev + 0.04*tidx + 0.10*ii + rndn(1, 1);
+            x2v = 0.35*x2_prev - 0.02*tidx + 0.08*ii + rndn(1, 1);
+            yv = 0.42*y_prev + 0.28*x1v - 0.16*x2v + 0.05*ii + 0.15*rndn(1, 1);
+            panel[rr, .] = ii~yv~x1v~x2v;
+            x1_prev = x1v;
+            x2_prev = x2v;
+            y_prev = yv;
+            rr = rr + 1;
+        endfor;
+    endfor;
+
+    retp(panel);
+endp;
+
 data = loadd(__FILE_DIR $+ "../examples/qardl_data.dat");
 data = data[1:350, 1:3];
 tau = { 0.25, 0.5, 0.75 };
@@ -39,6 +65,22 @@ call assert_true(pst_x >= 1 and rows(qst_x) == 2 and rows(ic_x_grid) == 8 and co
 struct qardlOut qaOut;
 qaOut = qardl(data, pst, qst, tau, "iid", 0, 0);
 call assert_true(rows(qaOut.bigbt) == 2*rows(tau), "qardl beta shape changed");
+call assert_true(rows(predictQARDL(qaOut, data)) == qaOut.nobs,
+                 "predictQARDL output changed");
+call assert_true(rows(forecastQARDL(qaOut, data, 2)) == 2 and cols(forecastQARDL(qaOut, data, 2)) == rows(tau),
+                 "forecastQARDL output changed");
+
+struct ardlOut arOut;
+arOut = ardl(data, pst, qst, "", 0);
+call assert_true(rows(arOut.bigbt) == 2 and arOut.nobs > 0 and arOut.sigma2 > 0,
+                 "ardl output changed");
+call assert_true(rows(predictARDL(arOut, data)) == arOut.nobs and rows(forecastARDL(arOut, data, 2)) == 2,
+                 "ARDL predict/forecast output changed");
+
+struct ardlFullOut afOut;
+afOut = ardlFull(data, 2, 2, "", 0, "bic");
+call assert_true(afOut.pst >= 1 and afOut.qst >= 0 and afOut.ardl_fstat > 0,
+                 "ardlFull output changed");
 struct qardlOut qaQ0Out;
 qaQ0Out = qardl(data, 2, 0, tau, "iid", 0, 0);
 call assert_true(qaQ0Out.q == 0 and rows(qaQ0Out.bigbt) == 2*rows(tau), "qardl q=0 output changed");
@@ -116,6 +158,43 @@ call assert_true(rows(ci_rho) == rows(tau) and cols(ci_rho) == 2, "blockBootstra
 call assert_true(rows(boot_diag) == 1 and cols(boot_diag) == 5, "blockBootstrapQARDLECMDiag diagnostics shape changed");
 call assert_true(boot_diag[1, 1] == 2 and boot_diag[1, 2] == 2 and boot_diag[1, 3] == 0,
                  "blockBootstrapQARDLECMDiag diagnostics content changed");
+
+nt = 80;
+tseq = seqa(1, 1, nt);
+nardl_data = (1 + 0.45*sin(tseq/3) - 0.20*cos(tseq/5) + 0.10*sin(tseq/2))~sin(tseq/3)~cos(tseq/5);
+nardl_df = asDF(nardl_data, "y", "x1", "x2");
+
+struct nardlOut naOut;
+naOut = nardl(nardl_data, 1, 1, "", 0);
+call assert_true(rows(naOut.beta_pos) == 2 and rows(naOut.asymmetry_pv) == 2,
+                 "nardl output changed");
+
+struct nardlFullOut nfOut;
+nfOut = nardlFull(nardl_df, 1, 1, "y ~ x1 + x2", 0);
+call assert_true(nfOut.pst == 1 and nfOut.qst >= 0 and rows(nfOut.na.beta_neg) == 2,
+                 "nardlFull formula output changed");
+call assert_true(rows(predictNARDL(nfOut.na, nardl_df, "y ~ x1 + x2")) == nfOut.na.nobs,
+                 "predictNARDL formula output changed");
+
+panel = make_package_csardl_panel(4, 60);
+panel_df = asDF(panel, "unit", "y", "x1", "x2");
+
+struct csardlOut csaOut;
+csaOut = csardl(panel, 1, 1, 1, "", 0);
+call assert_true(csaOut.nunits == 4 and rows(csaOut.bigbt) == 2,
+                 "csardl output changed");
+
+struct csardlFullOut cfOut;
+cfOut = csardlFull(panel_df, 1, 1, 1, "unit + y ~ x1 + x2", 0);
+call assert_true(cfOut.cs_lags == 1 and cfOut.csa.nunits == 4,
+                 "csardlFull formula output changed");
+
+struct csardlDiagOut diagOut;
+diagOut = csardlDiagnostics(panel_df, 1, 1, 1, "unit + y ~ x1 + x2", 0);
+call assert_true(diagOut.poolability_df == 6 and diagOut.poolability_pv >= 0 and diagOut.poolability_pv <= 1,
+                 "csardlDiagnostics output changed");
+call assert_true(rows(forecastCSARDL(cfOut.csa, panel_df, 2, "unit + y ~ x1 + x2")) == 2,
+                 "forecastCSARDL formula output changed");
 
 printQARDLECM(qECMOut, tau);
 

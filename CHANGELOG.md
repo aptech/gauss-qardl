@@ -15,6 +15,25 @@
   scripts, tests, simulations, rolling windows, and bootstrap workflows.
 - `printQARDL` and `printQARDLECM` now include diagnostic headers,
   coefficient table bodies, z-statistics, p-values, and 95% confidence limits.
+- Printed coefficient tables now include significance asterisks
+  (`***` p < 0.01, `**` p < 0.05, `*` p < 0.10).
+- NARDL and CS-ARDL model families with output structures, levels and ECM
+  estimators, information-criterion lag selection, print helpers, formula
+  hooks, prediction/forecast hooks, and deterministic source smoke tests.
+- Optional CS-ARDL mean-group and poolability diagnostics, plus deterministic
+  synthetic NARDL/CS-ARDL benchmark entry points and published-validation
+  tracking notes.
+- User-facing OLS ARDL workflow with `ardl`, `ardlFull`, `printARDL`,
+  `predictARDL`, `forecastARDL`, `ardlOut`, and `ardlFullOut`.
+- QARDL prediction and forecast hooks: `predictQARDL` and `forecastQARDL`.
+- Source-tree NARDL and CS-ARDL examples covering fixed-order estimation,
+  formula workflows, lag/model selection, print helpers, output fields,
+  prediction/forecast hooks, and supported diagnostics.
+- Examples now use `library qardl;` only and no longer include package source
+  files directly.
+- Usage-guide diagnostic workflow notes documenting implemented diagnostics
+  and TODO gaps for standalone residual serial-correlation,
+  heteroskedasticity, normality, and classical stability tests.
 - `CITATION.cff`, `CITATION.md`, and a QARDL software release article for
   users who need a preferred citation for the package.
 - Licensing guidance explaining why MIT does not prevent ports/translations
