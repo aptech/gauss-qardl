@@ -4,16 +4,18 @@ This note tracks published examples that are useful for validating and
 demonstrating the GAUSS QARDL library and the adjacent NARDL/CS-ARDL
 model families.
 
-## Replication Inventory
+## Replication Registry
 
-| Target | Status | Notes |
-| --- | --- | --- |
-| Cho, Kim, and Shin (2015), U.S. dividend-policy application | Public-data scaffold added | `examples/replicate_cho_dividend_policy.e` uses the bundled Shiller real dividend and earnings data as a transparent approximation. Exact numerical replication still requires the authors' exact dataset, transformations, sample window, and lag specification. |
-| Cho, Kim, Greenwood-Nimmo, and Shin (2023), asymmetric dividend response to earnings news | Candidate | Closely aligned with the bundled Shiller dividend/earnings example. Add once data and specification are confirmed. |
-| Galvao, Montes-Rojas, and Park (2013), QADL house-price returns | Candidate, adjacent methodology | This is a quantile ARDL model with stationary covariates rather than the Cho-Kim-Shin quantile cointegration setup. Useful as an adjacent validation target if data are public. |
-| Shin, Yu, and Greenwood-Nimmo (2014), NARDL asymmetric cointegration and dynamic multipliers | Target identified | Use as the canonical NARDL validation target. Exact replication requires the unemployment-output datasets, transformations, sample windows, and dynamic-multiplier specification. |
-| Chudik and Pesaran (2015), dynamic CCE/CS-ARDL panel ARDL Monte Carlo designs | Target identified | Use as the canonical CS-ARDL validation target. Exact replication requires the paper's Monte Carlo DGP grid and estimator variants, including cross-sectional-average lag choices and bias corrections. |
-| R `qardlr` simulated QARDL dataset | Benchmark candidate | Not an empirical paper replication, but the documented simulated QARDL(2,2) DGP is useful for cross-implementation testing. |
+| ID | Paper / target | Model family | Dataset status | Transformation status | Target tables / outputs | Expected-output path | Current validation state |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `published-ardl-pss2001` | Pesaran, Shin, and Smith (2001), ARDL bounds critical values | ARDL / bounds testing | No empirical dataset required | Not applicable; table lookup and simulation settings only | Cases I-V critical-value tables and simulated critical-value checks | `tests/fixtures/expected/published/ardl_bounds_pss_selected_cv.csv` | Selected table values pass; full support matrix pending |
+| `published-qardl-author-demo1` | Cho, Kim, and Shin (2015), author GAUSS demo archive | QARDL | Bundled demo dataset available as `examples/qardl_data.dat` | No transformations; columns 1:3, BIC over `p,q <= 7`, selected `p = 2`, `q = 1`, tau = 0.25/0.50/0.75 | Selected lags, long-run beta, beta covariance, phi, phi covariance, gamma, gamma covariance, Wald tests, median-quantile SE tables | `tests/fixtures/expected/published/qardl_author_demo1_*.csv` | Passes as published-reference software validation |
+| `published-qardl-cks2015` | Cho, Kim, and Shin (2015), U.S. dividend-policy application | QARDL | Exact author dataset pending; bundled Shiller data are only an approximation | Pending exact variable definitions, sample window, deterministic case, lag specification, and quantile grid | Long-run coefficient table, short-run coefficients, Wald tests, bounds test, bootstrap intervals | `tests/fixtures/expected/published/` | Scaffold only; no numerical pass/fail claim |
+| `published-qardl-ckgns2023` | Cho, Kim, Greenwood-Nimmo, and Shin (2023), asymmetric dividend response to earnings news | QARDL / asymmetric QARDL candidate | Candidate pending data confirmation | Pending earnings-news construction and asymmetric specification details | Coefficient tables, asymmetry tests, QIRF or dynamic response outputs if applicable | Pending | Not started |
+| `published-qadl-gmp2013` | Galvao, Montes-Rojas, and Park (2013), QADL house-price returns | Adjacent quantile ARDL | Candidate pending redistributable data | Pending stationary-return construction and estimator-definition comparison | QADL coefficient tables and cross-implementation comparison notes | Pending | Not started; adjacent methodology |
+| `published-nardl-syg2014` | Shin, Yu, and Greenwood-Nimmo (2014), NARDL asymmetric cointegration and dynamic multipliers | NARDL | Exact datasets pending | Pending positive/negative partial sums, sample windows, deterministic terms, lag orders, and dynamic multiplier settings | Long-run asymmetry, dynamic multipliers, bounds tests | `tests/fixtures/expected/published/` | Pending exact data/specification |
+| `published-csardl-cp2015` | Chudik and Pesaran (2015), dynamic CCE / CS-ARDL panel Monte Carlo designs | CS-ARDL | Exact Monte Carlo grid pending | Pending DGP grid, cross-sectional-average lag choices, estimator variants, and bias-correction policy | Pooled and mean-group coefficients, poolability or heterogeneity diagnostics, Monte Carlo summary tables | `tests/fixtures/expected/published/` | Pending exact DGP grid |
+| `cross-qardlr-simulated` | R `qardlr` simulated QARDL dataset | QARDL cross-implementation | Benchmark candidate, not an empirical paper replication | Pending DGP alignment and estimator-default comparison | Coefficients, selected lags, long-run estimates | Pending | Not started |
 
 ## Current Scaffold
 
@@ -55,15 +57,44 @@ Run:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tests/run_new_model_benchmarks.ps1
+powershell -ExecutionPolicy Bypass -File tests/run_validation_benchmarks.ps1
 ```
 
-This runs deterministic synthetic NARDL and CS-ARDL workloads, including
-CS-ARDL mean-group and poolability diagnostics. These benchmarks are intended
-to detect implementation drift while published replication datasets are still
-being confirmed.
+`run_new_model_benchmarks.ps1` runs deterministic synthetic NARDL and CS-ARDL
+workloads and prints summary values. `run_validation_benchmarks.ps1` compares
+stored expected coefficients, diagnostics, and forecasts against active
+deterministic fixtures.
+
+Active deterministic fixture metadata lives in
+`tests/fixtures/fixture_manifest.csv`. Stored expected outputs are grouped under
+`tests/fixtures/expected/synthetic/` by category:
+
+- `coefficients/`
+- `diagnostics/`
+- `forecasts/`
+- `intervals/`
+
+Published-result expected outputs are reserved under
+`tests/fixtures/expected/published/` and remain empty until exact datasets and
+specifications are available.
+
+See `docs/QARDL_VALIDATION.md` for the active QARDL author-demo validation
+target, QARDL bootstrap interval fixture, and exact empirical-replication gaps.
+
+## Tolerance Policy
+
+Deterministic synthetic coefficient, diagnostic, and forecast fixtures use a
+default tolerance of `1e-8`. Published-result fixtures should set tolerances in
+the manifest according to the source table's rounding, independent reproduction
+precision, and any documented estimator differences. Bootstrap and interval
+fixtures must use fixed seeds and should record whether the validation target is
+pointwise, simultaneous, or shape-only.
 
 ## Sources
 
+- Pesaran, M. H., Shin, Y., and Smith, R. J. (2001). Bounds testing approaches
+  to the analysis of level relationships. Journal of Applied Econometrics,
+  16(3), 289-326. https://doi.org/10.1002/jae.616
 - Cho, J. S., Kim, T.-H., and Shin, Y. (2015). Quantile cointegration in the
   autoregressive distributed-lag modeling framework. Journal of Econometrics,
   188(1), 281-300. https://doi.org/10.1016/j.jeconom.2015.05.003

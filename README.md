@@ -73,9 +73,9 @@ qfOut = qardlFull(macro, tau = tau,
 - ARDL bounds testing for Pesaran-Shin-Smith Cases I-V, with bundled
   asymptotic critical values and simulation critical-value APIs.
 - Robust and Newey-West/Bartlett HAC covariance paths.
-- Cross-quantile Wald tests, p-value helpers, QIRF, rolling estimation,
-  block bootstrap confidence intervals, confidence-band plot options, and CSV
-  export.
+- Cross-quantile Wald tests, p-value helpers, QIRF with bootstrap confidence
+  bands, rolling estimation, block bootstrap confidence intervals,
+  confidence-band plot options, and CSV export.
 
 ## Documentation
 
@@ -91,10 +91,12 @@ style:
   bootstrap intervals, QIRF, and limitations.
 - [Published replication notes](docs/PUBLISHED_REPLICATIONS.md): replication
   targets and the Cho-Kim-Shin dividend-policy scaffold.
+- [QARDL validation](docs/QARDL_VALIDATION.md): author-demo validation,
+  bootstrap interval fixtures, and exact empirical-replication gaps.
 - [LLM reference](llms.txt): compact package guide for users who want to point
   an AI assistant at the QARDL API.
-- [3.0.1 roadmap](docs/ROADMAP_3_0_1.md): planned presentation, confidence
-  band, and LaTeX export improvements.
+- [3.0.1 roadmap](docs/ROADMAP_3_0_1.md): planned presentation and LaTeX
+  export improvements, plus historical confidence-band planning notes.
 - [Citation guide](CITATION.md) and
   [release article](docs/QARDL_RELEASE_ARTICLE.md): preferred software
   citation materials for research users.
@@ -133,6 +135,12 @@ Run the example smoke suite:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tests\run_examples_smoke.ps1
+```
+
+Run deterministic validation fixtures:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tests\run_validation_benchmarks.ps1
 ```
 
 After rebuilding and reinstalling the package, verify the installed public API:

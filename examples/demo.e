@@ -58,7 +58,8 @@ print "phi   " wt_phi~pv_phi;
 
 // Quantile impulse response functions use the full coefficient matrix stored
 // in qfOut.qa.bt.
-qirfOut = qirf(qfOut.qa, qfOut.qa.p, qfOut.qa.q, 12, tau, 1, 1);
+qirfOut = blockBootstrapQIRF(data[1:350, .], qfOut.qa.p, qfOut.qa.q, 12, tau,
+                             1, 1, 10, 25, 0.10, 24680);
 
 print;
 print "Permanent-shock QIRF for regressor 1";

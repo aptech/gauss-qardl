@@ -71,9 +71,10 @@ print "beta  " wt_beta~pv_beta;
 print "gamma " wt_gamma~pv_gamma;
 print "phi   " wt_phi~pv_phi;
 
-qOut = qirf(qfOut.qa, qfOut.qa.p, qfOut.qa.q, 10, tau);
+qOut = blockBootstrapQIRF(data[1:500, .], qfOut.qa.p, qfOut.qa.q, 10, tau,
+                          1, 1, 10, 25, 0.10, 24680);
 print;
-print "Permanent-shock QIRF";
+print "Permanent-shock QIRF with bootstrap confidence bands";
 print qOut.irf;
 plotQIRF(qOut, 1);
 

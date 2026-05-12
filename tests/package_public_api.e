@@ -68,6 +68,10 @@ call assert_true(pst_x >= 1 and rows(qst_x) == 2 and rows(ic_x_grid) == 8 and co
 struct qardlOut qaOut;
 qaOut = qardl(data, pst, qst, tau, "iid", 0, 0);
 call assert_true(rows(qaOut.bigbt) == 2*rows(tau), "qardl beta shape changed");
+call assert_true(qaOut.model_family $== "QARDL" and qaOut.covariance_type $== "iid" and rows(qaOut.xvars) == 2,
+                 "qardl schema metadata changed");
+call assert_true(rows(qaOut.fitted) == qaOut.nobs and cols(qaOut.fitted) == rows(tau),
+                 "qardl fitted metadata changed");
 call assert_true(rows(predictQARDL(qaOut, data)) == qaOut.nobs,
                  "predictQARDL output changed");
 call assert_true(rows(forecastQARDL(qaOut, data, 2)) == 2 and cols(forecastQARDL(qaOut, data, 2)) == rows(tau),
@@ -81,6 +85,8 @@ struct ardlOut arOut;
 arOut = ardl(data, pst, qst, "", 0);
 call assert_true(rows(arOut.bigbt) == 2 and arOut.nobs > 0 and arOut.sigma2 > 0,
                  "ardl output changed");
+call assert_true(arOut.model_family $== "ARDL" and arOut.covariance_type $== "ols" and rows(arOut.qvec) == 2,
+                 "ardl schema metadata changed");
 call assert_true(rows(predictARDL(arOut, data)) == arOut.nobs and rows(forecastARDL(arOut, data, 2)) == 2,
                  "ARDL predict/forecast output changed");
 
@@ -149,6 +155,12 @@ call assert_true(fstat_case > 0 and tstat_case < 0 and case_id == 3, "ardlbounds
 struct qirfOut qiOut;
 qiOut = qirf(qaOut, pst, qst, 4, tau);
 call assert_true(rows(qiOut.irf) == 5 and cols(qiOut.irf) == rows(tau), "qirf output shape changed");
+call assert_true(qiOut.bands_available == 0, "qirf default confidence-band metadata changed");
+qiOut = blockBootstrapQIRF(data[1:250, .], 1, 1, 4, tau, 1, 1, 2, 10, 0.10, 12345);
+call assert_true(qiOut.bands_available == 1 and rows(qiOut.irf_lb) == 5 and cols(qiOut.irf_lb) == rows(tau),
+                 "blockBootstrapQIRF output changed");
+call assert_true(qiOut.boot_diag[1, 1] == 2 and qiOut.boot_diag[1, 2] >= 1 and qiOut.boot_diag[1, 5] == 12345,
+                 "blockBootstrapQIRF diagnostics changed");
 
 struct qardlFullOut qfOut;
 qfOut = qardlFull(data, 2, 2, tau);
@@ -189,6 +201,9 @@ struct nardlFullOut nfOut;
 nfOut = nardlFull(nardl_df, 1, 1, "y ~ x1 + x2", 0);
 call assert_true(nfOut.pst == 1 and nfOut.qst >= 0 and rows(nfOut.na.beta_neg) == 2,
                  "nardlFull formula output changed");
+call assert_true(nfOut.model_family $== "NARDL" and nfOut.formula $== "y ~ x1 + x2" and
+                 nfOut.na.formula $== "y ~ x1 + x2",
+                 "nardlFull schema metadata changed");
 
 rndseed 260511;
 n_default = 120;
@@ -221,6 +236,9 @@ struct csardlFullOut cfOut;
 cfOut = csardlFull(panel_df, 1, 1, 1, "y ~ x1 + x2", 0);
 call assert_true(cfOut.cs_lags == 1 and cfOut.csa.nunits == 4,
                  "csardlFull inferred panel formula output changed");
+call assert_true(cfOut.model_family $== "CS-ARDL" and cfOut.unitvar $== "unit" and
+                 cfOut.timevar $== "time" and cfOut.csa.formula $== "y ~ x1 + x2",
+                 "csardlFull schema metadata changed");
 cfOut = csardlFull(panel_df, cs_lags = 1, formula = "y ~ x1 + x2", verbose = 0);
 call assert_true(cfOut.pst >= 1 and cfOut.pst <= 8 and cfOut.qst >= 0 and cfOut.qst <= 8,
                  "csardlFull default lag bounds invalid");

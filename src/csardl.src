@@ -23,7 +23,9 @@ proc (struct csardlOut) = csardl(data, ppp, qqq, cs_lags = 0, formula = "", prin
     local Y, ONEX, csavg, unit_ids, unit_nobs, bt, k0, phi_start, cross_start;
     local gam, phi, denom, bigbt, cross_avg_coef;
     local fitted, resid, coef_cov, sigma2, bigbt_cov, phi_cov, gamma_cov;
+    local depvar, xvars, unitvar, timevar, max_lag;
 
+    { depvar, xvars, unitvar, timevar } = _csardlMetadataNames(data, formula);
     data = applyCSARDLFormula(data, formula);
     call _csardlValidateEstimatorInputs(data, ppp, qqq, cs_lags, "csardl");
 
@@ -46,10 +48,25 @@ proc (struct csardlOut) = csardl(data, ppp, qqq, cs_lags = 0, formula = "", prin
     bigbt_cov = _csardlLongRunCov(bt, coef_cov, ppp, qqq, cs_lags, k0);
     phi_cov = coef_cov[phi_start:phi_start+ppp-1, phi_start:phi_start+ppp-1];
     gamma_cov = coef_cov[2:1+k0, 2:1+k0];
+    max_lag = maxc(ppp|qqq|cs_lags);
 
     struct csardlOut csaOut;
+    csaOut.model_family = "CS-ARDL";
+    csaOut.formula = formula;
+    csaOut.depvar = depvar;
+    csaOut.xvars = xvars;
+    csaOut.unitvar = unitvar;
+    csaOut.timevar = timevar;
+    csaOut.deterministic = "constant";
+    csaOut.covariance_type = "ols";
+    csaOut.selection_criterion = "none";
+    csaOut.sample_start = 1;
+    csaOut.sample_end = rows(data);
+    csaOut.estimation_start = max_lag + 1;
+    csaOut.estimation_end = unit_nobs[1];
     csaOut.p = ppp;
     csaOut.q = qqq;
+    csaOut.qvec = qqq*ones(k0, 1);
     csaOut.cs_lags = cs_lags;
     csaOut.nobs = rows(Y);
     csaOut.k = k0;
@@ -88,7 +105,9 @@ endp;
 */
 proc (struct csardlECMOut) = csardlECM(data, ppp, qqq, cs_lags = 0, formula = "", print_results = 1);
     local Y_ecm, ONEX_ecm, bt_ecm, fitted, resid, coef_cov, sigma2;
+    local depvar, xvars, unitvar, timevar, unit_ids, T, max_lag;
 
+    { depvar, xvars, unitvar, timevar } = _csardlMetadataNames(data, formula);
     data = applyCSARDLFormula(data, formula);
     call _csardlValidateEstimatorInputs(data, ppp, qqq, cs_lags, "csardlECM");
 
@@ -102,10 +121,26 @@ proc (struct csardlECMOut) = csardlECM(data, ppp, qqq, cs_lags = 0, formula = ""
     fitted = ONEX_ecm*bt_ecm;
     resid = Y_ecm - fitted;
     { coef_cov, sigma2 } = _csardlOLSCov(ONEX_ecm, resid, "csardlECM");
+    { unit_ids, T } = _csardlPanelInfo(data, "csardlECM");
+    max_lag = maxc(ppp|qqq|cs_lags);
 
     struct csardlECMOut cECMOut;
+    cECMOut.model_family = "CS-ARDL-ECM";
+    cECMOut.formula = formula;
+    cECMOut.depvar = depvar;
+    cECMOut.xvars = xvars;
+    cECMOut.unitvar = unitvar;
+    cECMOut.timevar = timevar;
+    cECMOut.deterministic = "constant";
+    cECMOut.covariance_type = "ols";
+    cECMOut.selection_criterion = "none";
+    cECMOut.sample_start = 1;
+    cECMOut.sample_end = rows(data);
+    cECMOut.estimation_start = max_lag + 2;
+    cECMOut.estimation_end = T;
     cECMOut.p = ppp;
     cECMOut.q = qqq;
+    cECMOut.qvec = qqq*ones(cols(data) - 2, 1);
     cECMOut.cs_lags = cs_lags;
     cECMOut.nobs = rows(Y_ecm);
     cECMOut.k = cols(data) - 2;
@@ -144,12 +179,13 @@ endp;
 **              to 0.
 */
 proc (struct csardlFullOut) = csardlFull(data, pend = 8, qend = 8, cs_lags = 0, formula = "", verbose = 1, criterion = "bic");
-    local pst, qst;
+    local pst, qst, depvar, xvars, unitvar, timevar;
 
     call _qardlValidateLagScalar(pend, "csardlFull: pend");
     call _qardlValidateLagScalarZero(qend, "csardlFull: qend");
     call _qardlValidateLagScalarZero(cs_lags, "csardlFull: cs_lags");
 
+    { depvar, xvars, unitvar, timevar } = _csardlMetadataNames(data, formula);
     data = applyCSARDLFormula(data, formula);
     { pst, qst } = csardlOrder(data, pend, qend, cs_lags, criterion);
 
@@ -158,12 +194,37 @@ proc (struct csardlFullOut) = csardlFull(data, pend = 8, qend = 8, cs_lags = 0, 
     endif;
 
     struct csardlFullOut cfOut;
+    cfOut.model_family = "CS-ARDL";
+    cfOut.formula = formula;
+    cfOut.depvar = depvar;
+    cfOut.xvars = xvars;
+    cfOut.unitvar = unitvar;
+    cfOut.timevar = timevar;
+    cfOut.deterministic = "constant";
+    cfOut.covariance_type = "ols";
+    cfOut.selection_criterion = criterion;
+    cfOut.pmax = pend;
+    cfOut.qmax = qend;
+    cfOut.sample_start = 1;
+    cfOut.sample_end = rows(data);
     cfOut.pst = pst;
     cfOut.qst = qst;
     cfOut.cs_lags = cs_lags;
     cfOut.nobs = rows(data);
     cfOut.csa = csardl(data, pst, qst, cs_lags, "", 0);
     cfOut.ecm = csardlECM(data, pst, qst, cs_lags, "", 0);
+    cfOut.csa.formula = formula;
+    cfOut.csa.depvar = depvar;
+    cfOut.csa.xvars = xvars;
+    cfOut.csa.unitvar = unitvar;
+    cfOut.csa.timevar = timevar;
+    cfOut.csa.selection_criterion = criterion;
+    cfOut.ecm.formula = formula;
+    cfOut.ecm.depvar = depvar;
+    cfOut.ecm.xvars = xvars;
+    cfOut.ecm.unitvar = unitvar;
+    cfOut.ecm.timevar = timevar;
+    cfOut.ecm.selection_criterion = criterion;
 
     if verbose;
         call printCSARDL(cfOut.csa);
@@ -264,7 +325,9 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
     local ii, jj, Y_i, X_i, bt_i, resid_i, cov_i, sigma2_i, beta_i, beta_cov_i;
     local unit_bigbt, unit_phi, unit_bt, unit_sigma2, mean_group_bigbt, mean_group_se;
     local pooled_bigbt, poolability_wald, poolability_df, poolability_pv, diff, V_i;
+    local depvar, xvars, unitvar, timevar;
 
+    { depvar, xvars, unitvar, timevar } = _csardlMetadataNames(data, formula);
     data = applyCSARDLFormula(data, formula);
     call _csardlValidateEstimatorInputs(data, ppp, qqq, cs_lags, "csardlDiagnostics");
 
@@ -331,8 +394,22 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
     poolability_pv = cdfchic(poolability_wald, poolability_df);
 
     struct csardlDiagOut diagOut;
+    diagOut.model_family = "CS-ARDL-Diagnostics";
+    diagOut.formula = formula;
+    diagOut.depvar = depvar;
+    diagOut.xvars = xvars;
+    diagOut.unitvar = unitvar;
+    diagOut.timevar = timevar;
+    diagOut.deterministic = "constant";
+    diagOut.covariance_type = "ols";
+    diagOut.selection_criterion = "none";
+    diagOut.sample_start = 1;
+    diagOut.sample_end = rows(data);
+    diagOut.estimation_start = max_lag + 1;
+    diagOut.estimation_end = T;
     diagOut.p = ppp;
     diagOut.q = qqq;
+    diagOut.qvec = qqq*ones(k0, 1);
     diagOut.cs_lags = cs_lags;
     diagOut.unit_nobs = unit_nobs;
     diagOut.nobs = unit_nobs*nunits;
@@ -503,6 +580,24 @@ proc (1) = _forecastCSARDLLevels(struct csardlOut csaOut, data, h = 1, formula =
     retp(ones(h, 1)*fitted[rows(fitted)]);
 endp;
 
+proc (4) = _csardlMetadataNames(data, formula);
+    local depvar, xvars, unitvar, timevar;
+
+    if strlen(formula) == 0;
+        depvar = "y";
+        xvars = _qardlDefaultXVars(cols(data) - 2);
+        unitvar = "unit_id";
+        timevar = "time_index";
+        retp(depvar, xvars, unitvar, timevar);
+    endif;
+
+    { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 2);
+    unitvar = _csardlInferPanelIDVar(data, "_csardlMetadataNames");
+    timevar = _csardlInferPanelTimeVarQuiet(data, "_csardlMetadataNames");
+
+    retp(depvar, xvars, unitvar, timevar);
+endp;
+
 /*
 **> applyCSARDLFormula
 **
@@ -631,6 +726,25 @@ proc (1) = _csardlInferPanelTimeVar(data, caller);
 
     if used_numeric;
         warninglogat sprintf("%s: no date column found. Using numeric column '%s' as time variable.", caller, varnames[idx[1]]);
+    endif;
+
+    retp(varnames[idx[1]]);
+endp;
+
+proc (1) = _csardlInferPanelTimeVarQuiet(data, caller);
+    local col_types, varnames, idx;
+
+    col_types = getcoltypes(data);
+    varnames = getcolnames(data);
+
+    idx = packr(indnv(META_TYPE_DATE, col_types));
+    if ismiss(idx);
+        idx = packr(indnv(META_TYPE_NUMBER, col_types));
+    endif;
+
+    if ismiss(idx);
+        errorlog caller $+ ": missing panel time variable; expected the first date column or, if none exists, the first numeric column";
+        end;
     endif;
 
     retp(varnames[idx[1]]);

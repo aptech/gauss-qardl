@@ -3,9 +3,6 @@
 ## 3.0.1 - Unreleased
 
 ### Planned
-- GAUSS-style printed result tables with diagnostic headers and coefficient
-  bodies.
-- Bootstrap-based QIRF confidence bands once `qirfOut` stores interval data.
 - LaTeX export helpers for publication-ready QARDL result tables.
 
 ### Added
@@ -34,6 +31,17 @@
 - Confidence-band display controls for `plotQARDL`, `plotQARDLbands`,
   `plotRollingQARDL`, `plotRollingQARDLECM`, and graceful QIRF handling when
   interval data are not available.
+- `blockBootstrapQIRF` for QIRF point estimates with empirical bootstrap
+  confidence bands stored in `qirfOut.irf_lb` and `qirfOut.irf_ub`.
+- Standardized ARDL-family output metadata fields for model family, formula,
+  variable names, lag vectors, sample ranges, deterministic terms, covariance
+  type, and lag-selection criterion, plus `docs/OUTPUT_SCHEMA.md` and schema
+  parity tests.
+- Validation fixture registry, stored synthetic expected outputs, and
+  `tests/run_validation_benchmarks.ps1` for deterministic ARDL/QARDL/NARDL/
+  CS-ARDL coefficient, diagnostic, and forecast checks.
+- Published-reference QARDL validation against the author-provided Cho-Kim-Shin
+  GAUSS demo outputs, plus stored QARDL bootstrap interval fixtures.
 - CS-ARDL dataframe formulas now follow GAUSS panel-data conventions:
   `y ~ x1 + x2` infers the first string/category column as the unit variable
   and the first date column, or first numeric fallback, as the time variable.

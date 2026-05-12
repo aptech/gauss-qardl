@@ -229,6 +229,21 @@ qiOut = qirf(qaOut, 2, 1, 8, tau);
 call assert_true(rows(qiOut.irf) == 9 and cols(qiOut.irf) == rows(tau), "qirf output shape changed");
 qiOut = qirf(qaQ0Out, 2, 0, 8, tau);
 call assert_true(rows(qiOut.irf) == 9 and cols(qiOut.irf) == rows(tau), "qirf q=0 output shape changed");
+call assert_true(qiOut.bands_available == 0 and rows(qiOut.irf_lb) == 9 and cols(qiOut.irf_lb) == rows(tau),
+                 "qirf default confidence-band metadata changed");
+
+qiOut = blockBootstrapQIRF(data[1:250, .], 1, 1, 4, tau, 1, 1, 2, 10, 0.10, 12345);
+call assert_true(qiOut.bands_available == 1 and rows(qiOut.irf_lb) == 5 and cols(qiOut.irf_lb) == rows(tau),
+                 "blockBootstrapQIRF band shape changed");
+call assert_true(maxc(vec(qiOut.irf_lb - qiOut.irf_ub)) <= 1e-12,
+                 "blockBootstrapQIRF lower band exceeds upper band");
+call assert_true(qiOut.boot_diag[1, 1] == 2 and qiOut.boot_diag[1, 2] >= 1 and qiOut.boot_diag[1, 5] == 12345,
+                 "blockBootstrapQIRF diagnostics changed");
+
+qirf_df = asDF(data[1:250, .], "y", "x1", "x2");
+qiOut = blockBootstrapQIRF(qirf_df, 1, 1, 3, tau, 1, 1, 1, 10, 0.10, 12345, "moving", "y ~ x1 + x2");
+call assert_true(qiOut.bands_available == 1 and rows(qiOut.irf_ub) == 4,
+                 "blockBootstrapQIRF formula workflow changed");
 
 // Small bootstrap smoke checks. Keep B tiny; this validates API/shape, not inference quality.
 boot_data = data[1:250, .];

@@ -190,6 +190,10 @@ Computes block-bootstrap confidence intervals for levels-form QARDL estimates.
 
 Computes block-bootstrap confidence intervals for QARDL-ECM alpha and rho.
 
+[blockBootstrapQIRF](command-reference/blockBootstrapQIRF.md)
+
+Computes QIRF point estimates with bootstrap confidence bands.
+
 [rollingQardl](command-reference/rollingQardl.md)
 
 Runs rolling-window levels-form QARDL estimation.

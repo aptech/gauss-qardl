@@ -154,8 +154,9 @@ verification.
 ## Limitations
 
 The current package focuses on QARDL models with `p >= 1`. Distributed-lag
-order `q = 0` is supported. QIRF confidence bands, LaTeX export, and deeper
-publication-ready presentation tools are planned for post-3.0.0 work.
+order `q = 0` is supported. Bootstrap QIRF confidence bands are available
+through `blockBootstrapQIRF`. LaTeX export and deeper publication-ready
+presentation tools remain planned post-3.0.0 work.
 
 ## Citation Expectations
 

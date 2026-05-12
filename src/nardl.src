@@ -21,7 +21,9 @@ proc (struct nardlOut) = nardl(data, ppp, qqq, formula = "", print_results = 1);
     local theta_pos, theta_neg, phi, beta_pos, beta_neg;
     local fitted, resid, coef_cov, sigma2, bigbt_cov, phi_cov, gamma_cov;
     local asym_wald, asym_pv, sr_wald, sr_pv, bounds_fstat;
+    local depvar, xvars;
 
+    { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
     data = applyNARDLFormula(data, formula);
     call _nardlValidateEstimatorInputs(data, ppp, qqq, "nardl");
 
@@ -51,8 +53,20 @@ proc (struct nardlOut) = nardl(data, ppp, qqq, formula = "", print_results = 1);
     bounds_fstat = _nardlBoundsFstat(data, ppp, qqq);
 
     struct nardlOut naOut;
+    naOut.model_family = "NARDL";
+    naOut.formula = formula;
+    naOut.depvar = depvar;
+    naOut.xvars = xvars;
+    naOut.deterministic = "constant";
+    naOut.covariance_type = "ols";
+    naOut.selection_criterion = "none";
+    naOut.sample_start = 1;
+    naOut.sample_end = rows(data);
+    naOut.estimation_start = rows(data) - rows(Y) + 1;
+    naOut.estimation_end = rows(data);
     naOut.p = ppp;
     naOut.q = qqq;
+    naOut.qvec = qqq*ones(k0, 1);
     naOut.nobs = rows(Y);
     naOut.k = k0;
     naOut.bigbt = beta_pos | beta_neg;
@@ -95,7 +109,9 @@ endp;
 */
 proc (struct nardlECMOut) = nardlECM(data, ppp, qqq, formula = "", print_results = 1);
     local Y_ecm, ONEX_ecm, bt_ecm, fitted, resid, coef_cov, sigma2;
+    local depvar, xvars;
 
+    { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
     data = applyNARDLFormula(data, formula);
     call _nardlValidateEstimatorInputs(data, ppp, qqq, "nardlECM");
 
@@ -111,8 +127,20 @@ proc (struct nardlECMOut) = nardlECM(data, ppp, qqq, formula = "", print_results
     { coef_cov, sigma2 } = _nardlOLSCov(ONEX_ecm, resid, "nardlECM");
 
     struct nardlECMOut nECMOut;
+    nECMOut.model_family = "NARDL-ECM";
+    nECMOut.formula = formula;
+    nECMOut.depvar = depvar;
+    nECMOut.xvars = xvars;
+    nECMOut.deterministic = "constant";
+    nECMOut.covariance_type = "ols";
+    nECMOut.selection_criterion = "none";
+    nECMOut.sample_start = 1;
+    nECMOut.sample_end = rows(data);
+    nECMOut.estimation_start = rows(data) - rows(Y_ecm) + 1;
+    nECMOut.estimation_end = rows(data);
     nECMOut.p = ppp;
     nECMOut.q = qqq;
+    nECMOut.qvec = qqq*ones(cols(data) - 1, 1);
     nECMOut.nobs = rows(Y_ecm);
     nECMOut.k = cols(data) - 1;
     nECMOut.beta_pos = naOut.beta_pos;
@@ -149,11 +177,12 @@ endp;
 **  Note:       If omitted, pend and qend default to 8.
 */
 proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "", verbose = 1, criterion = "bic");
-    local pst, qst;
+    local pst, qst, depvar, xvars;
 
     call _qardlValidateLagScalar(pend, "nardlFull: pend");
     call _qardlValidateLagScalarZero(qend, "nardlFull: qend");
 
+    { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
     data = applyNARDLFormula(data, formula);
     { pst, qst } = nardlOrder(data, pend, qend, criterion);
 
@@ -162,11 +191,30 @@ proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "", v
     endif;
 
     struct nardlFullOut nfOut;
+    nfOut.model_family = "NARDL";
+    nfOut.formula = formula;
+    nfOut.depvar = depvar;
+    nfOut.xvars = xvars;
+    nfOut.deterministic = "constant";
+    nfOut.covariance_type = "ols";
+    nfOut.selection_criterion = criterion;
+    nfOut.pmax = pend;
+    nfOut.qmax = qend;
+    nfOut.sample_start = 1;
+    nfOut.sample_end = rows(data);
     nfOut.pst = pst;
     nfOut.qst = qst;
     nfOut.nobs = rows(data);
     nfOut.na = nardl(data, pst, qst, "", 0);
     nfOut.ecm = nardlECM(data, pst, qst, "", 0);
+    nfOut.na.formula = formula;
+    nfOut.na.depvar = depvar;
+    nfOut.na.xvars = xvars;
+    nfOut.na.selection_criterion = criterion;
+    nfOut.ecm.formula = formula;
+    nfOut.ecm.depvar = depvar;
+    nfOut.ecm.xvars = xvars;
+    nfOut.ecm.selection_criterion = criterion;
 
     if verbose;
         call printNARDL(nfOut.na);

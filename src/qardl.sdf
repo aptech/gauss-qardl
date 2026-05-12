@@ -1,4 +1,19 @@
 struct ardlOut {
+    // Standardized model metadata
+    string model_family;
+    string formula;
+    string depvar;
+    string array xvars;
+    string deterministic;
+    string covariance_type;
+    string selection_criterion;
+
+    // Row-index sample metadata
+    scalar sample_start;
+    scalar sample_end;
+    scalar estimation_start;
+    scalar estimation_end;
+
     // Lag orders used in estimation
     scalar p;
     scalar q;
@@ -48,6 +63,21 @@ struct ardlOut {
 };
 
 struct qardlOut {
+    // Standardized model metadata
+    string model_family;
+    string formula;
+    string depvar;
+    string array xvars;
+    string deterministic;
+    string covariance_type;
+    string selection_criterion;
+
+    // Row-index sample metadata
+    scalar sample_start;
+    scalar sample_end;
+    scalar estimation_start;
+    scalar estimation_end;
+
     // Quantile vector used in estimation
     matrix tau;
 
@@ -94,15 +124,37 @@ struct qardlOut {
     // rows 2+q*k:1+(q+1)*k: x-level (theta) coefficients;
     // rows 2+(q+1)*k:1+(q+1)*k+p: phi (lagged-y) coefficients
     matrix bt;
+
+    // In-sample diagnostics
+    matrix fitted;
+    matrix resid;
 };
 
 struct qardlECMOut {
+    // Standardized model metadata
+    string model_family;
+    string formula;
+    string depvar;
+    string array xvars;
+    string deterministic;
+    string covariance_type;
+    string selection_criterion;
+
+    // Row-index sample metadata
+    scalar sample_start;
+    scalar sample_end;
+    scalar estimation_start;
+    scalar estimation_end;
+
     // Quantile vector used in estimation
     matrix tau;
 
     // Lag orders used in estimation
     scalar p;
     scalar q;
+
+    // Per-regressor distributed-lag orders
+    matrix qvec;
 
     // Effective ECM sample size after lag alignment
     scalar nobs;
@@ -127,6 +179,11 @@ struct qardlECMOut {
 
     // Asymptotic covariance of alpha estimates across quantiles (ss x ss)
     matrix alpha_cov;
+
+    // Full ECM coefficient matrix and in-sample diagnostics
+    matrix bt;
+    matrix fitted;
+    matrix resid;
 };
 
 
@@ -135,6 +192,21 @@ struct qardlECMOut {
 ** Bundles lag-order selection, bounds test, and levels-form ARDL.
 */
 struct ardlFullOut {
+    // Standardized workflow metadata
+    string model_family;
+    string formula;
+    string depvar;
+    string array xvars;
+    string deterministic;
+    string covariance_type;
+    string selection_criterion;
+
+    // Search bounds and row-index sample metadata
+    scalar pmax;
+    scalar qmax;
+    scalar sample_start;
+    scalar sample_end;
+
     // Lag orders selected by the requested information criterion
     scalar pst;
     scalar qst;
@@ -151,9 +223,27 @@ struct ardlFullOut {
 };
 
 struct nardlOut {
+    // Standardized model metadata
+    string model_family;
+    string formula;
+    string depvar;
+    string array xvars;
+    string deterministic;
+    string covariance_type;
+    string selection_criterion;
+
+    // Row-index sample metadata
+    scalar sample_start;
+    scalar sample_end;
+    scalar estimation_start;
+    scalar estimation_end;
+
     // Lag orders used in estimation
     scalar p;
     scalar q;
+
+    // Per-regressor distributed-lag orders
+    matrix qvec;
 
     // Effective estimation sample size after lag alignment
     scalar nobs;
@@ -217,9 +307,27 @@ struct nardlOut {
 };
 
 struct nardlECMOut {
+    // Standardized model metadata
+    string model_family;
+    string formula;
+    string depvar;
+    string array xvars;
+    string deterministic;
+    string covariance_type;
+    string selection_criterion;
+
+    // Row-index sample metadata
+    scalar sample_start;
+    scalar sample_end;
+    scalar estimation_start;
+    scalar estimation_end;
+
     // Lag orders used in estimation
     scalar p;
     scalar q;
+
+    // Per-regressor distributed-lag orders
+    matrix qvec;
 
     // Effective ECM sample size after lag alignment
     scalar nobs;
@@ -257,6 +365,21 @@ struct nardlECMOut {
 };
 
 struct nardlFullOut {
+    // Standardized workflow metadata
+    string model_family;
+    string formula;
+    string depvar;
+    string array xvars;
+    string deterministic;
+    string covariance_type;
+    string selection_criterion;
+
+    // Search bounds and row-index sample metadata
+    scalar pmax;
+    scalar qmax;
+    scalar sample_start;
+    scalar sample_end;
+
     // Lag orders selected by the workflow
     scalar pst;
     scalar qst;
@@ -270,9 +393,30 @@ struct nardlFullOut {
 };
 
 struct csardlOut {
+    // Standardized model metadata
+    string model_family;
+    string formula;
+    string depvar;
+    string array xvars;
+    string unitvar;
+    string timevar;
+    string deterministic;
+    string covariance_type;
+    string selection_criterion;
+
+    // Row-index sample metadata. For panels, estimation_start/end are
+    // within-unit time indices after lag alignment.
+    scalar sample_start;
+    scalar sample_end;
+    scalar estimation_start;
+    scalar estimation_end;
+
     // Lag orders used in estimation
     scalar p;
     scalar q;
+
+    // Per-regressor distributed-lag orders
+    matrix qvec;
 
     // Cross-sectional-average lag order
     scalar cs_lags;
@@ -329,9 +473,30 @@ struct csardlOut {
 };
 
 struct csardlECMOut {
+    // Standardized model metadata
+    string model_family;
+    string formula;
+    string depvar;
+    string array xvars;
+    string unitvar;
+    string timevar;
+    string deterministic;
+    string covariance_type;
+    string selection_criterion;
+
+    // Row-index sample metadata. For panels, estimation_start/end are
+    // within-unit time indices after lag alignment.
+    scalar sample_start;
+    scalar sample_end;
+    scalar estimation_start;
+    scalar estimation_end;
+
     // Lag orders used in estimation
     scalar p;
     scalar q;
+
+    // Per-regressor distributed-lag orders
+    matrix qvec;
 
     // Cross-sectional-average lag order
     scalar cs_lags;
@@ -371,9 +536,28 @@ struct csardlECMOut {
 };
 
 struct csardlDiagOut {
+    // Standardized model metadata
+    string model_family;
+    string formula;
+    string depvar;
+    string array xvars;
+    string unitvar;
+    string timevar;
+    string deterministic;
+    string covariance_type;
+    string selection_criterion;
+
+    // Row-index sample metadata. For panels, estimation_start/end are
+    // within-unit time indices after lag alignment.
+    scalar sample_start;
+    scalar sample_end;
+    scalar estimation_start;
+    scalar estimation_end;
+
     // Lag orders used in diagnostics
     scalar p;
     scalar q;
+    matrix qvec;
     scalar cs_lags;
 
     // Effective per-unit and total observations
@@ -413,6 +597,23 @@ struct csardlDiagOut {
 };
 
 struct csardlFullOut {
+    // Standardized workflow metadata
+    string model_family;
+    string formula;
+    string depvar;
+    string array xvars;
+    string unitvar;
+    string timevar;
+    string deterministic;
+    string covariance_type;
+    string selection_criterion;
+
+    // Search bounds and row-index sample metadata
+    scalar pmax;
+    scalar qmax;
+    scalar sample_start;
+    scalar sample_end;
+
     // Lag orders selected by the workflow
     scalar pst;
     scalar qst;
@@ -510,6 +711,21 @@ struct rollingQardlOut {
 ** Bundles lag-order selection, bounds test, and both estimators.
 */
 struct qardlFullOut {
+    // Standardized workflow metadata
+    string model_family;
+    string formula;
+    string depvar;
+    string array xvars;
+    string deterministic;
+    string covariance_type;
+    string selection_criterion;
+
+    // Search bounds and row-index sample metadata
+    scalar pmax;
+    scalar qmax;
+    scalar sample_start;
+    scalar sample_end;
+
     // Lag orders selected by BIC
     scalar pst;
     scalar qst;
@@ -537,8 +753,12 @@ struct qardlFullOut {
 ** Holds quantile impulse responses across horizons and quantiles.
 */
 struct qirfOut {
-    // (H+1 x ss) matrix: row h+1 = response at horizon h (h=0 is impact)
+    // (H+1 x ss) matrix: row h+1 = response at horizon h (h=0 is pre-shock)
     matrix irf;
+
+    // (H+1 x ss) pointwise bootstrap confidence band limits
+    matrix irf_lb;
+    matrix irf_ub;
 
     // (ss x 1) quantile vector
     matrix tau;
@@ -551,6 +771,15 @@ struct qirfOut {
 
     // 1 = permanent unit shock; 0 = temporary (one-period) unit shock
     scalar permanent;
+
+    // 1 if irf_lb/irf_ub contain usable confidence bands
+    scalar bands_available;
+
+    // Nominal tail probability used for bands
+    scalar alpha;
+
+    // Bootstrap diagnostics: [B requested, B completed, B failed, blk_len, seed]
+    matrix boot_diag;
 };
 
 

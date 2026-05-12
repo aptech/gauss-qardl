@@ -116,6 +116,24 @@ qECMOut = qardlECMX(data, pst_x, qvec_x, tau);
 `qvec_x` is `k x 1`, ordered the same way as the regressors in `data`.
 `pqorderXGrid` returns columns `[p, q1, ..., qk, IC]`.
 
+## Output Metadata
+
+ARDL-family outputs expose a shared metadata baseline for downstream scripts:
+
+```gauss
+print arOut.model_family;
+print arOut.depvar;
+print arOut.xvars;
+print arOut.covariance_type;
+print arOut.estimation_start~arOut.estimation_end;
+```
+
+Common fields include `model_family`, `formula`, `depvar`, `xvars`,
+`deterministic`, `covariance_type`, `selection_criterion`, `sample_start`,
+`sample_end`, `estimation_start`, and `estimation_end`. Full workflows also
+store search bounds in `pmax` and `qmax`. See [OUTPUT_SCHEMA.md](OUTPUT_SCHEMA.md)
+for the full field map.
+
 ## Prediction And Forecast Hooks
 
 Levels-form ARDL-family estimates support in-sample prediction and simple
@@ -265,6 +283,8 @@ The bootstrap helpers are intended for applied uncertainty checks:
     blockBootstrapQARDLMethod(data, 2, 1, tau, 999, 0, 0.05, "circular");
 { ci_rho_s, ci_alpha_s } =
     blockBootstrapQARDLECMMethod(data, 2, 1, tau, 999, 0, 0.05, "stationary");
+qirfBandOut =
+    blockBootstrapQIRF(data, 2, 1, 20, tau, 1, 1, 999, 0, 0.05, 12345);
 ```
 
 Set `blk_len = 0` to use the default `floor(T^(1/3))` block length. For
@@ -289,8 +309,8 @@ plotRollingQARDLECM(rECMOut, tau, 0, 1, 0.05);
 plotQIRF(qOut, 1);
 ```
 
-`plotQIRF` currently has no confidence-band data in `qirfOut`; requesting
-bands prints a message and plots the response paths only.
+For QIRF bands, create `qOut` with `blockBootstrapQIRF`; `qirf` itself returns
+point estimates and zero band placeholders.
 
 ## Diagnostic Workflow
 
@@ -333,6 +353,10 @@ model-specific diagnostic fields as the currently supported checks.
 ```gauss
 qOut = qirf(qaOut, qaOut.p, qaOut.q, 20, qaOut.tau, k_x = 1, permanent = 1);
 plotQIRF(qOut, 1);
+
+qBandOut = blockBootstrapQIRF(data, qaOut.p, qaOut.q, 20, qaOut.tau,
+                              1, 1, 499, 0, 0.05, 12345);
+plotQIRF(qBandOut, 1);
 ```
 
 For a permanent shock, the response should approach the long-run beta when the

@@ -66,8 +66,9 @@
 proc (struct ardlOut) = ardl(data, ppp, qqq, formula = "", print_results = 1);
     local Y, ONEX, theta_start, phi_start, qvec, k0, bt, fitted, resid;
     local coef_cov, sigma2, theta, phi, denom, bigbt, bigbt_cov;
-    local dx_count, dx_coef, gamma_cov, phi_cov;
+    local dx_count, dx_coef, gamma_cov, phi_cov, depvar, xvars;
 
+    { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
     data = applyQARDLFormula(data, formula);
     call _qardlValidateEstimatorInputs(data, ppp, qqq, { 0.5 }, "ardl");
 
@@ -97,6 +98,17 @@ proc (struct ardlOut) = ardl(data, ppp, qqq, formula = "", print_results = 1);
     endif;
 
     struct ardlOut arOut;
+    arOut.model_family = "ARDL";
+    arOut.formula = formula;
+    arOut.depvar = depvar;
+    arOut.xvars = xvars;
+    arOut.deterministic = "constant";
+    arOut.covariance_type = "ols";
+    arOut.selection_criterion = "none";
+    arOut.sample_start = 1;
+    arOut.sample_end = rows(data);
+    arOut.estimation_start = rows(data) - rows(Y) + 1;
+    arOut.estimation_end = rows(data);
     arOut.p = ppp;
     arOut.q = qqq;
     arOut.qvec = qvec;
@@ -137,13 +149,14 @@ endp;
 **  Note:       If omitted, pend and qend default to 8.
 */
 proc (struct ardlFullOut) = ardlFull(data, pend = 8, qend = 8, formula = "", verbose = 1, criterion = "bic");
-    local pst, qst, fstat, cv;
+    local pst, qst, fstat, cv, depvar, xvars;
 
     if verbose /= 0 and verbose /= 1;
         errorlog "ardlFull: verbose must be 0 or 1";
         end;
     endif;
 
+    { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
     data = applyQARDLFormula(data, formula);
     call _qardlValidateSearchInputs(data, pend, qend, { 0.5 }, "ardlFull");
     call _qardlValidateICCriterion(criterion, "ardlFull");
@@ -160,12 +173,30 @@ proc (struct ardlFullOut) = ardlFull(data, pend = 8, qend = 8, formula = "", ver
     endif;
 
     struct ardlFullOut afOut;
+    struct ardlOut ar;
+    ar = ardl(data, pst, qst, "", verbose);
+    ar.formula = formula;
+    ar.depvar = depvar;
+    ar.xvars = xvars;
+    ar.selection_criterion = criterion;
+
+    afOut.model_family = "ARDL";
+    afOut.formula = formula;
+    afOut.depvar = depvar;
+    afOut.xvars = xvars;
+    afOut.deterministic = "constant";
+    afOut.covariance_type = "ols";
+    afOut.selection_criterion = criterion;
+    afOut.pmax = pend;
+    afOut.qmax = qend;
+    afOut.sample_start = 1;
+    afOut.sample_end = rows(data);
     afOut.pst = pst;
     afOut.qst = qst;
     afOut.nobs = rows(data);
     afOut.ardl_fstat = fstat;
     afOut.ardl_cv = cv;
-    afOut.ar = ardl(data, pst, qst, "", verbose);
+    afOut.ar = ar;
 
     retp(afOut);
 endp;
@@ -177,7 +208,7 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_ty
         bbt, cc, bigpi, bigphi, midphi, jj, bigam, bilam, k0, ss, hb, hs,
         bt, fh, uu, midgam, bigff, bigbtmm, barw, mtau, mbb, mfh,
         Y_qr, ONEX_qr,
-        cov_lags, full_cov, D_qr, D_inv_qr;
+        cov_lags, full_cov, D_qr, D_inv_qr, depvar, xvars, fitted_mat, resid_mat;
     
     call _qardlValidateEstimatorInputs(data, ppp, qqq, tau, "qardl");
     cov_type = lower(cov_type);
@@ -189,6 +220,7 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_ty
     
     // Number of variables
     k0 = cols(data)-1;
+    { depvar, xvars } = _qardlFormulaNames("", k0);
     
     // Number of quantiles
     ss = rows(tau);
@@ -326,9 +358,21 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_ty
         { bigbtmm, bigpi, bigff } = _qardlLevelsCovFromFull(full_cov, bt, ppp, qqq, k0, ss);
 
         struct qardlOut qaOutQ0;
+        qaOutQ0.model_family = "QARDL";
+        qaOutQ0.formula = "";
+        qaOutQ0.depvar = depvar;
+        qaOutQ0.xvars = xvars;
+        qaOutQ0.deterministic = "constant";
+        qaOutQ0.covariance_type = cov_type;
+        qaOutQ0.selection_criterion = "none";
+        qaOutQ0.sample_start = 1;
+        qaOutQ0.sample_end = rows(data);
+        qaOutQ0.estimation_start = rows(data) - rows(Y_qr) + 1;
+        qaOutQ0.estimation_end = rows(data);
         qaOutQ0.tau = tau;
         qaOutQ0.p = ppp;
         qaOutQ0.q = qqq;
+        qaOutQ0.qvec = qqq*ones(k0, 1);
         qaOutQ0.nobs = rows(Y_qr);
         qaOutQ0.k = k0;
         qaOutQ0.bigbt = bigbt;
@@ -340,6 +384,10 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_ty
         qaOutQ0.alpha = bt[1, .]';
         qaOutQ0.rho = -(1 - sumc(bt[2+k0:1+k0+ppp, .]));
         qaOutQ0.bt = bt;
+        fitted_mat = ONEX_qr*bt;
+        resid_mat = Y_qr*ones(1, ss) - fitted_mat;
+        qaOutQ0.fitted = fitted_mat;
+        qaOutQ0.resid = resid_mat;
 
         if print_results;
             call printQARDL(qaOutQ0, tau);
@@ -542,6 +590,17 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_ty
     
     struct qardlOut qaOut;
     
+    qaOut.model_family = "QARDL";
+    qaOut.formula = "";
+    qaOut.depvar = depvar;
+    qaOut.xvars = xvars;
+    qaOut.deterministic = "constant";
+    qaOut.covariance_type = cov_type;
+    qaOut.selection_criterion = "none";
+    qaOut.sample_start = 1;
+    qaOut.sample_end = rows(data);
+    qaOut.estimation_start = rows(data) - rows(Y_qr) + 1;
+    qaOut.estimation_end = rows(data);
     qaOut.tau = tau;
     qaOut.p = ppp;
     qaOut.q = qqq;
@@ -564,6 +623,10 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_ty
 
     // Full coefficient matrix for downstream use (e.g., QIRF)
     qaOut.bt = bt;
+    fitted_mat = ONEX_qr*bt;
+    resid_mat = Y_qr*ones(1, ss) - fitted_mat;
+    qaOut.fitted = fitted_mat;
+    qaOut.resid = resid_mat;
 
     if print_results;
         call printQARDL(qaOut, tau);
@@ -616,9 +679,11 @@ proc (struct qardlOut) = qardlX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }, cov_
     local nn, k0, ss, za, hb, hs, jj, yy, Y, ONEX, bt, fh, uu;
     local qmax, theta_start, phi_start, D_qr, D_inv_qr, cov_lags, full_cov;
     local midbt, bigbt, midphi, bigphi, midgam, bigam, bigbtmm, bigpi, bigff;
+    local depvar, xvars, fitted_mat, resid_mat;
 
     call _qardlValidateEstimatorInputs(data, ppp, 0, tau, "qardlX");
     k0 = cols(data) - 1;
+    { depvar, xvars } = _qardlFormulaNames("", k0);
     qvec = _qardlNormalizeQVector(qvec, k0, "qardlX: qvec");
     cov_type = lower(cov_type);
     call _qardlValidateECMCovType(cov_type, "qardlX");
@@ -690,6 +755,17 @@ proc (struct qardlOut) = qardlX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }, cov_
         _qardlLevelsCovFromFullPositions(full_cov, bt, theta_start, phi_start, k0, ppp, ss);
 
     struct qardlOut qaOut;
+    qaOut.model_family = "QARDL";
+    qaOut.formula = "";
+    qaOut.depvar = depvar;
+    qaOut.xvars = xvars;
+    qaOut.deterministic = "constant";
+    qaOut.covariance_type = cov_type;
+    qaOut.selection_criterion = "none";
+    qaOut.sample_start = 1;
+    qaOut.sample_end = rows(data);
+    qaOut.estimation_start = rows(data) - rows(Y) + 1;
+    qaOut.estimation_end = rows(data);
     qaOut.tau = tau;
     qaOut.p = ppp;
     qaOut.q = qmax;
@@ -705,6 +781,10 @@ proc (struct qardlOut) = qardlX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }, cov_
     qaOut.alpha = bt[1, .]';
     qaOut.rho = -(1 - sumc(bt[phi_start:phi_start+ppp-1, .]));
     qaOut.bt = bt;
+    fitted_mat = ONEX*bt;
+    resid_mat = Y*ones(1, ss) - fitted_mat;
+    qaOut.fitted = fitted_mat;
+    qaOut.resid = resid_mat;
 
     if print_results;
         call printQARDL(qaOut, tau);
@@ -780,6 +860,7 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, 
     local bt_ecm, fh_ecm, uu_ecm, hb;
     local za, cc, mfh, mtau, psu;
     local D_ecm, D_inv_ecm, rho_cov, alpha_cov, cov_lags;
+    local depvar, xvars, fitted_mat, resid_mat;
 
     call _qardlValidateEstimatorInputs(data, ppp, qqq, tau, "qardlECM");
     cov_type = lower(cov_type);
@@ -788,6 +869,7 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, 
 
     nn = rows(data);
     k0 = cols(data) - 1;
+    { depvar, xvars } = _qardlFormulaNames("", k0);
     ss = rows(tau);
     tau = sortc(tau, 1);
 
@@ -946,9 +1028,21 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, 
 
     // ---- Package results ----
     struct qardlECMOut qECMOut;
+    qECMOut.model_family = "QARDL-ECM";
+    qECMOut.formula = "";
+    qECMOut.depvar = depvar;
+    qECMOut.xvars = xvars;
+    qECMOut.deterministic = "constant";
+    qECMOut.covariance_type = cov_type;
+    qECMOut.selection_criterion = "none";
+    qECMOut.sample_start = 1;
+    qECMOut.sample_end = rows(data);
+    qECMOut.estimation_start = rows(data) - N_ecm + 1;
+    qECMOut.estimation_end = rows(data);
     qECMOut.tau       = tau;
     qECMOut.p         = ppp;
     qECMOut.q         = qqq;
+    qECMOut.qvec      = qqq*ones(k0, 1);
     qECMOut.nobs      = N_ecm;
     qECMOut.k         = k0;
     qECMOut.beta_lr   = beta_lr_ols;
@@ -957,6 +1051,11 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, 
     qECMOut.rho       = bt_ecm[2, .]';
     qECMOut.rho_cov   = rho_cov;
     qECMOut.alpha_cov = alpha_cov;
+    qECMOut.bt        = bt_ecm;
+    fitted_mat = ONEX_ecm*bt_ecm;
+    resid_mat = Y_ecm*ones(1, ss) - fitted_mat;
+    qECMOut.fitted = fitted_mat;
+    qECMOut.resid = resid_mat;
 
     if print_results;
         call printQARDLECM(qECMOut, tau);
@@ -1003,9 +1102,11 @@ proc (struct qardlECMOut) = qardlECMX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }
     local bt_ols, rho_ols, beta_lr_ols, qmax, T0, N, N_ecm, Y_ecm, ec_lag;
     local ONEX_ecm, dy_lags, dx_ecm, ii, jj, j, bt_ecm, fh_ecm, uu_ecm;
     local za, hb, D_ecm, D_inv_ecm, rho_cov, alpha_cov, cov_lags, cc, mtau, mfh, psu;
+    local depvar, xvars, fitted_mat, resid_mat;
 
     call _qardlValidateEstimatorInputs(data, ppp, 0, tau, "qardlECMX");
     k0 = cols(data) - 1;
+    { depvar, xvars } = _qardlFormulaNames("", k0);
     qvec = _qardlNormalizeQVector(qvec, k0, "qardlECMX: qvec");
     cov_type = lower(cov_type);
     call _qardlValidateECMCovType(cov_type, "qardlECMX");
@@ -1114,9 +1215,21 @@ proc (struct qardlECMOut) = qardlECMX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }
     endif;
 
     struct qardlECMOut qECMOut;
+    qECMOut.model_family = "QARDL-ECM";
+    qECMOut.formula = "";
+    qECMOut.depvar = depvar;
+    qECMOut.xvars = xvars;
+    qECMOut.deterministic = "constant";
+    qECMOut.covariance_type = cov_type;
+    qECMOut.selection_criterion = "none";
+    qECMOut.sample_start = 1;
+    qECMOut.sample_end = rows(data);
+    qECMOut.estimation_start = rows(data) - N_ecm + 1;
+    qECMOut.estimation_end = rows(data);
     qECMOut.tau = tau;
     qECMOut.p = ppp;
     qECMOut.q = qmax;
+    qECMOut.qvec = qvec;
     qECMOut.nobs = N_ecm;
     qECMOut.k = k0;
     qECMOut.beta_lr = beta_lr_ols;
@@ -1125,6 +1238,11 @@ proc (struct qardlECMOut) = qardlECMX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }
     qECMOut.rho = bt_ecm[2, .]';
     qECMOut.rho_cov = rho_cov;
     qECMOut.alpha_cov = alpha_cov;
+    qECMOut.bt = bt_ecm;
+    fitted_mat = ONEX_ecm*bt_ecm;
+    resid_mat = Y_ecm*ones(1, ss) - fitted_mat;
+    qECMOut.fitted = fitted_mat;
+    qECMOut.resid = resid_mat;
 
     if print_results;
         call printQARDLECM(qECMOut, tau);
@@ -4013,7 +4131,7 @@ endp;
 **  Developed:  April 2026
 */
 proc (struct qardlFullOut) = qardlFull(data, pend = 8, qend = 8, tau = { 0.25, 0.5, 0.75 }, formula = "", verbose = 1, criterion = "bic", cov_type = "iid", hac_lags = 0);
-    local pst, qst, fstat, cv;
+    local pst, qst, fstat, cv, depvar, xvars;
 
     struct qardlFullOut qfOut;
     struct qardlOut qa;
@@ -4024,6 +4142,7 @@ proc (struct qardlFullOut) = qardlFull(data, pend = 8, qend = 8, tau = { 0.25, 0
         end;
     endif;
 
+    { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
     data = _applyFormula(data, formula);
     call _qardlValidateSearchInputs(data, pend, qend, tau, "qardlFull");
     criterion = lower(criterion);
@@ -4059,6 +4178,10 @@ proc (struct qardlFullOut) = qardlFull(data, pend = 8, qend = 8, tau = { 0.25, 0
         endif;
     endif;
     qa = qardl(data, pst, qst, tau, cov_type, hac_lags, 0);
+    qa.formula = formula;
+    qa.depvar = depvar;
+    qa.xvars = xvars;
+    qa.selection_criterion = criterion;
     if verbose;
         printQARDL(qa, tau);
     endif;
@@ -4072,10 +4195,25 @@ proc (struct qardlFullOut) = qardlFull(data, pend = 8, qend = 8, tau = { 0.25, 0
         endif;
     endif;
     ecm = qardlECM(data, pst, qst, tau, cov_type, hac_lags, 0);
+    ecm.formula = formula;
+    ecm.depvar = depvar;
+    ecm.xvars = xvars;
+    ecm.selection_criterion = criterion;
     if verbose;
         printQARDLECM(ecm, tau);
     endif;
 
+    qfOut.model_family = "QARDL";
+    qfOut.formula = formula;
+    qfOut.depvar = depvar;
+    qfOut.xvars = xvars;
+    qfOut.deterministic = "constant";
+    qfOut.covariance_type = cov_type;
+    qfOut.selection_criterion = criterion;
+    qfOut.pmax = pend;
+    qfOut.qmax = qend;
+    qfOut.sample_start = 1;
+    qfOut.sample_end = rows(data);
     qfOut.pst        = pst;
     qfOut.qst        = qst;
     qfOut.tau        = tau;
@@ -4086,6 +4224,71 @@ proc (struct qardlFullOut) = qardlFull(data, pend = 8, qend = 8, tau = { 0.25, 0
     qfOut.ecm        = ecm;
 
     retp(qfOut);
+endp;
+
+proc (1) = _qardlDefaultXVars(k0);
+    local ii, xvars;
+
+    if k0 <= 0;
+        retp("");
+    endif;
+
+    xvars = "x1";
+    ii = 2;
+    do until ii > k0;
+        xvars = xvars $| ("x" $+ ftos(ii, "%g", 1, 0));
+        ii = ii + 1;
+    endo;
+
+    retp(xvars);
+endp;
+
+proc (2) = _qardlFormulaNames(formula, k0);
+    local tilde_pos, lhs, remaining, xvars, n_x, pos, part;
+
+    if strlen(formula) == 0;
+        retp("y", _qardlDefaultXVars(k0));
+    endif;
+
+    tilde_pos = strindx(formula, "~", 1);
+    if tilde_pos == 0;
+        retp("y", _qardlDefaultXVars(k0));
+    endif;
+
+    lhs = strtrim(strsect(formula, 1, tilde_pos - 1));
+    remaining = strtrim(strsect(formula, tilde_pos + 1, strlen(formula)));
+    xvars = "";
+    n_x = 0;
+
+    do while strlen(remaining) > 0;
+        pos = strindx(remaining, "+", 1);
+        if pos == 0;
+            part = strtrim(remaining);
+            remaining = "";
+        else;
+            part = strtrim(strsect(remaining, 1, pos - 1));
+            remaining = strtrim(strsect(remaining, pos + 1, strlen(remaining)));
+        endif;
+
+        if strlen(part) > 0;
+            if n_x == 0;
+                xvars = part;
+            else;
+                xvars = xvars $| part;
+            endif;
+            n_x = n_x + 1;
+        endif;
+    endo;
+
+    if strlen(lhs) == 0;
+        lhs = "y";
+    endif;
+
+    if n_x == 0;
+        xvars = _qardlDefaultXVars(k0);
+    endif;
+
+    retp(lhs, xvars);
 endp;
 
 /*

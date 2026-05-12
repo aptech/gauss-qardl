@@ -5,6 +5,11 @@ each public procedure should have a page with `Purpose`, `Format`,
 `Parameters`, `Returns`, `Remarks`, `Examples`, `Source`, and `See Also`
 sections.
 
+## Shared API Notes
+
+- [API control-structure audit](API_CONTROL_AUDIT.md)
+- [ARDL-family output schema](OUTPUT_SCHEMA.md)
+
 ## Core Workflow
 
 - [ardlFull](command-reference/ardlFull.md)
@@ -66,6 +71,7 @@ sections.
 - [blockBootstrapQARDLECM](command-reference/blockBootstrapQARDLECM.md)
 - [blockBootstrapQARDLECMMethod](command-reference/blockBootstrapQARDLECMMethod.md)
 - [blockBootstrapQARDLECMDiag](command-reference/blockBootstrapQARDLECMDiag.md)
+- [blockBootstrapQIRF](command-reference/blockBootstrapQIRF.md)
 - [rollingQardl](command-reference/rollingQardl.md)
 - [rollingQardlECM](command-reference/rollingQardlECM.md)
 - [qirf](command-reference/qirf.md)

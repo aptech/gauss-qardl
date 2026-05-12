@@ -46,6 +46,8 @@ print "beta  " wt_beta~pv_beta;
 print "gamma " wt_gamma~pv_gamma;
 print "phi   " wt_phi~pv_phi;
 
-qOut = qirf(qfOut.qa, qfOut.qa.p, qfOut.qa.q, 20, tau);
+qOut = blockBootstrapQIRF(shiller, qfOut.qa.p, qfOut.qa.q, 20, tau, 1, 1,
+                          10, 0, 0.10, 24680, "moving",
+                          "real_dividend ~ real_earnings");
 plotQARDLbands(qfOut.qa, tau, 0.05);
 plotQIRF(qOut, 1);
