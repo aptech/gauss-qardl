@@ -76,11 +76,11 @@ function Invoke-ValidationCases {
 
     foreach ($case in $cases) {
         $wrapper = Join-Path ([System.IO.Path]::GetTempPath()) ("qardl_validation_" + [System.Guid]::NewGuid().ToString("N") + ".e")
-        $gaussSrcDir = $srcDir -replace "\\", "/"
+        $gaussRepoDir = $RepoRoot -replace "\\", "/"
         $gaussCase = $case.FullName -replace "\\", "/"
         Set-Content -Path $wrapper -Value @(
             "new;",
-            "chdir `"$gaussSrcDir`";",
+            "chdir `"$gaussRepoDir`";",
             "run `"$gaussCase`";"
         )
 

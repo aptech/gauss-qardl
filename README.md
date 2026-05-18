@@ -93,6 +93,8 @@ style:
   targets and the Cho-Kim-Shin dividend-policy scaffold.
 - [QARDL validation](docs/QARDL_VALIDATION.md): author-demo validation,
   bootstrap interval fixtures, and exact empirical-replication gaps.
+- [NARDL validation](docs/NARDL_VALIDATION.md): partial-sum decomposition,
+  asymmetric effects, bounds, and dynamic-multiplier validation status.
 - [LLM reference](llms.txt): compact package guide for users who want to point
   an AI assistant at the QARDL API.
 - [3.0.1 roadmap](docs/ROADMAP_3_0_1.md): planned presentation and LaTeX

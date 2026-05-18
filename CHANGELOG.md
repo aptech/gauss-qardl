@@ -42,6 +42,9 @@
   CS-ARDL coefficient, diagnostic, and forecast checks.
 - Published-reference QARDL validation against the author-provided Cho-Kim-Shin
   GAUSS demo outputs, plus stored QARDL bootstrap interval fixtures.
+- `nardlDynamicMultipliers` plus deterministic NARDL validation fixtures for
+  partial-sum decomposition, asymmetric effects, bounds diagnostics, and
+  dynamic multipliers.
 - CS-ARDL dataframe formulas now follow GAUSS panel-data conventions:
   `y ~ x1 + x2` infers the first string/category column as the unit variable
   and the first date column, or first numeric fallback, as the time variable.

@@ -37,9 +37,11 @@ case under `tests/validation_cases/synthetic/`.
 Validation cases compare computed outputs with numeric CSV baselines under:
 
 - `tests/fixtures/expected/synthetic/coefficients/`
+- `tests/fixtures/expected/synthetic/decompositions/`
 - `tests/fixtures/expected/synthetic/diagnostics/`
 - `tests/fixtures/expected/synthetic/forecasts/`
 - `tests/fixtures/expected/synthetic/intervals/`
+- `tests/fixtures/expected/synthetic/multipliers/`
 
 The GAUSS assertions are quiet on success and report only shape mismatches,
 maximum absolute differences, and tolerances on failure.

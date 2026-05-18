@@ -136,6 +136,12 @@ call assert_common_metadata(na_formula.model_family, na_formula.formula, na_form
                             "NARDL", formula, "ols", n, 2, n);
 call assert_true(rows(na_formula.qvec) == 2 and rows(na_formula.fitted) == na_formula.nobs,
                  "NARDL qvec/fitted metadata");
+struct nardlDynMultOut ndm;
+ndm = nardlDynamicMultipliers(na_formula, 3);
+call assert_string(ndm.model_family, "NARDL-Dynamic-Multipliers", "NARDL multiplier model_family metadata");
+call assert_string(ndm.formula, formula, "NARDL multiplier formula metadata");
+call assert_true(ndm.horizon == 3 and rows(ndm.pos) == 4 and cols(ndm.neg) == 2,
+                 "NARDL multiplier shape metadata");
 
 struct nardlECMOut necm;
 necm = nardlECM(df, 1, 1, formula, 0);

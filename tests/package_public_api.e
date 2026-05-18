@@ -196,6 +196,11 @@ call assert_true(rows(naOut.beta_pos) == 2 and rows(naOut.asymmetry_pv) == 2,
 call assert_true(rows(predictARDL(naOut, nardl_data)) == naOut.nobs and
                  rows(forecastARDL(naOut, nardl_data, 2)) == 2,
                  "NARDL unified predict/forecast dispatch changed");
+struct nardlDynMultOut dmOut;
+dmOut = nardlDynamicMultipliers(naOut, 3);
+call assert_true(rows(dmOut.pos) == 4 and cols(dmOut.pos) == naOut.k and
+                 rows(dmOut.neg) == 4 and cols(dmOut.asymmetry) == naOut.k,
+                 "nardlDynamicMultipliers output changed");
 
 struct nardlFullOut nfOut;
 nfOut = nardlFull(nardl_df, 1, 1, "y ~ x1 + x2", 0);

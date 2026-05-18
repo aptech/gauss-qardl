@@ -13,7 +13,8 @@ Within each source type, expected outputs are grouped by category:
 - `diagnostics/`
 - `forecasts/`
 - `intervals/`
+- `decompositions/`
+- `multipliers/`
 
 CSV files are numeric and intentionally header-free so GAUSS validation scripts
 can read them with `csvReadM`.
-

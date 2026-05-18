@@ -186,6 +186,10 @@ nfOut = nardlFull(data, verbose = 0, criterion = "bic");
 nfOut = nardlFull(df, formula = "y ~ x1 + x2", verbose = 0, criterion = "bic");
 printNARDL(nfOut.na);
 printNARDLECM(nfOut.ecm);
+
+dmOut = nardlDynamicMultipliers(nfOut.na, 20);
+print dmOut.pos;
+print dmOut.neg;
 ```
 
 `nardl` and `nardlECM` are available when lag orders are fixed. The output
@@ -193,6 +197,8 @@ includes long-run positive and negative coefficients, long-run and short-run
 asymmetry Wald tests, a UECM bounds F-statistic, fitted values, residuals, and
 OLS covariance fields. `predictARDL` and `forecastARDL` infer NARDL output
 structures; `predictNARDL` and `forecastNARDL` remain available.
+`nardlDynamicMultipliers` computes the positive and negative adjustment paths
+implied by the estimated levels equation.
 
 Use `csardlFull` for pooled cross-sectionally augmented ARDL panels:
 
@@ -334,8 +340,8 @@ values, residuals, residual variance, ARDL bounds-test integration through
 `ardlFull`, and `predictARDL`/`forecastARDL` hooks.
 
 The standard NARDL workflow currently includes long-run and short-run
-asymmetry Wald tests, a UECM bounds F-statistic, fitted values, residuals, and
-residual variance fields.
+asymmetry Wald tests, a UECM bounds F-statistic, dynamic multipliers, fitted
+values, residuals, and residual variance fields.
 
 The standard CS-ARDL workflow currently includes pooled coefficient
 diagnostics, cross-sectional-average controls, fitted values, residuals,

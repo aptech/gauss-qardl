@@ -13,7 +13,7 @@ model families.
 | `published-qardl-cks2015` | Cho, Kim, and Shin (2015), U.S. dividend-policy application | QARDL | Exact author dataset pending; bundled Shiller data are only an approximation | Pending exact variable definitions, sample window, deterministic case, lag specification, and quantile grid | Long-run coefficient table, short-run coefficients, Wald tests, bounds test, bootstrap intervals | `tests/fixtures/expected/published/` | Scaffold only; no numerical pass/fail claim |
 | `published-qardl-ckgns2023` | Cho, Kim, Greenwood-Nimmo, and Shin (2023), asymmetric dividend response to earnings news | QARDL / asymmetric QARDL candidate | Candidate pending data confirmation | Pending earnings-news construction and asymmetric specification details | Coefficient tables, asymmetry tests, QIRF or dynamic response outputs if applicable | Pending | Not started |
 | `published-qadl-gmp2013` | Galvao, Montes-Rojas, and Park (2013), QADL house-price returns | Adjacent quantile ARDL | Candidate pending redistributable data | Pending stationary-return construction and estimator-definition comparison | QADL coefficient tables and cross-implementation comparison notes | Pending | Not started; adjacent methodology |
-| `published-nardl-syg2014` | Shin, Yu, and Greenwood-Nimmo (2014), NARDL asymmetric cointegration and dynamic multipliers | NARDL | Exact datasets pending | Pending positive/negative partial sums, sample windows, deterministic terms, lag orders, and dynamic multiplier settings | Long-run asymmetry, dynamic multipliers, bounds tests | `tests/fixtures/expected/published/` | Pending exact data/specification |
+| `published-nardl-syg2014` | Shin, Yu, and Greenwood-Nimmo (2014), NARDL asymmetric cointegration and dynamic multipliers | NARDL | Exact datasets pending | Pending positive/negative partial sums, sample windows, deterministic terms, lag orders, and dynamic multiplier settings | Long-run asymmetry, dynamic multipliers, bounds tests | `tests/fixtures/expected/published/` | Exact published data pending; deterministic decomposition, asymmetry, bounds, and multiplier fixtures pass |
 | `published-csardl-cp2015` | Chudik and Pesaran (2015), dynamic CCE / CS-ARDL panel Monte Carlo designs | CS-ARDL | Exact Monte Carlo grid pending | Pending DGP grid, cross-sectional-average lag choices, estimator variants, and bias-correction policy | Pooled and mean-group coefficients, poolability or heterogeneity diagnostics, Monte Carlo summary tables | `tests/fixtures/expected/published/` | Pending exact DGP grid |
 | `cross-qardlr-simulated` | R `qardlr` simulated QARDL dataset | QARDL cross-implementation | Benchmark candidate, not an empirical paper replication | Pending DGP alignment and estimator-default comparison | Coefficients, selected lags, long-run estimates | Pending | Not started |
 
@@ -74,12 +74,14 @@ Active deterministic fixture metadata lives in
 - `forecasts/`
 - `intervals/`
 
-Published-result expected outputs are reserved under
-`tests/fixtures/expected/published/` and remain empty until exact datasets and
-specifications are available.
+Published-reference expected outputs are stored under
+`tests/fixtures/expected/published/`. Exact empirical published-result fixtures
+remain pending until datasets and specifications are available.
 
 See `docs/QARDL_VALIDATION.md` for the active QARDL author-demo validation
 target, QARDL bootstrap interval fixture, and exact empirical-replication gaps.
+See `docs/NARDL_VALIDATION.md` for active NARDL decomposition, asymmetry,
+bounds, and dynamic-multiplier validation fixtures.
 
 ## Tolerance Policy
 

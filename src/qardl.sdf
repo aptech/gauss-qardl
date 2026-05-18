@@ -392,6 +392,28 @@ struct nardlFullOut {
     struct nardlECMOut ecm;
 };
 
+struct nardlDynMultOut {
+    // Standardized model metadata
+    string model_family;
+    string formula;
+    string depvar;
+    string array xvars;
+
+    // Multiplier horizon metadata
+    scalar horizon;
+    scalar k;
+    matrix h;
+
+    // Dynamic multipliers for a one-unit change in positive and negative
+    // partial-sum regressors. Rows correspond to horizons 0...horizon and
+    // columns correspond to original regressors.
+    matrix pos;
+    matrix neg;
+
+    // Difference pos - neg, useful for visualizing asymmetric adjustment.
+    matrix asymmetry;
+};
+
 struct csardlOut {
     // Standardized model metadata
     string model_family;

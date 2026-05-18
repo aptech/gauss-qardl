@@ -206,6 +206,10 @@ Runs rolling-window two-step QARDL-ECM estimation.
 
 Computes quantile impulse response functions.
 
+[nardlDynamicMultipliers](command-reference/nardlDynamicMultipliers.md)
+
+Computes positive and negative NARDL dynamic multiplier paths.
+
 ### Output, Plotting, And Export
 
 [printARDL](command-reference/printARDL.md)

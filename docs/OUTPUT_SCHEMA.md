@@ -43,6 +43,7 @@ store `pmax` and `qmax` for the search bounds.
 | `nardlOut` | NARDL | common metadata, `qvec`, row-index sample metadata | Includes positive/negative long-run decomposition fields. |
 | `nardlECMOut` | NARDL-ECM | common metadata, `qvec`, row-index sample metadata | Includes inherited asymmetric long-run tests. |
 | `nardlFullOut` | NARDL | common workflow metadata, `pmax`, `qmax` | Propagates formula/name metadata to `.na` and `.ecm`. |
+| `nardlDynMultOut` | NARDL-Dynamic-Multipliers | model family, formula, names, horizon | Contains `pos`, `neg`, and `asymmetry` multiplier matrices. |
 | `csardlOut` | CS-ARDL | common metadata, `unitvar`, `timevar`, `qvec` | `estimation_start/end` are within-unit time indices. |
 | `csardlECMOut` | CS-ARDL-ECM | common metadata, `unitvar`, `timevar`, `qvec` | Uses pooled long-run coefficients from CS-ARDL levels estimation. |
 | `csardlDiagOut` | CS-ARDL diagnostics | common metadata, `unitvar`, `timevar`, `qvec` | Covers mean-group and poolability diagnostics. |
@@ -98,4 +99,3 @@ within-unit time indices, not total row indices.
   documentation and tests in the next roadmap steps.
 - Additional control structures may still be needed for long positional APIs;
   this schema baseline does not change existing public signatures.
-

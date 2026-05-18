@@ -451,6 +451,89 @@ proc (1) = _forecastNARDLLevels(struct nardlOut naOut, data, h = 1, formula = ""
 endp;
 
 /*
+**> nardlDynamicMultipliers
+**
+**  Purpose:    Compute NARDL dynamic multipliers for positive and negative
+**              partial-sum shocks from a levels-form nardlOut.
+**
+**  Format:     dmOut = nardlDynamicMultipliers(naOut);
+**              dmOut = nardlDynamicMultipliers(naOut, horizon);
+*/
+proc (struct nardlDynMultOut) = nardlDynamicMultipliers(struct nardlOut naOut, horizon = 20);
+    local pos, neg, asym, hvec, k0, qqq, ppp, pos_start, neg_start;
+    local kk, hh, jj, response, row_idx, dx_idx;
+
+    call _qardlValidateLagScalarZero(horizon, "nardlDynamicMultipliers: horizon");
+
+    k0 = naOut.k;
+    ppp = naOut.p;
+    qqq = naOut.q;
+    pos = zeros(horizon+1, k0);
+    neg = zeros(horizon+1, k0);
+    hvec = seqa(0, 1, horizon+1);
+
+    pos_start = 2 + 2*k0 + ppp;
+    neg_start = pos_start + qqq*k0;
+
+    kk = 1;
+    do until kk > k0;
+        hh = 0;
+        do until hh > horizon;
+            row_idx = hh + 1;
+            response = naOut.theta_pos[kk];
+
+            if qqq > 0 and hh < qqq;
+                dx_idx = pos_start + (kk-1)*qqq + hh;
+                response = response + naOut.bt[dx_idx];
+            endif;
+
+            jj = 1;
+            do until jj > ppp;
+                if hh - jj >= 0;
+                    response = response + naOut.phi[jj]*pos[hh-jj+1, kk];
+                endif;
+                jj = jj + 1;
+            endo;
+            pos[row_idx, kk] = response;
+
+            response = naOut.theta_neg[kk];
+            if qqq > 0 and hh < qqq;
+                dx_idx = neg_start + (kk-1)*qqq + hh;
+                response = response + naOut.bt[dx_idx];
+            endif;
+
+            jj = 1;
+            do until jj > ppp;
+                if hh - jj >= 0;
+                    response = response + naOut.phi[jj]*neg[hh-jj+1, kk];
+                endif;
+                jj = jj + 1;
+            endo;
+            neg[row_idx, kk] = response;
+
+            hh = hh + 1;
+        endo;
+        kk = kk + 1;
+    endo;
+
+    asym = pos - neg;
+
+    struct nardlDynMultOut dmOut;
+    dmOut.model_family = "NARDL-Dynamic-Multipliers";
+    dmOut.formula = naOut.formula;
+    dmOut.depvar = naOut.depvar;
+    dmOut.xvars = naOut.xvars;
+    dmOut.horizon = horizon;
+    dmOut.k = k0;
+    dmOut.h = hvec;
+    dmOut.pos = pos;
+    dmOut.neg = neg;
+    dmOut.asymmetry = asym;
+
+    retp(dmOut);
+endp;
+
+/*
 **> applyNARDLFormula
 **
 **  Purpose:    Formula hook for NARDL workflows.  Uses the same Wilkinson

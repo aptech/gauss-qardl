@@ -99,6 +99,13 @@ call assert_true(rows(nardl_fcst) == 3 and cols(nardl_fcst) == 1,
                  "forecastNARDL returned wrong shape");
 call assert_close(forecastARDL(naOut, nardl_data, 3), nardl_fcst, 1e-10,
                   "forecastARDL NARDL dispatch changed forecasts");
+struct nardlDynMultOut dmOut;
+dmOut = nardlDynamicMultipliers(naOut, 4);
+call assert_true(rows(dmOut.pos) == 5 and cols(dmOut.pos) == naOut.k and
+                 rows(dmOut.neg) == 5 and rows(dmOut.asymmetry) == 5,
+                 "nardlDynamicMultipliers output shape changed");
+call assert_close(dmOut.asymmetry, dmOut.pos - dmOut.neg, 1e-12,
+                  "nardlDynamicMultipliers asymmetry calculation changed");
 
 struct nardlECMOut nECMOut;
 nECMOut = nardlECM(nardl_data, 1, 1, "", 0);

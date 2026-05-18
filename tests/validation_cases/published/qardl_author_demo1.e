@@ -9,20 +9,20 @@ new;
 ** validates the documented demo outputs distributed with the author code.
 */
 
-#include qardl.sdf
-#include qardl.src
-#include nardl.src
-#include csardl.src
-#include ardl_dispatch.src
-#include wtestlrb.src
-#include wtestsrp.src
-#include wtestsrg.src
-#include icmean.src
-#include p_values_qardl.src
-#include wtestsym.src
-#include wtestconst.src
-#include ardlbounds.src
-#include qirf.src
+#include src/qardl.sdf
+#include src/qardl.src
+#include src/nardl.src
+#include src/csardl.src
+#include src/ardl_dispatch.src
+#include src/wtestlrb.src
+#include src/wtestsrp.src
+#include src/wtestsrg.src
+#include src/icmean.src
+#include src/p_values_qardl.src
+#include src/wtestsym.src
+#include src/wtestconst.src
+#include src/ardlbounds.src
+#include src/qirf.src
 
 proc (0) = assert_close(actual, expected, tol, msg);
     local diff;
@@ -47,7 +47,7 @@ proc (1) = read_expected(fname);
     retp(csvReadM(__FILE_DIR $+ "../../fixtures/expected/published/" $+ fname));
 endp;
 
-data = loadd(__FILE_DIR $+ "../../../examples/qardl_data.dat");
+data = loadd("examples/qardl_data.dat");
 data = data[., 1:3];
 tau = { 0.25, 0.5, 0.75 };
 tol = 1e-5;

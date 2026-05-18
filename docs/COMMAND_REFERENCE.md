@@ -75,6 +75,7 @@ sections.
 - [rollingQardl](command-reference/rollingQardl.md)
 - [rollingQardlECM](command-reference/rollingQardlECM.md)
 - [qirf](command-reference/qirf.md)
+- [nardlDynamicMultipliers](command-reference/nardlDynamicMultipliers.md)
 
 ## Output, Plotting, And Export
 
