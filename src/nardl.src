@@ -305,6 +305,7 @@ endp;
 */
 proc (0) = printNARDL(struct nardlOut naOut);
     local ii, se_beta, se_phi, z_beta, z_phi, pv_beta, pv_phi;
+    local header, asym_header, note, table_width, eq_line, dash_line;
 
     se_beta = sqrt(diag(naOut.bigbt_cov));
     se_phi = sqrt(diag(naOut.phi_cov));
@@ -313,17 +314,24 @@ proc (0) = printNARDL(struct nardlOut naOut);
     pv_beta = 2*cdfnc(abs(z_beta));
     pv_phi = 2*cdfnc(abs(z_phi));
 
-    print "====================================================================================================";
+    header = "Name                  Coeff.       Std. Err.      z-value       P>|z|    Sig.";
+    asym_header = "Name                  statistic       p-value    Sig.";
+    note = _qardlSignifNote();
+    table_width = maxc(strlen(header)|strlen(asym_header)|84|strlen(note));
+    eq_line = _qardlTableBorder("=", table_width);
+    dash_line = _qardlTableBorder("-", table_width);
+
+    print eq_line;
     print "NARDL Levels Estimator";
-    print "====================================================================================================";
+    print eq_line;
     sprintf("%-26s%12.0f        %-26s%12.0f", "No. of obs:", naOut.nobs,
             "No. regressors:", naOut.k);
     sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", naOut.p,
             "DL lags (q):", naOut.q);
     sprintf("%-26s%12.4f", "Bounds F-stat:", naOut.bounds_fstat);
-    print "----------------------------------------------------------------------------------------------------";
-    print "Name                  Coeff.       Std. Err.      z-value       P>|z|    Sig.";
-    print "----------------------------------------------------------------------------------------------------";
+    print dash_line;
+    print header;
+    print dash_line;
 
     ii = 1;
     do until ii > naOut.k;
@@ -351,9 +359,9 @@ proc (0) = printNARDL(struct nardlOut naOut);
     endo;
     sprintf("  alpha       %16.6f", naOut.alpha[1]);
     sprintf("  rho         %16.6f", naOut.rho[1]);
-    print "----------------------------------------------------------------------------------------------------";
+    print dash_line;
     print "Long-run asymmetry tests";
-    print "Name                  statistic       p-value    Sig.";
+    print asym_header;
     ii = 1;
     do until ii > rows(naOut.asymmetry_wald);
         sprintf("  x%-17d%16.6f%15.6f%7s",
@@ -361,7 +369,8 @@ proc (0) = printNARDL(struct nardlOut naOut);
                 _qardlSignifStars(naOut.asymmetry_pv[ii]));
         ii = ii + 1;
     endo;
-    print "====================================================================================================";
+    print eq_line;
+    print note;
 endp;
 
 /*
@@ -371,6 +380,7 @@ endp;
 */
 proc (0) = printNARDLECM(struct nardlECMOut nECMOut);
     local se_alpha, se_rho, z_alpha, z_rho, pv_alpha, pv_rho;
+    local header, note, table_width, eq_line, dash_line;
 
     se_alpha = sqrt(nECMOut.alpha_cov[1, 1]);
     se_rho = sqrt(nECMOut.rho_cov[1, 1]);
@@ -379,23 +389,30 @@ proc (0) = printNARDLECM(struct nardlECMOut nECMOut);
     pv_alpha = 2*cdfnc(abs(z_alpha));
     pv_rho = 2*cdfnc(abs(z_rho));
 
-    print "====================================================================================================";
+    header = "Name                  Coeff.       Std. Err.      z-value       P>|z|    Sig.";
+    note = _qardlSignifNote();
+    table_width = maxc(strlen(header)|84|strlen(note));
+    eq_line = _qardlTableBorder("=", table_width);
+    dash_line = _qardlTableBorder("-", table_width);
+
+    print eq_line;
     print "NARDL-ECM Estimator";
-    print "====================================================================================================";
+    print eq_line;
     sprintf("%-26s%12.0f        %-26s%12.0f", "No. of obs:", nECMOut.nobs,
             "No. regressors:", nECMOut.k);
     sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", nECMOut.p,
             "DL lags (q):", nECMOut.q);
-    print "----------------------------------------------------------------------------------------------------";
-    print "Name                  Coeff.       Std. Err.      z-value       P>|z|    Sig.";
-    print "----------------------------------------------------------------------------------------------------";
+    print dash_line;
+    print header;
+    print dash_line;
     sprintf("  alpha       %16.6f%15.6f%13.6f%12.6f%7s",
             nECMOut.alpha[1], se_alpha, z_alpha, pv_alpha,
             _qardlSignifStars(pv_alpha));
     sprintf("  rho         %16.6f%15.6f%13.6f%12.6f%7s",
             nECMOut.rho[1], se_rho, z_rho, pv_rho,
             _qardlSignifStars(pv_rho));
-    print "====================================================================================================";
+    print eq_line;
+    print note;
 endp;
 
 /*

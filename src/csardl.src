@@ -441,29 +441,37 @@ endp;
 */
 proc (0) = printCSARDLDiagnostics(struct csardlDiagOut diagOut);
     local ii;
+    local header, note, table_width, eq_line, dash_line;
 
-    print "====================================================================================================";
+    header = "Name                  Pooled       Mean Group       MG Std. Err.";
+    note = _qardlSignifNote();
+    table_width = maxc(strlen(header)|87|strlen(note));
+    eq_line = _qardlTableBorder("=", table_width);
+    dash_line = _qardlTableBorder("-", table_width);
+
+    print eq_line;
     print "CS-ARDL Mean-Group / Poolability Diagnostics";
-    print "====================================================================================================";
+    print eq_line;
     sprintf("%-26s%12.0f        %-26s%12.0f", "No. units:", diagOut.nunits,
             "Unit obs:", diagOut.unit_nobs);
     sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", diagOut.p,
             "DL lags (q):", diagOut.q);
     sprintf("%-26s%12.0f", "CS lags:", diagOut.cs_lags);
-    print "----------------------------------------------------------------------------------------------------";
-    print "Name                  Pooled       Mean Group       MG Std. Err.";
-    print "----------------------------------------------------------------------------------------------------";
+    print dash_line;
+    print header;
+    print dash_line;
     ii = 1;
     do until ii > diagOut.k;
         sprintf("  beta_x%-7d%16.6f%16.6f%16.6f",
                 ii, diagOut.pooled_bigbt[ii], diagOut.mean_group_bigbt[ii], diagOut.mean_group_se[ii]);
         ii = ii + 1;
     endo;
-    print "----------------------------------------------------------------------------------------------------";
+    print dash_line;
     sprintf("Poolability Wald: %16.6f    df: %8.0f    p-value: %12.6f    Sig: %-3s",
             diagOut.poolability_wald, diagOut.poolability_df, diagOut.poolability_pv,
             _qardlSignifStars(diagOut.poolability_pv));
-    print "====================================================================================================";
+    print eq_line;
+    print note;
 endp;
 
 /*
@@ -473,6 +481,7 @@ endp;
 */
 proc (0) = printCSARDL(struct csardlOut csaOut);
     local ii, se_beta, se_phi, z_beta, z_phi, pv_beta, pv_phi;
+    local header, note, table_width, eq_line, dash_line;
 
     se_beta = sqrt(diag(csaOut.bigbt_cov));
     se_phi = sqrt(diag(csaOut.phi_cov));
@@ -481,18 +490,24 @@ proc (0) = printCSARDL(struct csardlOut csaOut);
     pv_beta = 2*cdfnc(abs(z_beta));
     pv_phi = 2*cdfnc(abs(z_phi));
 
-    print "====================================================================================================";
+    header = "Name                  Coeff.       Std. Err.      z-value       P>|z|    Sig.";
+    note = _qardlSignifNote();
+    table_width = maxc(strlen(header)|84|strlen(note));
+    eq_line = _qardlTableBorder("=", table_width);
+    dash_line = _qardlTableBorder("-", table_width);
+
+    print eq_line;
     print "CS-ARDL Levels Estimator";
-    print "====================================================================================================";
+    print eq_line;
     sprintf("%-26s%12.0f        %-26s%12.0f", "No. of obs:", csaOut.nobs,
             "No. units:", csaOut.nunits);
     sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", csaOut.p,
             "DL lags (q):", csaOut.q);
     sprintf("%-26s%12.0f        %-26s%12.0f", "CS lags:", csaOut.cs_lags,
             "No. regressors:", csaOut.k);
-    print "----------------------------------------------------------------------------------------------------";
-    print "Name                  Coeff.       Std. Err.      z-value       P>|z|    Sig.";
-    print "----------------------------------------------------------------------------------------------------";
+    print dash_line;
+    print header;
+    print dash_line;
 
     ii = 1;
     do until ii > csaOut.k;
@@ -511,7 +526,8 @@ proc (0) = printCSARDL(struct csardlOut csaOut);
     endo;
     sprintf("  alpha       %16.6f", csaOut.alpha[1]);
     sprintf("  rho         %16.6f", csaOut.rho[1]);
-    print "====================================================================================================";
+    print eq_line;
+    print note;
 endp;
 
 /*
@@ -521,6 +537,7 @@ endp;
 */
 proc (0) = printCSARDLECM(struct csardlECMOut cECMOut);
     local se_alpha, se_rho, z_alpha, z_rho, pv_alpha, pv_rho;
+    local header, note, table_width, eq_line, dash_line;
 
     se_alpha = sqrt(cECMOut.alpha_cov[1, 1]);
     se_rho = sqrt(cECMOut.rho_cov[1, 1]);
@@ -529,23 +546,30 @@ proc (0) = printCSARDLECM(struct csardlECMOut cECMOut);
     pv_alpha = 2*cdfnc(abs(z_alpha));
     pv_rho = 2*cdfnc(abs(z_rho));
 
-    print "====================================================================================================";
+    header = "Name                  Coeff.       Std. Err.      z-value       P>|z|    Sig.";
+    note = _qardlSignifNote();
+    table_width = maxc(strlen(header)|84|strlen(note));
+    eq_line = _qardlTableBorder("=", table_width);
+    dash_line = _qardlTableBorder("-", table_width);
+
+    print eq_line;
     print "CS-ARDL-ECM Estimator";
-    print "====================================================================================================";
+    print eq_line;
     sprintf("%-26s%12.0f        %-26s%12.0f", "No. of obs:", cECMOut.nobs,
             "No. units:", cECMOut.nunits);
     sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", cECMOut.p,
             "DL lags (q):", cECMOut.q);
-    print "----------------------------------------------------------------------------------------------------";
-    print "Name                  Coeff.       Std. Err.      z-value       P>|z|    Sig.";
-    print "----------------------------------------------------------------------------------------------------";
+    print dash_line;
+    print header;
+    print dash_line;
     sprintf("  alpha       %16.6f%15.6f%13.6f%12.6f%7s",
             cECMOut.alpha[1], se_alpha, z_alpha, pv_alpha,
             _qardlSignifStars(pv_alpha));
     sprintf("  rho         %16.6f%15.6f%13.6f%12.6f%7s",
             cECMOut.rho[1], se_rho, z_rho, pv_rho,
             _qardlSignifStars(pv_rho));
-    print "====================================================================================================";
+    print eq_line;
+    print note;
 endp;
 
 /*
