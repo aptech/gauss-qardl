@@ -75,6 +75,10 @@
   and why a reviewed source-available license is a better fit for a no-port
   release policy.
 
+### Fixed
+- Corrected QIRF bootstrap confidence-band alignment so `irf_lb` and `irf_ub`
+  preserve horizon-by-quantile ordering when plotted by `plotQIRF`.
+
 ## 3.0.0 - 2026-05-03
 
 ### Added

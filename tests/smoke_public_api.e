@@ -235,6 +235,10 @@ call assert_true(qiOut.bands_available == 0 and rows(qiOut.irf_lb) == 9 and cols
 qiOut = blockBootstrapQIRF(data[1:250, .], 1, 1, 4, tau, 1, 1, 2, 10, 0.10, 12345);
 call assert_true(qiOut.bands_available == 1 and rows(qiOut.irf_lb) == 5 and cols(qiOut.irf_lb) == rows(tau),
                  "blockBootstrapQIRF band shape changed");
+call assert_close(qiOut.irf_lb[1, .]', zeros(rows(tau), 1), 1e-12,
+                  "blockBootstrapQIRF lower band horizon-zero alignment changed");
+call assert_close(qiOut.irf_ub[1, .]', zeros(rows(tau), 1), 1e-12,
+                  "blockBootstrapQIRF upper band horizon-zero alignment changed");
 call assert_true(maxc(vec(qiOut.irf_lb - qiOut.irf_ub)) <= 1e-12,
                  "blockBootstrapQIRF lower band exceeds upper band");
 call assert_true(qiOut.boot_diag[1, 1] == 2 and qiOut.boot_diag[1, 2] >= 1 and qiOut.boot_diag[1, 5] == 12345,

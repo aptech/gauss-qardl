@@ -165,6 +165,8 @@ call assert_true(qiOut.bands_available == 0, "qirf default confidence-band metad
 qiOut = blockBootstrapQIRF(data[1:250, .], 1, 1, 4, tau, 1, 1, 2, 10, 0.10, 12345);
 call assert_true(qiOut.bands_available == 1 and rows(qiOut.irf_lb) == 5 and cols(qiOut.irf_lb) == rows(tau),
                  "blockBootstrapQIRF output changed");
+call assert_true(maxc(abs(qiOut.irf_lb[1, .]')) <= 1e-12 and maxc(abs(qiOut.irf_ub[1, .]')) <= 1e-12,
+                 "blockBootstrapQIRF horizon-zero bands changed");
 call assert_true(qiOut.boot_diag[1, 1] == 2 and qiOut.boot_diag[1, 2] >= 1 and qiOut.boot_diag[1, 5] == 12345,
                  "blockBootstrapQIRF diagnostics changed");
 

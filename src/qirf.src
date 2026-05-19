@@ -240,7 +240,7 @@ endp;
 proc (struct qirfOut) = blockBootstrapQIRF(data, ppp, qqq, H, tau = { 0.25, 0.5, 0.75 }, k_x = 1, permanent = 1, B = 999, blk_len = 0, alpha = 0.05, seed = 0, method = "moving", formula = "");
     local T, ss, dim_irf, bbb, attempts, max_attempts, completed_reps, failed_reps;
     local used_blk_len, idx, boot_data, boot_irf, q_lo, q_hi, jj;
-    local ci_lb, ci_ub;
+    local ci_lb, ci_ub, band_start, band_end;
 
     struct qardlOut qaOut;
     struct qardlOut qa_b;
@@ -319,8 +319,18 @@ proc (struct qirfOut) = blockBootstrapQIRF(data, ppp, qqq, H, tau = { 0.25, 0.5,
         jj = jj + 1;
     endo;
 
-    qOut.irf_lb = reshape(ci_lb, H+1, ss);
-    qOut.irf_ub = reshape(ci_ub, H+1, ss);
+    qOut.irf_lb = zeros(H+1, ss);
+    qOut.irf_ub = zeros(H+1, ss);
+
+    jj = 1;
+    do until jj > ss;
+        band_start = (jj - 1)*(H+1) + 1;
+        band_end   = jj*(H+1);
+        qOut.irf_lb[., jj] = ci_lb[band_start:band_end];
+        qOut.irf_ub[., jj] = ci_ub[band_start:band_end];
+        jj = jj + 1;
+    endo;
+
     qOut.bands_available = 1;
     qOut.alpha = alpha;
     qOut.boot_diag = B~completed_reps~failed_reps~used_blk_len~seed;

@@ -140,6 +140,21 @@ call assert_close(boot_diag,
                   read_expected("synthetic/intervals/qardl_bootstrap_diag.csv"),
                   tol, "QARDL bootstrap diagnostic fixture changed");
 
+struct qirfOut qiOut;
+qiOut = blockBootstrapQIRF(boot_data, 1, 1, 4, tau, 1, 1, 10, 10, 0.10, 12345);
+call assert_close(qiOut.irf,
+                  read_expected("synthetic/intervals/qirf_bootstrap_irf.csv"),
+                  tol, "QIRF bootstrap point estimate fixture changed");
+call assert_close(qiOut.irf_lb,
+                  read_expected("synthetic/intervals/qirf_bootstrap_lb.csv"),
+                  tol, "QIRF bootstrap lower-band fixture changed");
+call assert_close(qiOut.irf_ub,
+                  read_expected("synthetic/intervals/qirf_bootstrap_ub.csv"),
+                  tol, "QIRF bootstrap upper-band fixture changed");
+call assert_close(qiOut.boot_diag,
+                  read_expected("synthetic/intervals/qirf_bootstrap_diag.csv"),
+                  tol, "QIRF bootstrap diagnostic fixture changed");
+
 nardl_data = make_nardl_validation_data(300);
 struct nardlOut naOut;
 naOut = nardl(nardl_data, 2, 2, "", 0);
