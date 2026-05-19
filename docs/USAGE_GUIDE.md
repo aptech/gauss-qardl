@@ -142,6 +142,7 @@ recursive forecast hooks through the unified dispatcher:
 ```gauss
 ar_fit = predictARDL(arOut, data);
 ar_fcst = forecastARDL(arOut, data, 4);
+ar_fcst_x = forecastARDL(arOut, data, 4, "", future_x);
 
 qa_fit = predictARDL(qaOut, data);
 qa_fcst = forecastARDL(qaOut, data, 4);
@@ -151,10 +152,10 @@ qa_fcst = forecastARDL(qaOut, data, 4);
 NARDL, or CS-ARDL. QARDL returns one column per quantile. `predictQARDL` and
 `forecastQARDL` remain available as backward-compatible QARDL aliases.
 Forecast helpers hold future regressor levels fixed at their last observed
-values and set future differenced-x terms to zero where applicable.
-
-TODO: validate multi-step ARDL/QARDL forecast examples against published
-forecast workflows before using them for publication-grade forecasting.
+values when `future_x` is omitted. For ARDL, QARDL, and NARDL, pass an
+`h x k` `future_x` matrix to use an explicit future regressor path. CS-ARDL
+future panel paths and forecast intervals remain TODO. See
+[FORECASTING_VALIDATION.md](FORECASTING_VALIDATION.md).
 
 ## Formula And Dataframe Workflow
 
@@ -216,6 +217,10 @@ the panel unit variable is inferred as the first string/category column and
 the time variable is inferred as the first date column, falling back to the
 first numeric column if no date column exists. CS-ARDL sorts dataframe input
 by the inferred unit/time columns before building the estimator matrix.
+Unbalanced panels and missing panel cells are not currently supported; align or
+balance the panel before estimation. Formula strings do not include explicit
+unit/time terms, so choose identifiers by ordering and typing the dataframe
+columns according to the GAUSS panel-data convention.
 Use `csardlDiagnostics` for the optional mean-group and poolability diagnostic
 layer:
 
@@ -346,6 +351,12 @@ values, residuals, and residual variance fields.
 The standard CS-ARDL workflow currently includes pooled coefficient
 diagnostics, cross-sectional-average controls, fitted values, residuals,
 residual variance fields, and optional mean-group/poolability diagnostics.
+
+Bounds testing support is summarized in
+[BOUNDS_TESTING_SUPPORT.md](BOUNDS_TESTING_SUPPORT.md). The legacy
+`ardlbounds` wrapper and full ARDL/QARDL workflows use Case III, while
+`ardlboundsCase`, `ardlboundsCaseCV`, and the simulation APIs support PSS
+Cases I-V directly.
 
 TODO: standalone residual serial-correlation, heteroskedasticity, normality,
 and classical structural-stability tests are not implemented yet. Use robust

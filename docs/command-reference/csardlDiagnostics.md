@@ -14,7 +14,8 @@ diagOut = csardlDiagnostics(data, ppp, qqq, cs_lags, formula, print_results);
 ## Parameters
 
 `data` is a balanced panel stacked by unit in `[unit_id, y, x1, ...]` order,
-or a GAUSS dataframe used with the formula interface.
+or a GAUSS dataframe used with the formula interface. Unbalanced panels are
+not supported in the current implementation.
 
 `ppp` is the scalar AR lag order.
 
@@ -24,7 +25,7 @@ or a GAUSS dataframe used with the formula interface.
 
 `formula` is an optional string. For dataframe input, prefer `"y ~ x1 + x2"`;
 CS-ARDL infers the panel unit and time variables using GAUSS panel-data
-conventions.
+conventions. Formula strings do not include explicit unit/time terms.
 
 `print_results` controls whether `printCSARDLDiagnostics` is called.
 
@@ -43,6 +44,8 @@ long-run coefficients with the pooled CS-ARDL long-run coefficients using the
 unit-specific delta-method covariance matrices.
 
 This is a diagnostic convenience layer for the first CS-ARDL implementation.
+Deterministic validation recomputes mean-group coefficients, mean-group
+standard errors, and the poolability Wald statistic from unit-specific fits.
 TODO: validate the diagnostic distribution and finite-sample behavior against
 published dynamic CCE/CS-ARDL designs.
 

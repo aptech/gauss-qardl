@@ -11,6 +11,8 @@ The synthetic fixture categories are:
 - `forecasts/`
 - `intervals/`
 - `multipliers/`
+- `panels/`
+- `predictions/`
 
 The active validation runner is:
 

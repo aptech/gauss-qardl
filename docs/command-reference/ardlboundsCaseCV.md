@@ -28,8 +28,10 @@ I(1) upper.
 
 ## Remarks
 
-For bundled table lookup, use `reps = 0`. For finite-sample simulation, pass a
-positive replication count or call `ardlboundsCaseSimCV`.
+For bundled table lookup, use `reps = 0`. Bundled asymptotic PSS F critical
+values cover Cases I-V for `k0 <= 10`. For finite-sample simulation or
+larger regressor counts, pass a positive replication count or call
+`ardlboundsCaseSimCV`.
 
 ## Examples
 

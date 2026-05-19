@@ -29,8 +29,9 @@ Use after `ardlboundsCase` or `ardlboundsCaseSim`.
 ## Examples
 
 ```gauss
-{ Fstat, tstat, cv, k, case_id } = ardlboundsCase(data, 2, 1, 3);
-call ardlboundsCase_print(Fstat, tstat, cv, k, case_id);
+{ Fstat, tstat, cv, case_id, q_restrict } =
+    ardlboundsCase(data, 2, 1, 3);
+call ardlboundsCase_print(Fstat, tstat, cv, cols(data)-1, case_id);
 ```
 
 ## Source

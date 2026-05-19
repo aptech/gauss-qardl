@@ -41,8 +41,8 @@ proc (1) = make_csardl_example_panel(nunits, tobs);
 endp;
 
 panel = make_csardl_example_panel(8, 70);
-time = vec(seqa(1, 1, 70)*ones(1, 8));
-df = asDF(panel[., 1]~time~panel[., 2:4], "unit", "time", "y", "x1", "x2");
+_time = vec(seqa(1, 1, 70)*ones(1, 8));
+df = asDF(panel[., 1]~_time~panel[., 2:4], "unit", "time", "y", "x1", "x2");
 df = dftype(df, META_TYPE_CATEGORY, "unit");
 formula = "y ~ x1 + x2";
 

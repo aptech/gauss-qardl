@@ -460,8 +460,9 @@ proc (0) = printCSARDLDiagnostics(struct csardlDiagOut diagOut);
         ii = ii + 1;
     endo;
     print "----------------------------------------------------------------------------------------------------";
-    sprintf("Poolability Wald: %16.6f    df: %8.0f    p-value: %12.6f",
-            diagOut.poolability_wald, diagOut.poolability_df, diagOut.poolability_pv);
+    sprintf("Poolability Wald: %16.6f    df: %8.0f    p-value: %12.6f%s",
+            diagOut.poolability_wald, diagOut.poolability_df, diagOut.poolability_pv,
+            _qardlSignifStars(diagOut.poolability_pv));
     print "====================================================================================================";
 endp;
 
@@ -495,15 +496,17 @@ proc (0) = printCSARDL(struct csardlOut csaOut);
 
     ii = 1;
     do until ii > csaOut.k;
-        sprintf("  beta_x%-7d%16.6f%15.6f%13.6f%12.6f",
-                ii, csaOut.bigbt[ii], se_beta[ii], z_beta[ii], pv_beta[ii]);
+        sprintf("  beta_x%-7d%16.6f%15.6f%13.6f%12.6f%s",
+                ii, csaOut.bigbt[ii], se_beta[ii], z_beta[ii], pv_beta[ii],
+                _qardlSignifStars(pv_beta[ii]));
         ii = ii + 1;
     endo;
 
     ii = 1;
     do until ii > rows(csaOut.phi);
-        sprintf("  phi_l%-8d%16.6f%15.6f%13.6f%12.6f",
-                ii, csaOut.phi[ii], se_phi[ii], z_phi[ii], pv_phi[ii]);
+        sprintf("  phi_l%-8d%16.6f%15.6f%13.6f%12.6f%s",
+                ii, csaOut.phi[ii], se_phi[ii], z_phi[ii], pv_phi[ii],
+                _qardlSignifStars(pv_phi[ii]));
         ii = ii + 1;
     endo;
     sprintf("  alpha       %16.6f", csaOut.alpha[1]);
@@ -536,10 +539,12 @@ proc (0) = printCSARDLECM(struct csardlECMOut cECMOut);
     print "----------------------------------------------------------------------------------------------------";
     print "Name                  Coeff.       Std. Err.      z-value       P>|z|";
     print "----------------------------------------------------------------------------------------------------";
-    sprintf("  alpha       %16.6f%15.6f%13.6f%12.6f",
-            cECMOut.alpha[1], se_alpha, z_alpha, pv_alpha);
-    sprintf("  rho         %16.6f%15.6f%13.6f%12.6f",
-            cECMOut.rho[1], se_rho, z_rho, pv_rho);
+    sprintf("  alpha       %16.6f%15.6f%13.6f%12.6f%s",
+            cECMOut.alpha[1], se_alpha, z_alpha, pv_alpha,
+            _qardlSignifStars(pv_alpha));
+    sprintf("  rho         %16.6f%15.6f%13.6f%12.6f%s",
+            cECMOut.rho[1], se_rho, z_rho, pv_rho,
+            _qardlSignifStars(pv_rho));
     print "====================================================================================================";
 endp;
 
@@ -567,14 +572,19 @@ endp;
 **              future regressors and cross-sectional averages fixed and
 **              returns the last fitted value for each requested horizon.
 */
-proc (1) = forecastCSARDL(struct csardlOut csaOut, data, h = 1, formula = "");
-    retp(_forecastCSARDLLevels(csaOut, data, h, formula));
+proc (1) = forecastCSARDL(struct csardlOut csaOut, data, h = 1, formula = "", future_x = error(0));
+    retp(_forecastCSARDLLevels(csaOut, data, h, formula, future_x));
 endp;
 
-proc (1) = _forecastCSARDLLevels(struct csardlOut csaOut, data, h = 1, formula = "");
+proc (1) = _forecastCSARDLLevels(struct csardlOut csaOut, data, h = 1, formula = "", future_x = error(0));
     local fitted;
 
     call _qardlValidateLagScalar(h, "forecastCSARDL: h");
+    if _ardlFutureXPathProvided(future_x);
+        errorlog "forecastCSARDL: future_x paths are not yet supported for panel forecasts";
+        end;
+    endif;
+
     fitted = _predictCSARDLLevels(csaOut, data, formula);
 
     retp(ones(h, 1)*fitted[rows(fitted)]);

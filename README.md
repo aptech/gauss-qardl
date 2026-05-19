@@ -95,6 +95,12 @@ style:
   bootstrap interval fixtures, and exact empirical-replication gaps.
 - [NARDL validation](docs/NARDL_VALIDATION.md): partial-sum decomposition,
   asymmetric effects, bounds, and dynamic-multiplier validation status.
+- [CS-ARDL validation](docs/CSARDL_VALIDATION.md): balanced-panel handling,
+  cross-sectional averages, lag alignment, sorting, and diagnostics status.
+- [Bounds testing support](docs/BOUNDS_TESTING_SUPPORT.md): supported PSS
+  cases, critical-value sources, model-family integration, and validation.
+- [Prediction and forecast validation](docs/FORECASTING_VALIDATION.md):
+  unified dispatch, future-regressor-path assumptions, and interval gaps.
 - [LLM reference](llms.txt): compact package guide for users who want to point
   an AI assistant at the QARDL API.
 - [3.0.1 roadmap](docs/ROADMAP_3_0_1.md): planned presentation and LaTeX
@@ -117,6 +123,7 @@ The `examples/` directory contains runnable GAUSS programs:
 | `qardl_est_tests.e` | Estimation, formatted output, automatic tests, and custom Wald restrictions |
 | `nardl_example.e` | NARDL fixed-order, formula, lag-selection, prediction, and forecast workflow |
 | `csardl_example.e` | CS-ARDL panel workflow with formula input, prediction, forecast, and diagnostics |
+| `rolling_forecast_example.e` | Rolling-origin ARDL forecasts with supplied future regressor paths |
 | `rolling_qardl.e` | Rolling QARDL and rolling QARDL-ECM workflows |
 | `sp500.e` | Shiller dividend/earnings application using formula support |
 | `replicate_cho_dividend_policy.e` | Public-data scaffold for the Cho-Kim-Shin dividend-policy application |

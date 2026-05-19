@@ -36,7 +36,7 @@ endp;
 **              tstat       t-statistic for the lagged dependent level.
 **
 **              cv          PSS asymptotic F critical values where tabulated in
-**                          this package. Currently populated for Case III.
+**                          this package. Cases I-V are populated for k <= 10.
 **                          Use ardlboundsCaseSim for simulation-based critical
 **                          values for Cases I-V, finite samples, or k > 10.
 **
@@ -180,8 +180,8 @@ endp;
 /*
 **> ardlboundsCaseCV
 **
-**  Purpose:    Return bundled PSS Case III F critical values when available,
-**              or simulation-based F critical values when reps > 0.
+**  Purpose:    Return bundled PSS F critical values for Cases I-V when
+**              available, or simulation-based F critical values when reps > 0.
 */
 proc (1) = ardlboundsCaseCV(k0, case_id, Tsim = 1000, reps = 0, seed = 0);
     call _ardlboundsValidateCase(case_id);

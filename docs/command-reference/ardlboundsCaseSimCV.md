@@ -26,8 +26,8 @@ I(1) upper.
 
 ## Remarks
 
-Simulation can be time-consuming. Use bundled values through
-`ardlboundsCaseCV(..., reps = 0)` when asymptotic table lookup is sufficient.
+Simulation can be time-consuming. Use bundled asymptotic PSS F values through
+`ardlboundsCaseCV(..., reps = 0)` when table lookup is sufficient.
 
 ## Examples
 

@@ -42,9 +42,23 @@ Validation cases compare computed outputs with numeric CSV baselines under:
 - `tests/fixtures/expected/synthetic/forecasts/`
 - `tests/fixtures/expected/synthetic/intervals/`
 - `tests/fixtures/expected/synthetic/multipliers/`
+- `tests/fixtures/expected/synthetic/panels/`
 
 The GAUSS assertions are quiet on success and report only shape mismatches,
 maximum absolute differences, and tolerances on failure.
+
+CS-ARDL panel validation additionally checks known cross-sectional averages,
+levels-design lag alignment, formula row-order invariance, and manual
+mean-group/poolability diagnostic reproduction. See
+`docs/CSARDL_VALIDATION.md`.
+
+Bounds-test validation checks ARDL PSS Cases I-V, the legacy Case III wrapper,
+selected published table values, and fixed-seed simulation critical values. See
+`docs/BOUNDS_TESTING_SUPPORT.md`.
+
+Prediction and forecast validation checks unified dispatch, backward-compatible
+QARDL wrappers, hold-last forecasts, and explicit future-regressor paths for
+ARDL, QARDL, and NARDL. See `docs/FORECASTING_VALIDATION.md`.
 
 ## Published-Result Benchmarks
 

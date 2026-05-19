@@ -7,7 +7,8 @@ Computes ARDL bounds tests for Pesaran-Shin-Smith deterministic Cases I-V.
 ## Format
 
 ```gauss
-{ Fstat, tstat, cv, k, case_id } = ardlboundsCase(data, ppp, qqq, case_id);
+{ Fstat, tstat, cv, case_id, q_restrict } =
+    ardlboundsCase(data, ppp, qqq, case_id);
 ```
 
 ## Parameters
@@ -27,8 +28,8 @@ Computes ARDL bounds tests for Pesaran-Shin-Smith deterministic Cases I-V.
 - `Fstat` (*scalar*) - Bounds-test F-statistic.
 - `tstat` (*scalar*) - t-statistic for the lagged dependent level.
 - `cv` (*3x2 matrix*) - F critical-value bounds at 10%, 5%, and 1%.
-- `k` (*scalar*) - Number of regressors.
 - `case_id` (*scalar*) - Deterministic case used.
+- `q_restrict` (*scalar*) - Number of restrictions in the F-test.
 
 ## Remarks
 
@@ -38,8 +39,9 @@ Bundled asymptotic PSS F critical values cover Cases I-V and `k = 0` through
 ## Examples
 
 ```gauss
-{ Fstat, tstat, cv, k, case_id } = ardlboundsCase(data, 2, 1, 3);
-call ardlboundsCase_print(Fstat, tstat, cv, k, case_id);
+{ Fstat, tstat, cv, case_id, q_restrict } =
+    ardlboundsCase(data, 2, 1, 3);
+call ardlboundsCase_print(Fstat, tstat, cv, cols(data)-1, case_id);
 ```
 
 ## Source

@@ -12,6 +12,7 @@ $examples = @(
     "qardl_est_tests.e",
     "rolling_qardl.e",
     "sp500.e",
+    "rolling_forecast_example.e",
     "nardl_example.e",
     "csardl_example.e",
     "replicate_cho_dividend_policy.e",

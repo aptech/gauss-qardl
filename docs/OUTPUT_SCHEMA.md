@@ -89,13 +89,18 @@ CS-ARDL formula calls sort by the inferred unit/time variables before
 estimation. The returned `estimation_start` and `estimation_end` fields are
 within-unit time indices, not total row indices.
 
+CS-ARDL matrix input must already be a balanced panel stacked by unit. Formula
+input is sorted before estimation, but it must identify a balanced panel after
+sorting. Unbalanced panels and missing panel cells are unsupported in the
+current implementation.
+
 ## Current Limitations
 
 - Deterministic terms are currently recorded as `"constant"` because the public
   estimators use intercept specifications.
 - Full covariance matrices for all QARDL-ECM coefficients are not yet exposed;
   QARDL-ECM currently exposes `alpha_cov` and `rho_cov`.
-- Missing-data row dropping and unbalanced-panel policy need deeper
-  documentation and tests in the next roadmap steps.
+- Missing-data row dropping remains unsupported for CS-ARDL and needs a
+  broader package-level policy for other model families.
 - Additional control structures may still be needed for long positional APIs;
   this schema baseline does not change existing public signatures.

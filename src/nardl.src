@@ -327,23 +327,26 @@ proc (0) = printNARDL(struct nardlOut naOut);
 
     ii = 1;
     do until ii > naOut.k;
-        sprintf("  beta_pos_x%-4d%16.6f%15.6f%13.6f%12.6f",
-                ii, naOut.beta_pos[ii], se_beta[ii], z_beta[ii], pv_beta[ii]);
+        sprintf("  beta_pos_x%-4d%16.6f%15.6f%13.6f%12.6f%s",
+                ii, naOut.beta_pos[ii], se_beta[ii], z_beta[ii], pv_beta[ii],
+                _qardlSignifStars(pv_beta[ii]));
         ii = ii + 1;
     endo;
 
     ii = 1;
     do until ii > naOut.k;
-        sprintf("  beta_neg_x%-4d%16.6f%15.6f%13.6f%12.6f",
+        sprintf("  beta_neg_x%-4d%16.6f%15.6f%13.6f%12.6f%s",
                 ii, naOut.beta_neg[ii], se_beta[naOut.k+ii],
-                z_beta[naOut.k+ii], pv_beta[naOut.k+ii]);
+                z_beta[naOut.k+ii], pv_beta[naOut.k+ii],
+                _qardlSignifStars(pv_beta[naOut.k+ii]));
         ii = ii + 1;
     endo;
 
     ii = 1;
     do until ii > rows(naOut.phi);
-        sprintf("  phi_l%-8d%16.6f%15.6f%13.6f%12.6f",
-                ii, naOut.phi[ii], se_phi[ii], z_phi[ii], pv_phi[ii]);
+        sprintf("  phi_l%-8d%16.6f%15.6f%13.6f%12.6f%s",
+                ii, naOut.phi[ii], se_phi[ii], z_phi[ii], pv_phi[ii],
+                _qardlSignifStars(pv_phi[ii]));
         ii = ii + 1;
     endo;
     sprintf("  alpha       %16.6f", naOut.alpha[1]);
@@ -352,7 +355,9 @@ proc (0) = printNARDL(struct nardlOut naOut);
     print "Long-run asymmetry tests: statistic | p-value";
     ii = 1;
     do until ii > rows(naOut.asymmetry_wald);
-        sprintf("  x%-4d      %16.6f%15.6f", ii, naOut.asymmetry_wald[ii], naOut.asymmetry_pv[ii]);
+        sprintf("  x%-4d      %16.6f%15.6f%s",
+                ii, naOut.asymmetry_wald[ii], naOut.asymmetry_pv[ii],
+                _qardlSignifStars(naOut.asymmetry_pv[ii]));
         ii = ii + 1;
     endo;
     print "====================================================================================================";
@@ -383,10 +388,12 @@ proc (0) = printNARDLECM(struct nardlECMOut nECMOut);
     print "----------------------------------------------------------------------------------------------------";
     print "Name                  Coeff.       Std. Err.      z-value       P>|z|";
     print "----------------------------------------------------------------------------------------------------";
-    sprintf("  alpha       %16.6f%15.6f%13.6f%12.6f",
-            nECMOut.alpha[1], se_alpha, z_alpha, pv_alpha);
-    sprintf("  rho         %16.6f%15.6f%13.6f%12.6f",
-            nECMOut.rho[1], se_rho, z_rho, pv_rho);
+    sprintf("  alpha       %16.6f%15.6f%13.6f%12.6f%s",
+            nECMOut.alpha[1], se_alpha, z_alpha, pv_alpha,
+            _qardlSignifStars(pv_alpha));
+    sprintf("  rho         %16.6f%15.6f%13.6f%12.6f%s",
+            nECMOut.rho[1], se_rho, z_rho, pv_rho,
+            _qardlSignifStars(pv_rho));
     print "====================================================================================================";
 endp;
 
@@ -413,37 +420,58 @@ endp;
 **  Purpose:    Recursive NARDL forecast holding future regressors fixed at
 **              their last observed partial-sum values.
 */
-proc (1) = forecastNARDL(struct nardlOut naOut, data, h = 1, formula = "");
-    retp(_forecastNARDLLevels(naOut, data, h, formula));
+proc (1) = forecastNARDL(struct nardlOut naOut, data, h = 1, formula = "", future_x = error(0));
+    retp(_forecastNARDLLevels(naOut, data, h, formula, future_x));
 endp;
 
-proc (1) = _forecastNARDLLevels(struct nardlOut naOut, data, h = 1, formula = "");
-    local yy, x_pos, x_neg, dx_pos, dx_neg, ybuf, out, ii, jj, yhat;
+proc (1) = _forecastNARDLLevels(struct nardlOut naOut, data, h = 1, formula = "", future_x = error(0));
+    local yy, xx, xfuture, xall, yall, x_pos, x_neg, dx_pos, dx_neg;
+    local out, ii, jj, kk, yhat, row_idx, xrow, y_lags;
+    local dx_pos_lags, dx_neg_lags, col_idx, y_placeholder;
 
     call _qardlValidateLagScalar(h, "forecastNARDL: h");
     data = applyNARDLFormula(data, formula);
     yy = data[., 1];
-    { x_pos, x_neg, dx_pos, dx_neg } = _nardlPartialSumsWithDiffs(data);
-
-    ybuf = zeros(naOut.p, 1);
-    jj = 1;
-    do until jj > naOut.p;
-        ybuf[jj] = yy[rows(yy)+1-jj];
-        jj = jj + 1;
-    endo;
+    xx = data[., 2:cols(data)];
+    xfuture = _ardlFutureXOrHoldLast(xx, h, naOut.k, future_x, "forecastNARDL");
+    xall = xx|xfuture;
+    y_placeholder = zeros(rows(xall), 1);
+    { x_pos, x_neg, dx_pos, dx_neg } = _nardlPartialSumsWithDiffs(y_placeholder~xall);
+    yall = yy|zeros(h, 1);
 
     out = zeros(h, 1);
     ii = 1;
     do until ii > h;
-        yhat = naOut.alpha[1]
-             + x_pos[rows(x_pos), .]*naOut.theta_pos
-             + x_neg[rows(x_neg), .]*naOut.theta_neg
-             + naOut.phi'*ybuf;
-        out[ii] = yhat;
-        if naOut.p > 1;
-            ybuf[2:naOut.p] = ybuf[1:naOut.p-1];
+        row_idx = rows(yy) + ii;
+        y_lags = zeros(1, naOut.p);
+        jj = 1;
+        do until jj > naOut.p;
+            y_lags[1, jj] = yall[row_idx-jj];
+            jj = jj + 1;
+        endo;
+
+        xrow = ones(1, 1)~x_pos[row_idx, .]~x_neg[row_idx, .]~y_lags;
+
+        if naOut.q > 0;
+            dx_pos_lags = zeros(1, naOut.q*naOut.k);
+            dx_neg_lags = zeros(1, naOut.q*naOut.k);
+            kk = 1;
+            do until kk > naOut.k;
+                jj = 0;
+                do until jj > naOut.q-1;
+                    col_idx = (kk-1)*naOut.q + jj + 1;
+                    dx_pos_lags[1, col_idx] = dx_pos[row_idx-jj, kk];
+                    dx_neg_lags[1, col_idx] = dx_neg[row_idx-jj, kk];
+                    jj = jj + 1;
+                endo;
+                kk = kk + 1;
+            endo;
+            xrow = xrow~dx_pos_lags~dx_neg_lags;
         endif;
-        ybuf[1] = yhat;
+
+        yhat = xrow*naOut.bt;
+        out[ii] = yhat;
+        yall[row_idx] = yhat;
         ii = ii + 1;
     endo;
 

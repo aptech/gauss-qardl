@@ -2253,36 +2253,55 @@ proc (1) = _predictARDLLevels(struct ardlOut arOut, data, formula = "");
     retp(ONEX*arOut.bt);
 endp;
 
-proc (1) = _forecastARDLLevels(struct ardlOut arOut, data, h = 1, formula = "");
-    local yy, xx, xlast, ybuf, out, ii, jj, yhat, dx_count, theta_start, phi_start;
+proc (1) = _forecastARDLLevels(struct ardlOut arOut, data, h = 1, formula = "", future_x = error(0));
+    local yy, xx, xfuture, xall, dxall, yall, out, ii, jj, kk, yhat;
+    local dx_count, col_idx, row_idx, xrow, dx_terms, y_lags, qvec;
 
     call _qardlValidateLagScalar(h, "forecastARDL: h");
     data = applyQARDLFormula(data, formula);
     yy = data[., 1];
     xx = data[., 2:cols(data)];
-    xlast = xx[rows(xx), .];
-    dx_count = sumc(arOut.qvec);
-    theta_start = 2 + dx_count;
-    phi_start = theta_start + arOut.k;
-
-    ybuf = zeros(arOut.p, 1);
-    jj = 1;
-    do until jj > arOut.p;
-        ybuf[jj] = yy[rows(yy)+1-jj];
-        jj = jj + 1;
-    endo;
+    qvec = arOut.qvec;
+    dx_count = sumc(qvec);
+    xfuture = _ardlFutureXOrHoldLast(xx, h, arOut.k, future_x, "forecastARDL");
+    xall = xx|xfuture;
+    dxall = zeros(rows(xall), arOut.k);
+    dxall[2:rows(xall), .] = xall[2:rows(xall), .] - xall[1:rows(xall)-1, .];
+    yall = yy|zeros(h, 1);
 
     out = zeros(h, 1);
     ii = 1;
     do until ii > h;
-        yhat = arOut.bt[1] +
-               xlast*arOut.bt[theta_start:theta_start+arOut.k-1] +
-               arOut.bt[phi_start:phi_start+arOut.p-1]'*ybuf;
-        out[ii] = yhat;
-        if arOut.p > 1;
-            ybuf[2:arOut.p] = ybuf[1:arOut.p-1];
+        row_idx = rows(yy) + ii;
+        xrow = ones(1, 1);
+
+        if dx_count > 0;
+            dx_terms = zeros(1, dx_count);
+            col_idx = 1;
+            kk = 1;
+            do until kk > arOut.k;
+                if qvec[kk] > 0;
+                    for jj(0, qvec[kk]-1, 1);
+                        dx_terms[1, col_idx] = dxall[row_idx-jj, kk];
+                        col_idx = col_idx + 1;
+                    endfor;
+                endif;
+                kk = kk + 1;
+            endo;
+            xrow = xrow~dx_terms;
         endif;
-        ybuf[1] = yhat;
+
+        y_lags = zeros(1, arOut.p);
+        jj = 1;
+        do until jj > arOut.p;
+            y_lags[1, jj] = yall[row_idx-jj];
+            jj = jj + 1;
+        endo;
+
+        xrow = xrow~xall[row_idx, .]~y_lags;
+        yhat = xrow*arOut.bt;
+        out[ii] = yhat;
+        yall[row_idx] = yhat;
         ii = ii + 1;
     endo;
 
@@ -2314,49 +2333,93 @@ endp;
 **  TODO: Validate multi-step quantile forecast behavior against external
 **        QARDL forecast references before using for publication results.
 */
-proc (1) = forecastQARDL(struct qardlOut qaOut, data, h = 1, formula = "");
-    retp(_forecastQARDLLevels(qaOut, data, h, formula));
+proc (1) = forecastQARDL(struct qardlOut qaOut, data, h = 1, formula = "", future_x = error(0));
+    retp(_forecastQARDLLevels(qaOut, data, h, formula, future_x));
 endp;
 
-proc (1) = _forecastQARDLLevels(struct qardlOut qaOut, data, h = 1, formula = "");
-    local yy, xx, xlast, ybuf, out, ii, jj, ss, yhat, dx_count, theta_start, phi_start;
+proc (1) = _forecastQARDLLevels(struct qardlOut qaOut, data, h = 1, formula = "", future_x = error(0));
+    local yy, xx, xfuture, xall, dxall, yall, out, ii, jj, kk, ss, yhat;
+    local dx_count, col_idx, row_idx, xrow, dx_terms, y_lags, qvec;
 
     call _qardlValidateLagScalar(h, "forecastQARDL: h");
     data = applyQARDLFormula(data, formula);
     yy = data[., 1];
     xx = data[., 2:cols(data)];
-    xlast = xx[rows(xx), .];
-    dx_count = sumc(qaOut.qvec);
-    theta_start = 2 + dx_count;
-    phi_start = theta_start + qaOut.k;
+    qvec = qaOut.qvec;
+    dx_count = sumc(qvec);
+    xfuture = _ardlFutureXOrHoldLast(xx, h, qaOut.k, future_x, "forecastQARDL");
+    xall = xx|xfuture;
+    dxall = zeros(rows(xall), qaOut.k);
+    dxall[2:rows(xall), .] = xall[2:rows(xall), .] - xall[1:rows(xall)-1, .];
     ss = cols(qaOut.bt);
 
     out = zeros(h, ss);
-    jj = 1;
-    do until jj > ss;
-        ybuf = zeros(qaOut.p, 1);
-        ii = 1;
-        do until ii > qaOut.p;
-            ybuf[ii] = yy[rows(yy)+1-ii];
-            ii = ii + 1;
-        endo;
-
+    ss = 1;
+    do until ss > cols(qaOut.bt);
+        yall = yy|zeros(h, 1);
         ii = 1;
         do until ii > h;
-            yhat = qaOut.bt[1, jj] +
-                   xlast*qaOut.bt[theta_start:theta_start+qaOut.k-1, jj] +
-                   qaOut.bt[phi_start:phi_start+qaOut.p-1, jj]'*ybuf;
-            out[ii, jj] = yhat;
-            if qaOut.p > 1;
-                ybuf[2:qaOut.p] = ybuf[1:qaOut.p-1];
+            row_idx = rows(yy) + ii;
+            xrow = ones(1, 1);
+
+            if dx_count > 0;
+                dx_terms = zeros(1, dx_count);
+                col_idx = 1;
+                kk = 1;
+                do until kk > qaOut.k;
+                    if qvec[kk] > 0;
+                        for jj(0, qvec[kk]-1, 1);
+                            dx_terms[1, col_idx] = dxall[row_idx-jj, kk];
+                            col_idx = col_idx + 1;
+                        endfor;
+                    endif;
+                    kk = kk + 1;
+                endo;
+                xrow = xrow~dx_terms;
             endif;
-            ybuf[1] = yhat;
+
+            y_lags = zeros(1, qaOut.p);
+            jj = 1;
+            do until jj > qaOut.p;
+                y_lags[1, jj] = yall[row_idx-jj];
+                jj = jj + 1;
+            endo;
+
+            xrow = xrow~xall[row_idx, .]~y_lags;
+            yhat = xrow*qaOut.bt[., ss];
+            out[ii, ss] = yhat;
+            yall[row_idx] = yhat;
             ii = ii + 1;
         endo;
-        jj = jj + 1;
+        ss = ss + 1;
     endo;
 
     retp(out);
+endp;
+
+proc (1) = _ardlFutureXPathProvided(future_x);
+    retp(not (rows(future_x) == 1 and cols(future_x) == 1 and scalmiss(future_x)));
+endp;
+
+proc (1) = _ardlFutureXOrHoldLast(xx, h, k0, future_x, caller);
+    local xfuture;
+
+    if not _ardlFutureXPathProvided(future_x);
+        retp(ones(h, 1)*xx[rows(xx), .]);
+    endif;
+
+    if rows(future_x) < h or cols(future_x) /= k0;
+        errorlog caller $+ ": future_x must have at least h rows and one column per regressor";
+        end;
+    endif;
+
+    if ismiss(future_x);
+        errorlog caller $+ ": future_x contains missing values";
+        end;
+    endif;
+
+    xfuture = future_x[1:h, .];
+    retp(xfuture);
 endp;
 /*
 **> saveQARDLECMResults

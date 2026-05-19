@@ -8,9 +8,9 @@ finite-sample critical values.
 ## Format
 
 ```gauss
-{ Fstat, tstat, cv, k, case_id } =
+{ Fstat, tstat, cv, case_id, q_restrict } =
     ardlboundsCaseSim(data, ppp, qqq, case_id);
-{ Fstat, tstat, cv, k, case_id } =
+{ Fstat, tstat, cv, case_id, q_restrict } =
     ardlboundsCaseSim(data, ppp, qqq, case_id, reps, seed);
 ```
 
@@ -28,8 +28,8 @@ finite-sample critical values.
 - `Fstat` - Bounds-test F-statistic.
 - `tstat` - t-statistic for the lagged dependent level.
 - `cv` - Simulated critical-value bounds.
-- `k` - Number of regressors.
 - `case_id` - Deterministic case used.
+- `q_restrict` - Number of restrictions in the F-test.
 
 ## Remarks
 
@@ -39,7 +39,7 @@ critical values.
 ## Examples
 
 ```gauss
-{ Fstat, tstat, cv, k, case_id } =
+{ Fstat, tstat, cv, case_id, q_restrict } =
     ardlboundsCaseSim(data, 2, 1, 3, 10000, 12345);
 ```
 

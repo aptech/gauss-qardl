@@ -80,6 +80,10 @@ call assert_true(rows(predictARDL(qaOut, data)) == qaOut.nobs,
                  "predictARDL QARDL dispatch output changed");
 call assert_true(rows(forecastARDL(qaOut, data, 2)) == 2 and cols(forecastARDL(qaOut, data, 2)) == rows(tau),
                  "forecastARDL QARDL dispatch output changed");
+future_x = data[rows(data), 2:cols(data)] + seqa(1, 1, 2)*(0.10~0.05);
+call assert_true(rows(forecastARDL(qaOut, data, 2, "", future_x)) == 2 and
+                 cols(forecastQARDL(qaOut, data, 2, "", future_x)) == rows(tau),
+                 "QARDL future_x forecast output changed");
 
 struct ardlOut arOut;
 arOut = ardl(data, pst, qst, "", 0);
@@ -89,6 +93,8 @@ call assert_true(arOut.model_family $== "ARDL" and arOut.covariance_type $== "ol
                  "ardl schema metadata changed");
 call assert_true(rows(predictARDL(arOut, data)) == arOut.nobs and rows(forecastARDL(arOut, data, 2)) == 2,
                  "ARDL predict/forecast output changed");
+call assert_true(rows(forecastARDL(arOut, data, 2, "", future_x)) == 2,
+                 "ARDL future_x forecast output changed");
 
 struct ardlFullOut afOut;
 afOut = ardlFull(data, 2, 2, "", 0, "bic");
@@ -196,6 +202,9 @@ call assert_true(rows(naOut.beta_pos) == 2 and rows(naOut.asymmetry_pv) == 2,
 call assert_true(rows(predictARDL(naOut, nardl_data)) == naOut.nobs and
                  rows(forecastARDL(naOut, nardl_data, 2)) == 2,
                  "NARDL unified predict/forecast dispatch changed");
+n_future_x = nardl_data[rows(nardl_data), 2:cols(nardl_data)] + seqa(1, 1, 2)*(0.05~-0.04);
+call assert_true(rows(forecastARDL(naOut, nardl_data, 2, "", n_future_x)) == 2,
+                 "NARDL future_x forecast output changed");
 struct nardlDynMultOut dmOut;
 dmOut = nardlDynamicMultipliers(naOut, 3);
 call assert_true(rows(dmOut.pos) == 4 and cols(dmOut.pos) == naOut.k and

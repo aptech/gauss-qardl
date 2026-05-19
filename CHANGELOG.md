@@ -13,6 +13,8 @@
   coefficient table bodies, z-statistics, p-values, and 95% confidence limits.
 - Printed coefficient tables now include significance asterisks
   (`***` p < 0.01, `**` p < 0.05, `*` p < 0.10).
+- Significance asterisks are applied consistently to ARDL, QARDL, NARDL, and
+  CS-ARDL printed coefficient and diagnostic p-value rows.
 - NARDL and CS-ARDL model families with output structures, levels and ECM
   estimators, information-criterion lag selection, print helpers, formula
   hooks, prediction/forecast hooks, and deterministic source smoke tests.
@@ -25,6 +27,9 @@
 - Unified `predictARDL` and `forecastARDL` dispatch for ARDL, QARDL, NARDL,
   and CS-ARDL output structures, with `predictQARDL` and `forecastQARDL`
   preserved for backward compatibility.
+- Forecast hooks for ARDL, QARDL, and NARDL now accept optional `future_x`
+  regressor paths and carry lagged differenced-regressor terms into recursive
+  forecasts when `q > 1`.
 - Default maximum lag search bounds of `p = 8` and `q = 8` for `pqorder`,
   `pqorderX`, `pqorderGrid`, `qardlFull`, `ardlFull`, `nardlFull`,
   `nardlOrder`, `csardlFull`, and `csardlOrder` when users omit maximum lags.
@@ -45,9 +50,17 @@
 - `nardlDynamicMultipliers` plus deterministic NARDL validation fixtures for
   partial-sum decomposition, asymmetric effects, bounds diagnostics, and
   dynamic multipliers.
+- ARDL bounds-test support documentation and validation for Pesaran-Shin-Smith
+  Cases I-V, including fixed-seed simulation critical-value fixtures.
+- Prediction and forecast validation fixtures for ARDL, QARDL, NARDL, and
+  CS-ARDL, including hold-last forecasts, explicit future-regressor paths, and
+  backward-compatible QARDL wrappers.
 - CS-ARDL dataframe formulas now follow GAUSS panel-data conventions:
   `y ~ x1 + x2` infers the first string/category column as the unit variable
   and the first date column, or first numeric fallback, as the time variable.
+- CS-ARDL validation fixtures for balanced-panel cross-sectional averages,
+  lag alignment, formula row-order invariance, and mean-group/poolability
+  diagnostic reproduction, plus `docs/CSARDL_VALIDATION.md`.
 - Source-tree NARDL and CS-ARDL examples covering fixed-order estimation,
   formula workflows, lag/model selection, print helpers, output fields,
   prediction/forecast hooks, and supported diagnostics.

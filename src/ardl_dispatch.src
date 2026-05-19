@@ -35,22 +35,24 @@ endp;
 **              Dispatches on ardlOut, qardlOut, nardlOut, or csardlOut.
 **
 **  Format:     fcst = forecastARDL(modelOut, data);
-**              fcst = forecastARDL(modelOut, data, h, formula);
+**              fcst = forecastARDL(modelOut, data, h, formula, future_x);
 **
 **  Input:      modelOut   ardlOut, qardlOut, nardlOut, or csardlOut.
 **              data       estimation data.
 **              h          optional scalar forecast horizon.
 **              formula    optional formula string.
+**              future_x   optional h x k future regressor path for ARDL,
+**                         QARDL, and NARDL outputs.
 */
-proc (1) = forecastARDL(modelOut, data, h = 1, formula = "");
+proc (1) = forecastARDL(modelOut, data, h = 1, formula = "", future_x = error(0));
     if isStructType(modelOut, "ardlOut");
-        retp(_forecastARDLLevels(modelOut, data, h, formula));
+        retp(_forecastARDLLevels(modelOut, data, h, formula, future_x));
     elseif isStructType(modelOut, "qardlOut");
-        retp(_forecastQARDLLevels(modelOut, data, h, formula));
+        retp(_forecastQARDLLevels(modelOut, data, h, formula, future_x));
     elseif isStructType(modelOut, "nardlOut");
-        retp(_forecastNARDLLevels(modelOut, data, h, formula));
+        retp(_forecastNARDLLevels(modelOut, data, h, formula, future_x));
     elseif isStructType(modelOut, "csardlOut");
-        retp(_forecastCSARDLLevels(modelOut, data, h, formula));
+        retp(_forecastCSARDLLevels(modelOut, data, h, formula, future_x));
     endif;
 
     errorlog "forecastARDL: unsupported model output structure";

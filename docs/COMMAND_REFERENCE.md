@@ -9,6 +9,8 @@ sections.
 
 - [API control-structure audit](API_CONTROL_AUDIT.md)
 - [ARDL-family output schema](OUTPUT_SCHEMA.md)
+- [Bounds testing support matrix](BOUNDS_TESTING_SUPPORT.md)
+- [Prediction and forecast validation](FORECASTING_VALIDATION.md)
 
 ## Core Workflow
 

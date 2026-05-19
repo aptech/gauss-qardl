@@ -8,13 +8,13 @@ model families.
 
 | ID | Paper / target | Model family | Dataset status | Transformation status | Target tables / outputs | Expected-output path | Current validation state |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `published-ardl-pss2001` | Pesaran, Shin, and Smith (2001), ARDL bounds critical values | ARDL / bounds testing | No empirical dataset required | Not applicable; table lookup and simulation settings only | Cases I-V critical-value tables and simulated critical-value checks | `tests/fixtures/expected/published/ardl_bounds_pss_selected_cv.csv` | Selected table values pass; full support matrix pending |
+| `published-ardl-pss2001` | Pesaran, Shin, and Smith (2001), ARDL bounds critical values | ARDL / bounds testing | No empirical dataset required | Not applicable; table lookup and simulation settings only | Cases I-V critical-value tables and simulated critical-value checks | `tests/fixtures/expected/published/ardl_bounds_pss_selected_cv.csv` | Selected Cases I-V table values pass; deterministic Cases I-V and fixed-seed simulation fixtures pass |
 | `published-qardl-author-demo1` | Cho, Kim, and Shin (2015), author GAUSS demo archive | QARDL | Bundled demo dataset available as `examples/qardl_data.dat` | No transformations; columns 1:3, BIC over `p,q <= 7`, selected `p = 2`, `q = 1`, tau = 0.25/0.50/0.75 | Selected lags, long-run beta, beta covariance, phi, phi covariance, gamma, gamma covariance, Wald tests, median-quantile SE tables | `tests/fixtures/expected/published/qardl_author_demo1_*.csv` | Passes as published-reference software validation |
 | `published-qardl-cks2015` | Cho, Kim, and Shin (2015), U.S. dividend-policy application | QARDL | Exact author dataset pending; bundled Shiller data are only an approximation | Pending exact variable definitions, sample window, deterministic case, lag specification, and quantile grid | Long-run coefficient table, short-run coefficients, Wald tests, bounds test, bootstrap intervals | `tests/fixtures/expected/published/` | Scaffold only; no numerical pass/fail claim |
 | `published-qardl-ckgns2023` | Cho, Kim, Greenwood-Nimmo, and Shin (2023), asymmetric dividend response to earnings news | QARDL / asymmetric QARDL candidate | Candidate pending data confirmation | Pending earnings-news construction and asymmetric specification details | Coefficient tables, asymmetry tests, QIRF or dynamic response outputs if applicable | Pending | Not started |
 | `published-qadl-gmp2013` | Galvao, Montes-Rojas, and Park (2013), QADL house-price returns | Adjacent quantile ARDL | Candidate pending redistributable data | Pending stationary-return construction and estimator-definition comparison | QADL coefficient tables and cross-implementation comparison notes | Pending | Not started; adjacent methodology |
 | `published-nardl-syg2014` | Shin, Yu, and Greenwood-Nimmo (2014), NARDL asymmetric cointegration and dynamic multipliers | NARDL | Exact datasets pending | Pending positive/negative partial sums, sample windows, deterministic terms, lag orders, and dynamic multiplier settings | Long-run asymmetry, dynamic multipliers, bounds tests | `tests/fixtures/expected/published/` | Exact published data pending; deterministic decomposition, asymmetry, bounds, and multiplier fixtures pass |
-| `published-csardl-cp2015` | Chudik and Pesaran (2015), dynamic CCE / CS-ARDL panel Monte Carlo designs | CS-ARDL | Exact Monte Carlo grid pending | Pending DGP grid, cross-sectional-average lag choices, estimator variants, and bias-correction policy | Pooled and mean-group coefficients, poolability or heterogeneity diagnostics, Monte Carlo summary tables | `tests/fixtures/expected/published/` | Pending exact DGP grid |
+| `published-csardl-cp2015` | Chudik and Pesaran (2015), dynamic CCE / CS-ARDL panel Monte Carlo designs | CS-ARDL | Exact Monte Carlo grid pending | Pending DGP grid, cross-sectional-average lag choices, estimator variants, and bias-correction policy | Pooled and mean-group coefficients, poolability or heterogeneity diagnostics, Monte Carlo summary tables | `tests/fixtures/expected/published/` | Exact DGP grid pending; deterministic balanced-panel sorting, cross-average, lag-alignment, coefficient, forecast, mean-group, and poolability fixtures pass |
 | `cross-qardlr-simulated` | R `qardlr` simulated QARDL dataset | QARDL cross-implementation | Benchmark candidate, not an empirical paper replication | Pending DGP alignment and estimator-default comparison | Coefficients, selected lags, long-run estimates | Pending | Not started |
 
 ## Current Scaffold
@@ -70,9 +70,12 @@ Active deterministic fixture metadata lives in
 `tests/fixtures/expected/synthetic/` by category:
 
 - `coefficients/`
+- `decompositions/`
 - `diagnostics/`
 - `forecasts/`
 - `intervals/`
+- `multipliers/`
+- `panels/`
 
 Published-reference expected outputs are stored under
 `tests/fixtures/expected/published/`. Exact empirical published-result fixtures
@@ -82,6 +85,12 @@ See `docs/QARDL_VALIDATION.md` for the active QARDL author-demo validation
 target, QARDL bootstrap interval fixture, and exact empirical-replication gaps.
 See `docs/NARDL_VALIDATION.md` for active NARDL decomposition, asymmetry,
 bounds, and dynamic-multiplier validation fixtures.
+See `docs/CSARDL_VALIDATION.md` for active CS-ARDL balanced-panel,
+cross-sectional-average, sorting, and diagnostic validation fixtures.
+See `docs/BOUNDS_TESTING_SUPPORT.md` for the bounds-testing support matrix and
+active PSS Cases I-V validation fixtures.
+See `docs/FORECASTING_VALIDATION.md` for active prediction and forecast
+dispatch fixtures and current forecast-interval gaps.
 
 ## Tolerance Policy
 
