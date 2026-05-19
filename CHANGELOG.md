@@ -78,6 +78,8 @@
 ### Fixed
 - Corrected QIRF bootstrap confidence-band alignment so `irf_lb` and `irf_ub`
   preserve horizon-by-quantile ordering when plotted by `plotQIRF`.
+- Aligned NARDL and CS-ARDL printed significance codes in fixed-width `Sig.`
+  columns, including ECM and poolability/asymmetry diagnostic output.
 
 ## 3.0.0 - 2026-05-03
 

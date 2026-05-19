@@ -460,7 +460,7 @@ proc (0) = printCSARDLDiagnostics(struct csardlDiagOut diagOut);
         ii = ii + 1;
     endo;
     print "----------------------------------------------------------------------------------------------------";
-    sprintf("Poolability Wald: %16.6f    df: %8.0f    p-value: %12.6f%s",
+    sprintf("Poolability Wald: %16.6f    df: %8.0f    p-value: %12.6f    Sig: %-3s",
             diagOut.poolability_wald, diagOut.poolability_df, diagOut.poolability_pv,
             _qardlSignifStars(diagOut.poolability_pv));
     print "====================================================================================================";
@@ -491,12 +491,12 @@ proc (0) = printCSARDL(struct csardlOut csaOut);
     sprintf("%-26s%12.0f        %-26s%12.0f", "CS lags:", csaOut.cs_lags,
             "No. regressors:", csaOut.k);
     print "----------------------------------------------------------------------------------------------------";
-    print "Name                  Coeff.       Std. Err.      z-value       P>|z|";
+    print "Name                  Coeff.       Std. Err.      z-value       P>|z|    Sig.";
     print "----------------------------------------------------------------------------------------------------";
 
     ii = 1;
     do until ii > csaOut.k;
-        sprintf("  beta_x%-7d%16.6f%15.6f%13.6f%12.6f%s",
+        sprintf("  beta_x%-7d%16.6f%15.6f%13.6f%12.6f%7s",
                 ii, csaOut.bigbt[ii], se_beta[ii], z_beta[ii], pv_beta[ii],
                 _qardlSignifStars(pv_beta[ii]));
         ii = ii + 1;
@@ -504,7 +504,7 @@ proc (0) = printCSARDL(struct csardlOut csaOut);
 
     ii = 1;
     do until ii > rows(csaOut.phi);
-        sprintf("  phi_l%-8d%16.6f%15.6f%13.6f%12.6f%s",
+        sprintf("  phi_l%-8d%16.6f%15.6f%13.6f%12.6f%7s",
                 ii, csaOut.phi[ii], se_phi[ii], z_phi[ii], pv_phi[ii],
                 _qardlSignifStars(pv_phi[ii]));
         ii = ii + 1;
@@ -537,12 +537,12 @@ proc (0) = printCSARDLECM(struct csardlECMOut cECMOut);
     sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", cECMOut.p,
             "DL lags (q):", cECMOut.q);
     print "----------------------------------------------------------------------------------------------------";
-    print "Name                  Coeff.       Std. Err.      z-value       P>|z|";
+    print "Name                  Coeff.       Std. Err.      z-value       P>|z|    Sig.";
     print "----------------------------------------------------------------------------------------------------";
-    sprintf("  alpha       %16.6f%15.6f%13.6f%12.6f%s",
+    sprintf("  alpha       %16.6f%15.6f%13.6f%12.6f%7s",
             cECMOut.alpha[1], se_alpha, z_alpha, pv_alpha,
             _qardlSignifStars(pv_alpha));
-    sprintf("  rho         %16.6f%15.6f%13.6f%12.6f%s",
+    sprintf("  rho         %16.6f%15.6f%13.6f%12.6f%7s",
             cECMOut.rho[1], se_rho, z_rho, pv_rho,
             _qardlSignifStars(pv_rho));
     print "====================================================================================================";
