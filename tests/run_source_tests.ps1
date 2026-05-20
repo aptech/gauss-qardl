@@ -12,6 +12,9 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 & powershell -ExecutionPolicy Bypass -File (Join-Path $testsDir "run_invalid_input_tests.ps1") -RepoRoot $RepoRoot -GaussExe $GaussExe
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+& powershell -ExecutionPolicy Bypass -File (Join-Path $testsDir "run_plot_smoke_tests.ps1") -RepoRoot $RepoRoot -GaussExe $GaussExe
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 $gaussTests = @(
     "smoke_public_api.e",
     "schema_metadata.e",

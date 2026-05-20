@@ -308,6 +308,20 @@ the internal attempt limit.
 The method variants support `"moving"`, `"circular"`, and `"stationary"`
 resampling.
 
+## Table Export
+
+Use the generic table exporter for publication-style coefficient tables:
+
+```gauss
+saveARDLTable(arOut, "ardl_table.md", "markdown", 4, 1, 0.95);
+saveARDLMarkdown(naOut, "nardl_table.md", 4, 1, 0.95);
+saveARDLLaTeX(csaOut, "csardl_table.tex", 4, 1, 0.95);
+```
+
+The exporter dispatches on ARDL, QARDL, NARDL, CS-ARDL, ECM, and full-workflow
+output structures. Set `stars = 0` to omit significance codes or
+`ci_level = 0` to omit confidence-interval columns.
+
 ## Plot Confidence Bands
 
 Plot helpers use uncertainty already stored in output structures:

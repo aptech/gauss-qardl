@@ -541,16 +541,20 @@ proc (0) = printCSARDLDiagnostics(struct csardlDiagOut diagOut);
         ii = ii + 1;
     endo;
     print dash_line;
-    sprintf("Poolability Wald: %16.6f    df: %8.0f    p-value: %12.6f    Sig: %-3s",
-            diagOut.poolability_wald, diagOut.poolability_df, diagOut.poolability_pv,
+    sprintf("%-25s%13.6f    %-8s%8.0f    p-value: %12.6f    Sig: %-3s",
+            "Poolability Wald:",
+            diagOut.poolability_wald, "df:", diagOut.poolability_df, diagOut.poolability_pv,
             _qardlSignifStars(diagOut.poolability_pv));
-    sprintf("Slope heterogeneity:%14.6f    df: %8.0f    p-value: %12.6f    Sig: %-3s",
-            diagOut.slope_hetero_wald, diagOut.slope_hetero_df, diagOut.slope_hetero_pv,
+    sprintf("%-25s%13.6f    %-8s%8.0f    p-value: %12.6f    Sig: %-3s",
+            "Slope heterogeneity:",
+            diagOut.slope_hetero_wald, "df:", diagOut.slope_hetero_df, diagOut.slope_hetero_pv,
             _qardlSignifStars(diagOut.slope_hetero_pv));
-    sprintf("Pesaran CD:       %16.6f    pairs: %5.0f    p-value: %12.6f    Sig: %-3s",
-            diagOut.cd_stat, diagOut.cd_pairs, diagOut.cd_pv,
+    sprintf("%-25s%13.6f    %-8s%8.0f    p-value: %12.6f    Sig: %-3s",
+            "Pesaran CD:",
+            diagOut.cd_stat, "pairs:", diagOut.cd_pairs, diagOut.cd_pv,
             _qardlSignifStars(diagOut.cd_pv));
-    sprintf("Average residual correlation: %12.6f", diagOut.cd_avg_corr);
+    print "Average residual";
+    sprintf("%-25s%13.6f", "correlation:", diagOut.cd_avg_corr);
     print eq_line;
     print note;
 endp;

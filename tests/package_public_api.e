@@ -43,6 +43,18 @@ proc (1) = make_package_csardl_panel(nunits, tobs);
     retp(panel);
 endp;
 
+proc (0) = clean_package_table_exports(outdir);
+    local ret;
+
+    ret = deleteFile(outdir $+ "package_ardl_table.md");
+    ret = deleteFile(outdir $+ "package_qardl_table.tex");
+    ret = deleteFile(outdir $+ "package_nardl_table.md");
+    ret = deleteFile(outdir $+ "package_csardl_table.csv");
+endp;
+
+outdir = __FILE_DIR;
+call clean_package_table_exports(outdir);
+
 data = loadd(__FILE_DIR $+ "../examples/qardl_data.dat");
 data = data[1:350, 1:3];
 tau = { 0.25, 0.5, 0.75 };
@@ -73,6 +85,9 @@ call assert_true(qaOut.model_family $== "QARDL" and qaOut.covariance_type $== "i
 { lr_beta, lr_cov } = ardlLongRun(qaOut);
 call assert_true(rows(lr_beta) == rows(qaOut.bigbt) and rows(lr_cov) == rows(qaOut.bigbt_cov),
                  "ardlLongRun QARDL output changed");
+saveARDLLaTeX(qaOut, outdir $+ "package_qardl_table.tex", 4, 1, 0.95);
+call assert_true(filesa(outdir $+ "package_qardl_table.tex") $/= "",
+                 "saveARDLLaTeX QARDL output missing");
 call assert_true(rows(qaOut.fitted) == qaOut.nobs and cols(qaOut.fitted) == rows(tau),
                  "qardl fitted metadata changed");
 call assert_true(rows(predictQARDL(qaOut, data)) == qaOut.nobs,
@@ -97,6 +112,9 @@ call assert_true(arOut.model_family $== "ARDL" and arOut.covariance_type $== "ol
 { lr_beta, lr_cov } = ardlLongRun(arOut);
 call assert_true(rows(lr_beta) == rows(arOut.bigbt) and rows(lr_cov) == rows(arOut.bigbt_cov),
                  "ardlLongRun ARDL output changed");
+saveARDLMarkdown(arOut, outdir $+ "package_ardl_table.md", 4, 0, 0);
+call assert_true(filesa(outdir $+ "package_ardl_table.md") $/= "",
+                 "saveARDLMarkdown ARDL output missing");
 call assert_true(rows(predictARDL(arOut, data)) == arOut.nobs and rows(forecastARDL(arOut, data, 2)) == 2,
                  "ARDL predict/forecast output changed");
 call assert_true(rows(forecastARDL(arOut, data, 2, "", future_x)) == 2,
@@ -217,6 +235,9 @@ call assert_true(rows(naOut.beta_pos) == 2 and rows(naOut.asymmetry_pv) == 2,
 { lr_beta, lr_cov } = ardlLongRun(naOut);
 call assert_true(rows(lr_beta) == rows(naOut.bigbt) and rows(lr_cov) == rows(naOut.bigbt_cov),
                  "ardlLongRun NARDL output changed");
+saveARDLTable(naOut, outdir $+ "package_nardl_table.md", "markdown", 4, 1, 0.95);
+call assert_true(filesa(outdir $+ "package_nardl_table.md") $/= "",
+                 "saveARDLTable NARDL output missing");
 call assert_true(rows(predictARDL(naOut, nardl_data)) == naOut.nobs and
                  rows(forecastARDL(naOut, nardl_data, 2)) == 2,
                  "NARDL unified predict/forecast dispatch changed");
@@ -264,6 +285,9 @@ call assert_true(csaOut.nunits == 4 and rows(csaOut.bigbt) == 2,
 { lr_beta, lr_cov } = ardlLongRun(csaOut);
 call assert_true(rows(lr_beta) == rows(csaOut.bigbt) and rows(lr_cov) == rows(csaOut.bigbt_cov),
                  "ardlLongRun CS-ARDL output changed");
+saveARDLTable(csaOut, outdir $+ "package_csardl_table.csv", "csv", 4, 1, 0);
+call assert_true(filesa(outdir $+ "package_csardl_table.csv") $/= "",
+                 "saveARDLTable CS-ARDL output missing");
 call assert_true(rows(predictARDL(csaOut, panel)) == csaOut.nobs and
                  rows(forecastARDL(csaOut, panel, 2)) == 2,
                  "CSARDL unified predict/forecast dispatch changed");
@@ -289,5 +313,7 @@ call assert_true(rows(forecastCSARDL(cfOut.csa, panel_df, 2, "y ~ x1 + x2")) == 
                  "forecastCSARDL formula output changed");
 
 printQARDLECM(qECMOut, tau);
+
+call clean_package_table_exports(outdir);
 
 print "package_public_api.e: PASS";

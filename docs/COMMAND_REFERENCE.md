@@ -12,6 +12,7 @@ sections.
 - [Bounds testing support matrix](BOUNDS_TESTING_SUPPORT.md)
 - [Prediction and forecast validation](FORECASTING_VALIDATION.md)
 - [Inference and interval support matrix](INFERENCE_INTERVALS.md)
+- [Reporting and plotting support](REPORTING_AND_PLOTTING.md)
 
 ## Core Workflow
 
@@ -97,6 +98,9 @@ sections.
 - [plotRollingQARDL](command-reference/plotRollingQARDL.md)
 - [plotRollingQARDLECM](command-reference/plotRollingQARDLECM.md)
 - [plotQIRF](command-reference/plotQIRF.md)
+- [saveARDLTable](command-reference/saveARDLTable.md)
+- [saveARDLMarkdown](command-reference/saveARDLMarkdown.md)
+- [saveARDLLaTeX](command-reference/saveARDLLaTeX.md)
 - [saveQARDLResults](command-reference/saveQARDLResults.md)
 - [saveQARDLECMResults](command-reference/saveQARDLECMResults.md)
 

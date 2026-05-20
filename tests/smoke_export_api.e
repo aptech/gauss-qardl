@@ -7,6 +7,9 @@ new;
 
 #include ../src/qardl.sdf
 #include ../src/qardl.src
+#include ../src/nardl.src
+#include ../src/csardl.src
+#include ../src/ardl_dispatch.src
 #include ../src/wtestlrb.src
 #include ../src/wtestsrp.src
 #include ../src/wtestsrg.src
@@ -44,6 +47,41 @@ proc (0) = clean_exports(outdir);
     ret = deleteFile(outdir $+ "qardl_ecm.csv");
     ret = deleteFile(outdir $+ "qardl_ecm_lr.csv");
     ret = deleteFile(outdir $+ "qardl_ecm_qr.csv");
+    ret = deleteFile(outdir $+ "ardl_table.md");
+    ret = deleteFile(outdir $+ "qardl_table.tex");
+    ret = deleteFile(outdir $+ "nardl_table.csv");
+    ret = deleteFile(outdir $+ "csardl_table.md");
+    ret = deleteFile(outdir $+ "qardl_ecm_table.tex");
+endp;
+
+proc (1) = make_csardl_export_panel(nunits, tobs);
+    local panel, rr, ii, tidx, x1_prev, x2_prev, y_prev;
+    local common1, common2, x1v, x2v, yv;
+
+    rndseed 260611;
+    panel = zeros(nunits*tobs, 4);
+    rr = 1;
+
+    for ii(1, nunits, 1);
+        x1_prev = 0;
+        x2_prev = 0;
+        y_prev = 0;
+        for tidx(1, tobs, 1);
+            common1 = sin(tidx/8);
+            common2 = cos(tidx/10);
+            x1v = 0.45*x1_prev + 0.10*common1 + 0.02*tidx + 0.05*ii + rndn(1, 1);
+            x2v = 0.30*x2_prev - 0.08*common2 - 0.01*tidx + 0.04*ii + rndn(1, 1);
+            yv = 0.35*y_prev + 0.24*x1v - 0.12*x2v + 0.05*common1 +
+                 0.03*ii + 0.20*rndn(1, 1);
+            panel[rr, .] = ii~yv~x1v~x2v;
+            x1_prev = x1v;
+            x2_prev = x2v;
+            y_prev = yv;
+            rr = rr + 1;
+        endfor;
+    endfor;
+
+    retp(panel);
 endp;
 
 outdir = __FILE_DIR;
@@ -55,9 +93,18 @@ tau = { 0.25, 0.5, 0.75 };
 
 qaOut = qardl(data, 1, 1, tau, "iid", 0, 0);
 qECMOut = qardlECM(data, 1, 1, tau, "iid", 0, 0);
+arOut = ardl(data, 1, 1, "", 0);
+naOut = nardl(data, 1, 1, "", 0);
+panel = make_csardl_export_panel(5, 45);
+csaOut = csardl(panel, 1, 1, 1, "", 0);
 
 saveQARDLResults(qaOut, tau, outdir);
 saveQARDLECMResults(qECMOut, tau, outdir);
+saveARDLMarkdown(arOut, outdir $+ "ardl_table.md", 4, 0, 0);
+saveARDLLaTeX(qaOut, outdir $+ "qardl_table.tex", 4, 1, 0.90);
+saveARDLTable(naOut, outdir $+ "nardl_table.csv", "csv", 5, 1, 0);
+saveARDLTable(csaOut, outdir $+ "csardl_table.md", "markdown", 4, 1, 0.95);
+saveARDLLaTeX(qECMOut, outdir $+ "qardl_ecm_table.tex", 4, 1, 0.95);
 
 call assert_true(filesa(outdir $+ "qardl_beta.csv") $/= "", "qardl_beta.csv was not written");
 call assert_true(filesa(outdir $+ "qardl_gamma.csv") $/= "", "qardl_gamma.csv was not written");
@@ -65,6 +112,11 @@ call assert_true(filesa(outdir $+ "qardl_phi.csv") $/= "", "qardl_phi.csv was no
 call assert_true(filesa(outdir $+ "qardl_ecm.csv") $/= "", "qardl_ecm.csv was not written");
 call assert_true(filesa(outdir $+ "qardl_ecm_lr.csv") $/= "", "qardl_ecm_lr.csv was not written");
 call assert_true(filesa(outdir $+ "qardl_ecm_qr.csv") $/= "", "qardl_ecm_qr.csv was not written");
+call assert_true(filesa(outdir $+ "ardl_table.md") $/= "", "ardl_table.md was not written");
+call assert_true(filesa(outdir $+ "qardl_table.tex") $/= "", "qardl_table.tex was not written");
+call assert_true(filesa(outdir $+ "nardl_table.csv") $/= "", "nardl_table.csv was not written");
+call assert_true(filesa(outdir $+ "csardl_table.md") $/= "", "csardl_table.md was not written");
+call assert_true(filesa(outdir $+ "qardl_ecm_table.tex") $/= "", "qardl_ecm_table.tex was not written");
 
 call assert_true(count_file_rows(outdir $+ "qardl_beta.csv") == rows(tau)*qaOut.k,
                  "qardl_beta.csv row count changed");

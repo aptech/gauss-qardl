@@ -132,3 +132,590 @@ endp;
 proc (2) = _ardlLongRunCSARDLFull(struct csardlFullOut out);
     retp(out.csa.bigbt, out.csa.bigbt_cov);
 endp;
+
+/*
+**> saveARDLTable
+**
+**  Purpose:    Save a publication-style coefficient table for an ARDL-family
+**              output structure. Dispatches on levels, ECM, and full-workflow
+**              output structures where coefficient information is available.
+**
+**  Format:     saveARDLTable(modelOut, fpath);
+**              saveARDLTable(modelOut, fpath, table_format, precision, stars, ci_level);
+**
+**  Input:      modelOut    ARDL-family output structure.
+**              fpath       Output file path.
+**              table_format      "markdown", "latex", or "csv".
+**              precision   Decimal places for numeric entries.
+**              stars       1 to include significance-code column, 0 to omit.
+**              ci_level    Confidence level for CI columns. Use 0 to omit.
+*/
+proc (0) = saveARDLTable(modelOut, fpath, table_format = "markdown", precision = 6, stars = 1, ci_level = 0.95);
+    if isStructType(modelOut, "ardlOut");
+        call _saveARDLTableARDL(modelOut, fpath, table_format, precision, stars, ci_level);
+    elseif isStructType(modelOut, "qardlOut");
+        call _saveARDLTableQARDL(modelOut, fpath, table_format, precision, stars, ci_level);
+    elseif isStructType(modelOut, "qardlECMOut");
+        call _saveARDLTableQARDLECM(modelOut, fpath, table_format, precision, stars, ci_level);
+    elseif isStructType(modelOut, "nardlOut");
+        call _saveARDLTableNARDL(modelOut, fpath, table_format, precision, stars, ci_level);
+    elseif isStructType(modelOut, "nardlECMOut");
+        call _saveARDLTableNARDLECM(modelOut, fpath, table_format, precision, stars, ci_level);
+    elseif isStructType(modelOut, "csardlOut");
+        call _saveARDLTableCSARDL(modelOut, fpath, table_format, precision, stars, ci_level);
+    elseif isStructType(modelOut, "csardlECMOut");
+        call _saveARDLTableCSARDLECM(modelOut, fpath, table_format, precision, stars, ci_level);
+    elseif isStructType(modelOut, "ardlFullOut");
+        call _saveARDLTableARDLFull(modelOut, fpath, table_format, precision, stars, ci_level);
+    elseif isStructType(modelOut, "qardlFullOut");
+        call _saveARDLTableQARDLFull(modelOut, fpath, table_format, precision, stars, ci_level);
+    elseif isStructType(modelOut, "nardlFullOut");
+        call _saveARDLTableNARDLFull(modelOut, fpath, table_format, precision, stars, ci_level);
+    elseif isStructType(modelOut, "csardlFullOut");
+        call _saveARDLTableCSARDLFull(modelOut, fpath, table_format, precision, stars, ci_level);
+    else;
+        errorlog "saveARDLTable: unsupported model output structure";
+        end;
+    endif;
+endp;
+
+/*
+**> saveARDLMarkdown
+**
+**  Purpose:    Save an ARDL-family coefficient table in Markdown format.
+*/
+proc (0) = saveARDLMarkdown(modelOut, fpath, precision = 6, stars = 1, ci_level = 0.95);
+    call saveARDLTable(modelOut, fpath, "markdown", precision, stars, ci_level);
+endp;
+
+/*
+**> saveARDLLaTeX
+**
+**  Purpose:    Save an ARDL-family coefficient table in LaTeX tabular format.
+*/
+proc (0) = saveARDLLaTeX(modelOut, fpath, precision = 6, stars = 1, ci_level = 0.95);
+    call saveARDLTable(modelOut, fpath, "latex", precision, stars, ci_level);
+endp;
+
+proc (0) = _saveARDLTableARDLFull(struct ardlFullOut out, fpath, table_format, precision, stars, ci_level);
+    call _saveARDLTableARDL(out.ar, fpath, table_format, precision, stars, ci_level);
+endp;
+
+proc (0) = _saveARDLTableQARDLFull(struct qardlFullOut out, fpath, table_format, precision, stars, ci_level);
+    call _saveARDLTableQARDL(out.qa, fpath, table_format, precision, stars, ci_level);
+endp;
+
+proc (0) = _saveARDLTableNARDLFull(struct nardlFullOut out, fpath, table_format, precision, stars, ci_level);
+    call _saveARDLTableNARDL(out.na, fpath, table_format, precision, stars, ci_level);
+endp;
+
+proc (0) = _saveARDLTableCSARDLFull(struct csardlFullOut out, fpath, table_format, precision, stars, ci_level);
+    call _saveARDLTableCSARDL(out.csa, fpath, table_format, precision, stars, ci_level);
+endp;
+
+proc (0) = _saveARDLTableARDL(struct ardlOut arOut, fpath, table_format, precision, stars, ci_level);
+    local fid, fmt, include_stars, include_ci, zcrit, ii;
+    local se_beta, se_phi, z_beta, z_phi, pv_beta, pv_phi;
+
+    { fid, fmt, include_stars, include_ci, zcrit } = _ardlTableOpen(fpath, table_format, precision, stars, ci_level, "saveARDLTable");
+
+    call _ardlTableBegin(fid, fmt, include_stars, include_ci);
+
+    se_beta = sqrt(diag(arOut.bigbt_cov));
+    se_phi = sqrt(diag(arOut.phi_cov));
+    z_beta = arOut.bigbt ./ se_beta;
+    z_phi = arOut.phi ./ se_phi;
+    pv_beta = 2*cdfnc(abs(z_beta));
+    pv_phi = 2*cdfnc(abs(z_phi));
+
+    ii = 1;
+    do until ii > arOut.k;
+        call _ardlTableWriteRow(fid, fmt, arOut.model_family, "", "beta_" $+ arOut.xvars[ii],
+                                arOut.bigbt[ii], se_beta[ii], z_beta[ii], pv_beta[ii],
+                                include_stars, include_ci, zcrit, precision);
+        ii = ii + 1;
+    endo;
+
+    ii = 1;
+    do until ii > rows(arOut.phi);
+        call _ardlTableWriteRow(fid, fmt, arOut.model_family, "", "phi_l" $+ ntos(ii),
+                                arOut.phi[ii], se_phi[ii], z_phi[ii], pv_phi[ii],
+                                include_stars, include_ci, zcrit, precision);
+        ii = ii + 1;
+    endo;
+
+    call _ardlTableWriteRow(fid, fmt, arOut.model_family, "", "alpha",
+                            arOut.alpha[1], error(0), error(0), error(0),
+                            include_stars, include_ci, zcrit, precision);
+    call _ardlTableWriteRow(fid, fmt, arOut.model_family, "", "rho",
+                            arOut.rho[1], error(0), error(0), error(0),
+                            include_stars, include_ci, zcrit, precision);
+
+    call _ardlTableEnd(fid, fmt);
+endp;
+
+proc (0) = _saveARDLTableQARDL(struct qardlOut qaOut, fpath, table_format, precision, stars, ci_level);
+    local fid, fmt, include_stars, include_ci, zcrit, ss, k, p, ii, jj, idx, tau_label;
+    local se_bt, se_phi, se_gam, z_bt, z_phi, z_gam, pv_bt, pv_phi, pv_gam;
+
+    { fid, fmt, include_stars, include_ci, zcrit } = _ardlTableOpen(fpath, table_format, precision, stars, ci_level, "saveARDLTable");
+
+    call _ardlTableBegin(fid, fmt, include_stars, include_ci);
+
+    ss = rows(qaOut.tau);
+    k = qaOut.k;
+    p = rows(qaOut.phi) / ss;
+
+    se_bt = sqrt(diag(qaOut.bigbt_cov));
+    se_phi = sqrt(diag(qaOut.phi_cov));
+    se_gam = sqrt(diag(qaOut.gamma_cov));
+    z_bt = qaOut.bigbt ./ se_bt;
+    z_phi = qaOut.phi ./ se_phi;
+    z_gam = qaOut.gamma ./ se_gam;
+    pv_bt = 2*cdfnc(abs(z_bt));
+    pv_phi = 2*cdfnc(abs(z_phi));
+    pv_gam = 2*cdfnc(abs(z_gam));
+
+    jj = 1;
+    do until jj > ss;
+        tau_label = _ardlFmtNum(qaOut.tau[jj], precision);
+
+        ii = 1;
+        do until ii > k;
+            idx = (jj-1)*k + ii;
+            call _ardlTableWriteRow(fid, fmt, qaOut.model_family, tau_label, "beta_" $+ qaOut.xvars[ii],
+                                    qaOut.bigbt[idx], se_bt[idx], z_bt[idx], pv_bt[idx],
+                                    include_stars, include_ci, zcrit, precision);
+            ii = ii + 1;
+        endo;
+
+        ii = 1;
+        do until ii > k;
+            idx = (jj-1)*k + ii;
+            call _ardlTableWriteRow(fid, fmt, qaOut.model_family, tau_label, "gamma_" $+ qaOut.xvars[ii],
+                                    qaOut.gamma[idx], se_gam[idx], z_gam[idx], pv_gam[idx],
+                                    include_stars, include_ci, zcrit, precision);
+            ii = ii + 1;
+        endo;
+
+        ii = 1;
+        do until ii > p;
+            idx = (jj-1)*p + ii;
+            call _ardlTableWriteRow(fid, fmt, qaOut.model_family, tau_label, "phi_l" $+ ntos(ii),
+                                    qaOut.phi[idx], se_phi[idx], z_phi[idx], pv_phi[idx],
+                                    include_stars, include_ci, zcrit, precision);
+            ii = ii + 1;
+        endo;
+
+        call _ardlTableWriteRow(fid, fmt, qaOut.model_family, tau_label, "alpha",
+                                qaOut.alpha[jj], error(0), error(0), error(0),
+                                include_stars, include_ci, zcrit, precision);
+        call _ardlTableWriteRow(fid, fmt, qaOut.model_family, tau_label, "rho",
+                                qaOut.rho[jj], error(0), error(0), error(0),
+                                include_stars, include_ci, zcrit, precision);
+        jj = jj + 1;
+    endo;
+
+    call _ardlTableEnd(fid, fmt);
+endp;
+
+proc (0) = _saveARDLTableQARDLECM(struct qardlECMOut qECMOut, fpath, table_format, precision, stars, ci_level);
+    local fid, fmt, include_stars, include_ci, zcrit, ss, ii, jj, tau_label;
+    local se_alpha, se_rho, z_alpha, z_rho, pv_alpha, pv_rho;
+
+    { fid, fmt, include_stars, include_ci, zcrit } = _ardlTableOpen(fpath, table_format, precision, stars, ci_level, "saveARDLTable");
+
+    call _ardlTableBegin(fid, fmt, include_stars, include_ci);
+
+    ss = rows(qECMOut.tau);
+    se_alpha = sqrt(diag(qECMOut.alpha_cov));
+    se_rho = sqrt(diag(qECMOut.rho_cov));
+    z_alpha = qECMOut.alpha ./ se_alpha;
+    z_rho = qECMOut.rho ./ se_rho;
+    pv_alpha = 2*cdfnc(abs(z_alpha));
+    pv_rho = 2*cdfnc(abs(z_rho));
+
+    ii = 1;
+    do until ii > qECMOut.k;
+        call _ardlTableWriteRow(fid, fmt, qECMOut.model_family, "", "beta_lr_" $+ qECMOut.xvars[ii],
+                                qECMOut.beta_lr[ii], error(0), error(0), error(0),
+                                include_stars, include_ci, zcrit, precision);
+        ii = ii + 1;
+    endo;
+
+    jj = 1;
+    do until jj > ss;
+        tau_label = _ardlFmtNum(qECMOut.tau[jj], precision);
+        call _ardlTableWriteRow(fid, fmt, qECMOut.model_family, tau_label, "alpha",
+                                qECMOut.alpha[jj], se_alpha[jj], z_alpha[jj], pv_alpha[jj],
+                                include_stars, include_ci, zcrit, precision);
+        call _ardlTableWriteRow(fid, fmt, qECMOut.model_family, tau_label, "rho",
+                                qECMOut.rho[jj], se_rho[jj], z_rho[jj], pv_rho[jj],
+                                include_stars, include_ci, zcrit, precision);
+        jj = jj + 1;
+    endo;
+
+    call _ardlTableEnd(fid, fmt);
+endp;
+
+proc (0) = _saveARDLTableNARDL(struct nardlOut naOut, fpath, table_format, precision, stars, ci_level);
+    local fid, fmt, include_stars, include_ci, zcrit, ii;
+    local se_beta, se_phi, z_beta, z_phi, pv_beta, pv_phi;
+
+    { fid, fmt, include_stars, include_ci, zcrit } = _ardlTableOpen(fpath, table_format, precision, stars, ci_level, "saveARDLTable");
+
+    call _ardlTableBegin(fid, fmt, include_stars, include_ci);
+
+    se_beta = sqrt(diag(naOut.bigbt_cov));
+    se_phi = sqrt(diag(naOut.phi_cov));
+    z_beta = naOut.bigbt ./ se_beta;
+    z_phi = naOut.phi ./ se_phi;
+    pv_beta = 2*cdfnc(abs(z_beta));
+    pv_phi = 2*cdfnc(abs(z_phi));
+
+    ii = 1;
+    do until ii > naOut.k;
+        call _ardlTableWriteRow(fid, fmt, naOut.model_family, "", "beta_pos_" $+ naOut.xvars[ii],
+                                naOut.beta_pos[ii], se_beta[ii], z_beta[ii], pv_beta[ii],
+                                include_stars, include_ci, zcrit, precision);
+        ii = ii + 1;
+    endo;
+
+    ii = 1;
+    do until ii > naOut.k;
+        call _ardlTableWriteRow(fid, fmt, naOut.model_family, "", "beta_neg_" $+ naOut.xvars[ii],
+                                naOut.beta_neg[ii], se_beta[naOut.k+ii],
+                                z_beta[naOut.k+ii], pv_beta[naOut.k+ii],
+                                include_stars, include_ci, zcrit, precision);
+        ii = ii + 1;
+    endo;
+
+    ii = 1;
+    do until ii > rows(naOut.phi);
+        call _ardlTableWriteRow(fid, fmt, naOut.model_family, "", "phi_l" $+ ntos(ii),
+                                naOut.phi[ii], se_phi[ii], z_phi[ii], pv_phi[ii],
+                                include_stars, include_ci, zcrit, precision);
+        ii = ii + 1;
+    endo;
+
+    call _ardlTableWriteRow(fid, fmt, naOut.model_family, "", "alpha",
+                            naOut.alpha[1], error(0), error(0), error(0),
+                            include_stars, include_ci, zcrit, precision);
+    call _ardlTableWriteRow(fid, fmt, naOut.model_family, "", "rho",
+                            naOut.rho[1], error(0), error(0), error(0),
+                            include_stars, include_ci, zcrit, precision);
+
+    call _ardlTableEnd(fid, fmt);
+endp;
+
+proc (0) = _saveARDLTableNARDLECM(struct nardlECMOut nECMOut, fpath, table_format, precision, stars, ci_level);
+    local fid, fmt, include_stars, include_ci, zcrit, ii;
+    local se_alpha, se_rho, z_alpha, z_rho, pv_alpha, pv_rho;
+
+    { fid, fmt, include_stars, include_ci, zcrit } = _ardlTableOpen(fpath, table_format, precision, stars, ci_level, "saveARDLTable");
+
+    call _ardlTableBegin(fid, fmt, include_stars, include_ci);
+
+    ii = 1;
+    do until ii > nECMOut.k;
+        call _ardlTableWriteRow(fid, fmt, nECMOut.model_family, "", "beta_pos_" $+ nECMOut.xvars[ii],
+                                nECMOut.beta_pos[ii], error(0), error(0), error(0),
+                                include_stars, include_ci, zcrit, precision);
+        call _ardlTableWriteRow(fid, fmt, nECMOut.model_family, "", "beta_neg_" $+ nECMOut.xvars[ii],
+                                nECMOut.beta_neg[ii], error(0), error(0), error(0),
+                                include_stars, include_ci, zcrit, precision);
+        ii = ii + 1;
+    endo;
+
+    se_alpha = sqrt(nECMOut.alpha_cov[1, 1]);
+    se_rho = sqrt(nECMOut.rho_cov[1, 1]);
+    z_alpha = nECMOut.alpha[1] / se_alpha;
+    z_rho = nECMOut.rho[1] / se_rho;
+    pv_alpha = 2*cdfnc(abs(z_alpha));
+    pv_rho = 2*cdfnc(abs(z_rho));
+
+    call _ardlTableWriteRow(fid, fmt, nECMOut.model_family, "", "alpha",
+                            nECMOut.alpha[1], se_alpha, z_alpha, pv_alpha,
+                            include_stars, include_ci, zcrit, precision);
+    call _ardlTableWriteRow(fid, fmt, nECMOut.model_family, "", "rho",
+                            nECMOut.rho[1], se_rho, z_rho, pv_rho,
+                            include_stars, include_ci, zcrit, precision);
+
+    call _ardlTableEnd(fid, fmt);
+endp;
+
+proc (0) = _saveARDLTableCSARDL(struct csardlOut csaOut, fpath, table_format, precision, stars, ci_level);
+    local fid, fmt, include_stars, include_ci, zcrit, ii;
+    local se_beta, se_phi, z_beta, z_phi, pv_beta, pv_phi;
+
+    { fid, fmt, include_stars, include_ci, zcrit } = _ardlTableOpen(fpath, table_format, precision, stars, ci_level, "saveARDLTable");
+
+    call _ardlTableBegin(fid, fmt, include_stars, include_ci);
+
+    se_beta = sqrt(diag(csaOut.bigbt_cov));
+    se_phi = sqrt(diag(csaOut.phi_cov));
+    z_beta = csaOut.bigbt ./ se_beta;
+    z_phi = csaOut.phi ./ se_phi;
+    pv_beta = 2*cdfnc(abs(z_beta));
+    pv_phi = 2*cdfnc(abs(z_phi));
+
+    ii = 1;
+    do until ii > csaOut.k;
+        call _ardlTableWriteRow(fid, fmt, csaOut.model_family, "", "beta_" $+ csaOut.xvars[ii],
+                                csaOut.bigbt[ii], se_beta[ii], z_beta[ii], pv_beta[ii],
+                                include_stars, include_ci, zcrit, precision);
+        ii = ii + 1;
+    endo;
+
+    ii = 1;
+    do until ii > rows(csaOut.phi);
+        call _ardlTableWriteRow(fid, fmt, csaOut.model_family, "", "phi_l" $+ ntos(ii),
+                                csaOut.phi[ii], se_phi[ii], z_phi[ii], pv_phi[ii],
+                                include_stars, include_ci, zcrit, precision);
+        ii = ii + 1;
+    endo;
+
+    call _ardlTableWriteRow(fid, fmt, csaOut.model_family, "", "alpha",
+                            csaOut.alpha[1], error(0), error(0), error(0),
+                            include_stars, include_ci, zcrit, precision);
+    call _ardlTableWriteRow(fid, fmt, csaOut.model_family, "", "rho",
+                            csaOut.rho[1], error(0), error(0), error(0),
+                            include_stars, include_ci, zcrit, precision);
+
+    call _ardlTableEnd(fid, fmt);
+endp;
+
+proc (0) = _saveARDLTableCSARDLECM(struct csardlECMOut cECMOut, fpath, table_format, precision, stars, ci_level);
+    local fid, fmt, include_stars, include_ci, zcrit;
+    local se_alpha, se_rho, z_alpha, z_rho, pv_alpha, pv_rho;
+
+    { fid, fmt, include_stars, include_ci, zcrit } = _ardlTableOpen(fpath, table_format, precision, stars, ci_level, "saveARDLTable");
+
+    call _ardlTableBegin(fid, fmt, include_stars, include_ci);
+
+    se_alpha = sqrt(cECMOut.alpha_cov[1, 1]);
+    se_rho = sqrt(cECMOut.rho_cov[1, 1]);
+    z_alpha = cECMOut.alpha[1] / se_alpha;
+    z_rho = cECMOut.rho[1] / se_rho;
+    pv_alpha = 2*cdfnc(abs(z_alpha));
+    pv_rho = 2*cdfnc(abs(z_rho));
+
+    call _ardlTableWriteRow(fid, fmt, cECMOut.model_family, "", "alpha",
+                            cECMOut.alpha[1], se_alpha, z_alpha, pv_alpha,
+                            include_stars, include_ci, zcrit, precision);
+    call _ardlTableWriteRow(fid, fmt, cECMOut.model_family, "", "rho",
+                            cECMOut.rho[1], se_rho, z_rho, pv_rho,
+                            include_stars, include_ci, zcrit, precision);
+
+    call _ardlTableEnd(fid, fmt);
+endp;
+
+proc (5) = _ardlTableOpen(fpath, table_format, precision, stars, ci_level, caller);
+    local fmt, fid, include_stars, include_ci, zcrit;
+
+    fmt = lower(table_format);
+    if fmt $== "md";
+        fmt = "markdown";
+    elseif fmt $== "tex";
+        fmt = "latex";
+    endif;
+
+    if not (fmt $== "markdown" or fmt $== "latex" or fmt $== "csv");
+        errorlog caller $+ ": table_format must be 'markdown', 'latex', or 'csv'";
+        end;
+    endif;
+
+    if precision < 0;
+        errorlog caller $+ ": precision must be nonnegative";
+        end;
+    endif;
+
+    include_stars = stars /= 0;
+    include_ci = ci_level > 0;
+    if include_ci and (ci_level <= 0 or ci_level >= 1);
+        errorlog caller $+ ": ci_level must be between 0 and 1, or 0 to omit CI columns";
+        end;
+    endif;
+
+    if include_ci;
+        zcrit = cdfni(1 - (1-ci_level)/2);
+    else;
+        zcrit = error(0);
+    endif;
+
+    fid = fopen(fpath, "w");
+    if fid == -1;
+        errorlog caller $+ ": could not open " $+ fpath;
+        end;
+    endif;
+
+    retp(fid, fmt, include_stars, include_ci, zcrit);
+endp;
+
+proc (0) = _ardlTableBegin(fid, fmt, include_stars, include_ci);
+    local header, sep, ncols, ret;
+
+    header = _ardlTableHeader(fmt, include_stars, include_ci);
+
+    if fmt $== "latex";
+        ncols = 7 + include_stars + 2*include_ci;
+        ret = fputs(fid, "\\begin{tabular}{" $+ _qardlTableBorder("l", ncols) $+ "}\n");
+        ret = fputs(fid, "\\hline\n");
+        ret = fputs(fid, header $+ " \\\\\n");
+        ret = fputs(fid, "\\hline\n");
+    elseif fmt $== "markdown";
+        sep = "|---|---|---|---|---|---|---|";
+        if include_stars;
+            sep = sep $+ "---|";
+        endif;
+        if include_ci;
+            sep = sep $+ "---|---|";
+        endif;
+        ret = fputs(fid, header $+ "\n");
+        ret = fputs(fid, sep $+ "\n");
+    else;
+        ret = fputs(fid, header $+ "\n");
+    endif;
+endp;
+
+proc (1) = _ardlTableHeader(fmt, include_stars, include_ci);
+    local header;
+
+    if fmt $== "latex";
+        header = "Model & Tau & Name & Estimate & Std. Err. & z-value & P>|z|";
+        if include_stars;
+            header = header $+ " & Sig.";
+        endif;
+        if include_ci;
+            header = header $+ " & CI lower & CI upper";
+        endif;
+    elseif fmt $== "markdown";
+        header = "| Model | Tau | Name | Estimate | Std. Err. | z-value | P>|z| |";
+        if include_stars;
+            header = header $+ " Sig. |";
+        endif;
+        if include_ci;
+            header = header $+ " CI lower | CI upper |";
+        endif;
+    else;
+        header = "model,tau,name,estimate,std_error,z_value,p_value";
+        if include_stars;
+            header = header $+ ",sig";
+        endif;
+        if include_ci;
+            header = header $+ ",ci_lower,ci_upper";
+        endif;
+    endif;
+
+    retp(header);
+endp;
+
+proc (0) = _ardlTableEnd(fid, fmt);
+    local ret;
+
+    if fmt $== "latex";
+        ret = fputs(fid, "\\hline\n");
+        ret = fputs(fid, "\\end{tabular}\n");
+    endif;
+
+    ret = close(fid);
+endp;
+
+proc (0) = _ardlTableWriteRow(fid, fmt, model, tau_label, name, estimate, se, zval, pval,
+                              include_stars, include_ci, zcrit, precision);
+    local out_line, sig, ci_lb, ci_ub, ret;
+
+    if include_stars and not scalmiss(pval);
+        sig = _qardlSignifStars(pval);
+    else;
+        sig = "";
+    endif;
+
+    if include_ci and not scalmiss(se);
+        ci_lb = estimate - zcrit*se;
+        ci_ub = estimate + zcrit*se;
+    else;
+        ci_lb = error(0);
+        ci_ub = error(0);
+    endif;
+
+    if fmt $== "csv";
+        out_line = _ardlCsvField(model) $+ "," $+ _ardlCsvField(tau_label);
+        out_line = out_line $+ "," $+ _ardlCsvField(name);
+        out_line = out_line $+ "," $+ _ardlFmtNum(estimate, precision);
+        out_line = out_line $+ "," $+ _ardlFmtNum(se, precision);
+        out_line = out_line $+ "," $+ _ardlFmtNum(zval, precision);
+        out_line = out_line $+ "," $+ _ardlFmtNum(pval, precision);
+        if include_stars;
+            out_line = out_line $+ "," $+ _ardlCsvField(sig);
+        endif;
+        if include_ci;
+            out_line = out_line $+ "," $+ _ardlFmtNum(ci_lb, precision) $+ "," $+ _ardlFmtNum(ci_ub, precision);
+        endif;
+    elseif fmt $== "latex";
+        out_line = _ardlLatexEscape(model) $+ " & " $+ _ardlLatexEscape(tau_label);
+        out_line = out_line $+ " & " $+ _ardlLatexEscape(name);
+        out_line = out_line $+ " & " $+ _ardlFmtNum(estimate, precision);
+        out_line = out_line $+ " & " $+ _ardlFmtNum(se, precision);
+        out_line = out_line $+ " & " $+ _ardlFmtNum(zval, precision);
+        out_line = out_line $+ " & " $+ _ardlFmtNum(pval, precision);
+        if include_stars;
+            out_line = out_line $+ " & " $+ _ardlLatexEscape(sig);
+        endif;
+        if include_ci;
+            out_line = out_line $+ " & " $+ _ardlFmtNum(ci_lb, precision) $+ " & " $+ _ardlFmtNum(ci_ub, precision);
+        endif;
+        out_line = out_line $+ " \\\\";
+    else;
+        out_line = "| " $+ model $+ " | " $+ tau_label;
+        out_line = out_line $+ " | " $+ name;
+        out_line = out_line $+ " | " $+ _ardlFmtNum(estimate, precision);
+        out_line = out_line $+ " | " $+ _ardlFmtNum(se, precision);
+        out_line = out_line $+ " | " $+ _ardlFmtNum(zval, precision);
+        out_line = out_line $+ " | " $+ _ardlFmtNum(pval, precision) $+ " |";
+        if include_stars;
+            out_line = out_line $+ " " $+ sig $+ " |";
+        endif;
+        if include_ci;
+            out_line = out_line $+ " " $+ _ardlFmtNum(ci_lb, precision) $+ " | " $+ _ardlFmtNum(ci_ub, precision) $+ " |";
+        endif;
+    endif;
+
+    ret = fputs(fid, out_line $+ "\n");
+endp;
+
+proc (1) = _ardlFmtNum(x, precision);
+    if scalmiss(x);
+        retp("");
+    endif;
+
+    retp(ftos(x, "%*.*lf", 1, precision));
+endp;
+
+proc (1) = _ardlCsvField(s);
+    retp("\"" $+ s $+ "\"");
+endp;
+
+proc (1) = _ardlLatexEscape(s);
+    local ii, ch, out;
+
+    out = "";
+    ii = 1;
+    do until ii > strlen(s);
+        ch = strsect(s, ii, 1);
+        if ch $== "_";
+            out = out $+ "\\_";
+        elseif ch $== "%";
+            out = out $+ "\\%";
+        elseif ch $== "&";
+            out = out $+ "\\&";
+        elseif ch $== "#";
+            out = out $+ "\\#";
+        else;
+            out = out $+ ch;
+        endif;
+        ii = ii + 1;
+    endo;
+
+    retp(out);
+endp;

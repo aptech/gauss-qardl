@@ -36,6 +36,11 @@
   full-workflow outputs.
 - `docs/INFERENCE_INTERVALS.md` documenting covariance, bootstrap interval,
   forecast interval, simultaneous-band, and Wald p-value support by workflow.
+- `saveARDLTable`, `saveARDLMarkdown`, and `saveARDLLaTeX` for generic
+  ARDL-family coefficient table export with precision, significance-code, and
+  confidence-interval column controls.
+- `docs/REPORTING_AND_PLOTTING.md` plus an opt-in headless-safe plot smoke
+  runner for reporting and plotting support.
 - Invalid-input source tests for CS-ARDL unbalanced and unstacked panels,
   including formula-based diagnostic calls.
 - User-facing OLS ARDL workflow with `ardl`, `ardlFull`, `printARDL`,
