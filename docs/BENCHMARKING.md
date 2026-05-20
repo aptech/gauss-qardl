@@ -54,6 +54,10 @@ levels-design lag alignment, formula row-order invariance, and manual
 mean-group, poolability, and Pesaran CD diagnostic reproduction. See
 `docs/CSARDL_VALIDATION.md`.
 
+Invalid-input source tests run through `tests/run_invalid_input_tests.ps1`.
+They currently protect clear CS-ARDL failures for unbalanced panels,
+unstacked panels, and unbalanced formula-based diagnostic inputs.
+
 Bounds-test validation checks ARDL PSS Cases I-V, the legacy Case III wrapper,
 selected published table values, and fixed-seed simulation critical values. See
 `docs/BOUNDS_TESTING_SUPPORT.md`.

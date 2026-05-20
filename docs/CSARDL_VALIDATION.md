@@ -96,6 +96,10 @@ Unbalanced CS-ARDL panels are not supported in the current implementation. A
 user should first align or balance the panel before calling `csardl`,
 `csardlECM`, `csardlFull`, or `csardlDiagnostics`.
 
+Expected-failure tests under `tests/invalid_input_cases/` verify that
+unbalanced matrix inputs, unstacked matrix inputs, and unbalanced formula
+diagnostic inputs stop with explicit panel-layout errors.
+
 Explicit unit/time arguments are also not part of the public CS-ARDL formula
 API. To choose identifiers, arrange and type the dataframe so the desired unit
 column is the first string/category variable and the desired time column is the

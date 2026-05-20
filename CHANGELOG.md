@@ -29,6 +29,8 @@
   tracking notes.
 - Pesaran CD residual cross-sectional dependence diagnostics in
   `csardlDiagnostics`, with deterministic balanced-panel validation fixtures.
+- Invalid-input source tests for CS-ARDL unbalanced and unstacked panels,
+  including formula-based diagnostic calls.
 - User-facing OLS ARDL workflow with `ardl`, `ardlFull`, `printARDL`,
   `predictARDL`, `forecastARDL`, `ardlOut`, and `ardlFullOut`.
 - QARDL prediction and forecast hooks: `predictQARDL` and `forecastQARDL`.

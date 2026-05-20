@@ -4,21 +4,23 @@ param(
 )
 
 $testsDir = Join-Path $RepoRoot "tests"
-$srcDir = Join-Path $RepoRoot "src"
 
-& powershell -ExecutionPolicy Bypass -File (Join-Path $testsDir "verify_package_manifest.ps1") -RepoRoot $RepoRoot
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-& powershell -ExecutionPolicy Bypass -File (Join-Path $testsDir "run_invalid_input_tests.ps1") -RepoRoot $RepoRoot -GaussExe $GaussExe
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-$gaussTests = @(
-    "smoke_public_api.e",
-    "schema_metadata.e",
-    "smoke_nardl_csardl_api.e",
-    "statistical_benchmark.e",
-    "smoke_workflow_api.e",
-    "smoke_export_api.e"
+$cases = @(
+    @{
+        Name = "csardl_unbalanced_diagnostics"
+        Script = "invalid_input_cases/csardl_unbalanced_diagnostics.e"
+        Expected = "csardlDiagnostics: panel must be balanced and stacked by unit"
+    },
+    @{
+        Name = "csardl_unstacked"
+        Script = "invalid_input_cases/csardl_unstacked.e"
+        Expected = "csardl: panel must be stacked by unit with equal-length blocks"
+    },
+    @{
+        Name = "csardl_formula_unbalanced_diagnostics"
+        Script = "invalid_input_cases/csardl_formula_unbalanced_diagnostics.e"
+        Expected = "csardlDiagnostics: panel must be balanced and stacked by unit"
+    }
 )
 
 function Invoke-GaussBatch {
@@ -64,26 +66,30 @@ function Remove-TemporaryFile {
     }
 }
 
-foreach ($test in $gaussTests) {
-    $wrapper = Join-Path ([System.IO.Path]::GetTempPath()) ("qardl_" + [System.Guid]::NewGuid().ToString("N") + ".e")
-    $gaussTestsDir = $testsDir -replace "\\", "/"
-    $gaussSrcDir = $srcDir -replace "\\", "/"
+foreach ($case in $cases) {
+    $scriptPath = Join-Path $testsDir $case.Script
+    $wrapper = Join-Path ([System.IO.Path]::GetTempPath()) ("qardl_invalid_" + [System.Guid]::NewGuid().ToString("N") + ".e")
+    $gaussRepoDir = $RepoRoot -replace "\\", "/"
+    $gaussScript = $scriptPath -replace "\\", "/"
+
     Set-Content -Path $wrapper -Value @(
         "new;",
-        "chdir `"$gaussSrcDir`";",
-        "run `"$gaussTestsDir/$test`";"
+        "chdir `"$gaussRepoDir`";",
+        "run `"$gaussScript`";"
     )
 
     try {
         $result = Invoke-GaussBatch -Exe $GaussExe -Arguments @("-nb", "-b", "-x", $wrapper)
         $output = $result.Output
-        $output
-        if ($result.ExitCode -ne 0 -or ($output -match "Program execute failed|error G[0-9]+|Program compile failed")) {
+        if ($output -notmatch [regex]::Escape($case.Expected)) {
+            $output
+            Write-Error ("{0}: expected error message not found: {1}" -f $case.Name, $case.Expected)
             exit 1
         }
+        Write-Host ("{0}: PASS" -f $case.Name)
     } finally {
         Remove-TemporaryFile -Path $wrapper
     }
 }
 
-Write-Host "run_source_tests.ps1: PASS"
+Write-Host "run_invalid_input_tests.ps1: PASS"
