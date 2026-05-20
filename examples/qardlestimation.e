@@ -37,7 +37,7 @@ data = yyy~xxx;
 tau = { 0.25, 0.5, 0.75 };
 
 // Silent integrated workflow. Set the last argument to 1 for printed output.
-qfOut = qardlFull(data, 4, 4, tau, "", 0);
+qfOut = qardlFull(data);
 
 print;
 print "Simulated-data QARDL";
@@ -46,8 +46,6 @@ print "True long-run beta: " true_beta;
 print "Selected p, q:      " qfOut.pst~qfOut.qst;
 print "Bounds F-stat:      " qfOut.ardl_fstat;
 print "Metadata p q k nobs:" qfOut.qa.p~qfOut.qa.q~qfOut.qa.k~qfOut.qa.nobs;
-
-printQARDL(qfOut.qa, tau);
 
 qardl_fit = predictARDL(qfOut.qa, data);
 qardl_fcst = forecastARDL(qfOut.qa, data, 3);

@@ -42,8 +42,6 @@
 **
 **  Developed:  March 2026
 */
-#include qardl.sdf 
-
 proc (2) = qardl_pval_ecm(struct qardlECMOut qECMOut);
     local se_alpha, se_rho;
     local z_alpha, z_rho;

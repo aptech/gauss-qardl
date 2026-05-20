@@ -16,8 +16,10 @@ The benchmark script runs `tests/benchmark_nardl_csardl.e`, which:
 
 - Generates seeded synthetic NARDL and CS-ARDL datasets.
 - Estimates levels and ECM NARDL models.
-- Estimates pooled CS-ARDL and optional mean-group/poolability diagnostics.
-- Prints long-run coefficient summaries and the CS-ARDL poolability statistic.
+- Estimates pooled CS-ARDL and optional mean-group, poolability, and Pesaran
+  CD diagnostics.
+- Prints long-run coefficient summaries plus CS-ARDL poolability and CD
+  statistics.
 
 These are deterministic implementation benchmarks, not published-result
 replications.
@@ -49,7 +51,7 @@ maximum absolute differences, and tolerances on failure.
 
 CS-ARDL panel validation additionally checks known cross-sectional averages,
 levels-design lag alignment, formula row-order invariance, and manual
-mean-group/poolability diagnostic reproduction. See
+mean-group, poolability, and Pesaran CD diagnostic reproduction. See
 `docs/CSARDL_VALIDATION.md`.
 
 Bounds-test validation checks ARDL PSS Cases I-V, the legacy Case III wrapper,

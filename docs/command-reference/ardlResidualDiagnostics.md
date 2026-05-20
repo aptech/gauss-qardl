@@ -21,12 +21,18 @@ dOut = ardlResidualDiagnostics(modelOut, max_lags);
 ## Returns
 
 An `ardlResidualDiagOut` structure with Ljung-Box serial-correlation,
-Breusch-Pagan-style heteroskedasticity, and Jarque-Bera normality diagnostics.
+Breusch-Pagan-style heteroskedasticity, Jarque-Bera normality, and residual
+CUSUM/CUSUMSQ stability diagnostics.
 
 ## Remarks
 
 The heteroskedasticity diagnostic regresses squared residuals on an intercept
 and fitted values. QARDL outputs return one diagnostic row per quantile.
+
+The stability diagnostics are residual-bridge CUSUM and CUSUMSQ checks based
+on centered residuals. They do not replace full recursive-residual stability
+tests, which require regression design information not yet stored in every
+public output structure.
 
 CS-ARDL panel residual diagnostics are not handled here because stacked-panel
 serial-correlation tests require unit-aware diagnostics. Use

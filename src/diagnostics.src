@@ -4,8 +4,8 @@
 **  Purpose:    Compute core residual diagnostics for ARDL-family time-series
 **              output structures. The first diagnostic layer includes:
 **              Ljung-Box serial-correlation tests, Breusch-Pagan-style
-**              heteroskedasticity tests using fitted values, and Jarque-Bera
-**              normality tests.
+**              heteroskedasticity tests using fitted values, Jarque-Bera
+**              normality tests, and residual CUSUM/CUSUMSQ stability tests.
 **
 **  Format:     dOut = ardlResidualDiagnostics(modelOut);
 **              dOut = ardlResidualDiagnostics(modelOut, max_lags);
@@ -21,8 +21,6 @@
 **              to the panel diagnostics milestone because stacked-panel
 **              residual serial-correlation tests require unit-aware handling.
 */
-#include qardl.sdf
-
 proc (struct ardlResidualDiagOut) = ardlResidualDiagnostics(modelOut, max_lags = 0);
     if isStructType(modelOut, "ardlOut");
         retp(_ardlDiagARDL(modelOut, max_lags));
@@ -66,7 +64,7 @@ endp;
 proc (0) = printARDLResidualDiagnostics(struct ardlResidualDiagOut dOut);
     local ii, header, note, table_width, eq_line, dash_line, label;
 
-    header = "Series  Test                 Statistic       df      P>|ChiSq|    Sig.";
+    header = "Series  Test                 Statistic       df       P-value     Sig.";
     note = _qardlSignifNote();
     table_width = maxc(strlen(header)|84|strlen(note));
     eq_line = _qardlTableBorder("=", table_width);
@@ -95,6 +93,14 @@ proc (0) = printARDLResidualDiagnostics(struct ardlResidualDiagOut dOut);
         sprintf("%-7s %-18s%14.6f%9.0f%14.6f%7s",
                 label, "Jarque-Bera", dOut.normality_stat[ii], dOut.normality_df[ii],
                 dOut.normality_pv[ii], _qardlSignifStars(dOut.normality_pv[ii]));
+        if dOut.stability_available;
+            sprintf("%-7s %-18s%14.6f%9s%14.6f%7s",
+                    label, "CUSUM", dOut.cusum_stat[ii], ".",
+                    dOut.cusum_pv[ii], _qardlSignifStars(dOut.cusum_pv[ii]));
+            sprintf("%-7s %-18s%14.6f%9s%14.6f%7s",
+                    label, "CUSUMSQ", dOut.cusumsq_stat[ii], ".",
+                    dOut.cusumsq_pv[ii], _qardlSignifStars(dOut.cusumsq_pv[ii]));
+        endif;
         if ii < dOut.nseries;
             print dash_line;
         endif;
@@ -106,7 +112,7 @@ proc (0) = printARDLResidualDiagnostics(struct ardlResidualDiagOut dOut);
 endp;
 
 proc (struct ardlResidualDiagOut) = _ardlDiagFromMatrices(resid, fitted, source_model_family, max_lags);
-    local nobs, nseries, lags, ii;
+    local nobs, nseries, lags, ii, c_path, csq_path;
     struct ardlResidualDiagOut dOut;
 
     call _ardlDiagValidateInputs(resid, fitted, max_lags);
@@ -137,6 +143,15 @@ proc (struct ardlResidualDiagOut) = _ardlDiagFromMatrices(resid, fitted, source_
     dOut.normality_stat = zeros(nseries, 1);
     dOut.normality_df = 2*ones(nseries, 1);
     dOut.normality_pv = zeros(nseries, 1);
+    dOut.stability_available = 1;
+    dOut.cusum_stat = zeros(nseries, 1);
+    dOut.cusum_pv = zeros(nseries, 1);
+    dOut.cusum_crit5 = 1.35810151574062*ones(nseries, 1);
+    dOut.cusumsq_stat = zeros(nseries, 1);
+    dOut.cusumsq_pv = zeros(nseries, 1);
+    dOut.cusumsq_crit5 = 1.35810151574062*ones(nseries, 1);
+    dOut.cusum_path = zeros(nobs, nseries);
+    dOut.cusumsq_path = zeros(nobs, nseries);
 
     ii = 1;
     do until ii > nseries;
@@ -146,6 +161,11 @@ proc (struct ardlResidualDiagOut) = _ardlDiagFromMatrices(resid, fitted, source_
             _ardlDiagBreuschPagan(resid[., ii], fitted[., minc(ii|cols(fitted))]);
         { dOut.normality_stat[ii], dOut.normality_pv[ii] } =
             _ardlDiagJarqueBera(resid[., ii]);
+        { dOut.cusum_stat[ii], dOut.cusum_pv[ii], dOut.cusumsq_stat[ii],
+          dOut.cusumsq_pv[ii], c_path, csq_path } =
+            _ardlDiagStability(resid[., ii]);
+        dOut.cusum_path[., ii] = c_path;
+        dOut.cusumsq_path[., ii] = csq_path;
         ii = ii + 1;
     endo;
 
@@ -267,4 +287,56 @@ proc (2) = _ardlDiagJarqueBera(e);
     jb = (nobs/6) * (skew^2 + ((kurt - 3)^2)/4);
 
     retp(jb, cdfchic(jb, 2));
+endp;
+
+proc (6) = _ardlDiagStability(e);
+    local nobs, u, denom, c_path, sq_path, c_stat, sq_stat, c_pv, sq_pv;
+
+    nobs = rows(e);
+    u = e - meanc(e);
+    denom = u'*u;
+    if denom <= 1e-14;
+        errorlog "ardlResidualDiagnostics: residual variance is too small for stability diagnostics";
+        end;
+    endif;
+
+    c_path = cumsumc(u) / sqrt(denom);
+    c_stat = maxc(abs(c_path));
+    c_pv = _ardlDiagKSPV(c_stat);
+
+    sq_path = cumsumc(u .* u) / denom - seqa(1, 1, nobs) / nobs;
+    sq_stat = sqrt(nobs) * maxc(abs(sq_path));
+    sq_pv = _ardlDiagKSPV(sq_stat);
+
+    retp(c_stat, c_pv, sq_stat, sq_pv, c_path, sq_path);
+endp;
+
+proc (1) = _ardlDiagKSPV(stat);
+    local jj, term, pv, sgn;
+
+    if stat <= 0;
+        retp(1);
+    endif;
+
+    pv = 0;
+    sgn = 1;
+    jj = 1;
+    do until jj > 100;
+        term = exp(-2 * (jj^2) * (stat^2));
+        pv = pv + sgn * term;
+        if term < 1e-12;
+            break;
+        endif;
+        sgn = -sgn;
+        jj = jj + 1;
+    endo;
+
+    pv = 2 * pv;
+    if pv < 0;
+        pv = 0;
+    elseif pv > 1;
+        pv = 1;
+    endif;
+
+    retp(pv);
 endp;

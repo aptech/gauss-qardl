@@ -41,8 +41,6 @@
 **
 **  Developed:  March 2026
 */
-#include qardl.sdf 
-
 proc (6) = wtestsym(struct qardlOut qaOut, tau, data);
     local ss, k, p, nn;
     local pair_j, pair_m, n_pairs, max_pairs, tol;

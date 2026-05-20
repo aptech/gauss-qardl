@@ -100,6 +100,11 @@ rdiagOut = ardlResidualDiagnostics(qaOut, 4);
 call assert_true(rdiagOut.nobs == qaOut.nobs and rdiagOut.nseries == rows(tau) and
                  rows(rdiagOut.serial_stat) == rows(tau) and rdiagOut.lags == 4,
                  "ardlResidualDiagnostics QARDL output shape changed");
+call assert_true(rdiagOut.stability_available == 1 and
+                 rows(rdiagOut.cusum_stat) == rows(tau) and
+                 rows(rdiagOut.cusum_path) == qaOut.nobs and
+                 cols(rdiagOut.cusum_path) == rows(tau),
+                 "ardlResidualDiagnostics QARDL stability output shape changed");
 
 qardl_fit = predictQARDL(qaOut, data);
 { predY, predX, theta_start, phi_start } = _qardlBuildLevelsDesignX(data, qaOut.p, qaOut.qvec);
@@ -125,7 +130,9 @@ rdiagOut = ardlResidualDiagnostics(arOut, 4);
 call assert_true(rdiagOut.nobs == arOut.nobs and rdiagOut.nseries == 1 and
                  rdiagOut.serial_pv[1] >= 0 and rdiagOut.serial_pv[1] <= 1 and
                  rdiagOut.hetero_pv[1] >= 0 and rdiagOut.hetero_pv[1] <= 1 and
-                 rdiagOut.normality_pv[1] >= 0 and rdiagOut.normality_pv[1] <= 1,
+                 rdiagOut.normality_pv[1] >= 0 and rdiagOut.normality_pv[1] <= 1 and
+                 rdiagOut.cusum_pv[1] >= 0 and rdiagOut.cusum_pv[1] <= 1 and
+                 rdiagOut.cusumsq_pv[1] >= 0 and rdiagOut.cusumsq_pv[1] <= 1,
                  "ardlResidualDiagnostics ARDL output invalid");
 
 struct ardlFullOut afOut;

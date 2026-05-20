@@ -97,7 +97,10 @@ call assert_true(rows(forecastARDL(arOut, data, 2, "", future_x)) == 2,
                  "ARDL future_x forecast output changed");
 struct ardlResidualDiagOut rdiagOut;
 rdiagOut = ardlResidualDiagnostics(arOut, 4);
-call assert_true(rdiagOut.nobs == arOut.nobs and rdiagOut.nseries == 1 and rdiagOut.lags == 4,
+call assert_true(rdiagOut.nobs == arOut.nobs and rdiagOut.nseries == 1 and rdiagOut.lags == 4 and
+                 rdiagOut.stability_available == 1 and rdiagOut.cusum_pv[1] >= 0 and
+                 rdiagOut.cusum_pv[1] <= 1 and rdiagOut.cusumsq_pv[1] >= 0 and
+                 rdiagOut.cusumsq_pv[1] <= 1,
                  "ardlResidualDiagnostics ARDL output invalid");
 
 struct ardlFullOut afOut;
@@ -265,7 +268,8 @@ call assert_true(cfOut.pst >= 1 and cfOut.pst <= 8 and cfOut.qst >= 0 and cfOut.
 
 struct csardlDiagOut diagOut;
 diagOut = csardlDiagnostics(panel_df, 1, 1, 1, "y ~ x1 + x2", 0);
-call assert_true(diagOut.poolability_df == 6 and diagOut.poolability_pv >= 0 and diagOut.poolability_pv <= 1,
+call assert_true(diagOut.poolability_df == 6 and diagOut.poolability_pv >= 0 and diagOut.poolability_pv <= 1 and
+                 diagOut.cd_pairs == 6 and diagOut.cd_pv >= 0 and diagOut.cd_pv <= 1,
                  "csardlDiagnostics output changed");
 call assert_true(rows(forecastCSARDL(cfOut.csa, panel_df, 2, "y ~ x1 + x2")) == 2,
                  "forecastCSARDL formula output changed");

@@ -162,11 +162,17 @@ call assert_close(diag_matrix.mean_group_bigbt,
 call assert_close(diag_matrix.poolability_wald~diag_matrix.poolability_df~diag_matrix.poolability_pv,
                   read_expected("synthetic/diagnostics/csardl_poolability.csv"),
                   1e-8, "CS-ARDL seeded poolability fixture changed");
+call assert_close(diag_matrix.cd_stat~diag_matrix.cd_pv~diag_matrix.cd_pairs~diag_matrix.cd_avg_corr,
+                  read_expected("synthetic/diagnostics/csardl_cd.csv"),
+                  1e-8, "CS-ARDL seeded CD fixture changed");
 call assert_close(diag_formula.mean_group_bigbt, diag_matrix.mean_group_bigbt, tol,
                   "CS-ARDL formula diagnostics changed after panel sorting");
 call assert_close(diag_formula.poolability_wald~diag_formula.poolability_df~diag_formula.poolability_pv,
                   diag_matrix.poolability_wald~diag_matrix.poolability_df~diag_matrix.poolability_pv,
                   1e-8, "CS-ARDL formula poolability changed after panel sorting");
+call assert_close(diag_formula.cd_stat~diag_formula.cd_pv~diag_formula.cd_pairs~diag_formula.cd_avg_corr,
+                  diag_matrix.cd_stat~diag_matrix.cd_pv~diag_matrix.cd_pairs~diag_matrix.cd_avg_corr,
+                  1e-8, "CS-ARDL formula CD diagnostic changed after panel sorting");
 
 manual_mg = zeros(diag_matrix.k, 1);
 manual_mg_se = zeros(diag_matrix.k, 1);
@@ -181,10 +187,12 @@ call assert_close(diag_matrix.mean_group_se, manual_mg_se, 1e-12,
                   "manual CS-ARDL mean-group SE reproduction changed");
 
 manual_poolability = 0;
+manual_unit_resid = zeros(diag_matrix.unit_nobs, diag_matrix.nunits);
 for ii(1, diag_matrix.nunits, 1);
     { y_unit, x_unit } = _csardlBuildUnitDesign(panel, 2, 1, 1, ii);
     bt_unit = _qardlSafeInv(x_unit'*x_unit, "csardl_panel_validation", "unit moment matrix")*x_unit'*y_unit;
     resid_unit = y_unit - x_unit*bt_unit;
+    manual_unit_resid[., ii] = resid_unit;
     { cov_unit, sigma2_unit } = _csardlOLSCov(x_unit, resid_unit, "csardl_panel_validation");
     beta_unit = _csardlLongRunBeta(bt_unit, 2, diag_matrix.k);
     beta_cov_unit = _csardlLongRunCov(bt_unit, cov_unit, 2, 1, 1, diag_matrix.k);
@@ -194,5 +202,10 @@ for ii(1, diag_matrix.nunits, 1);
 endfor;
 call assert_close(diag_matrix.poolability_wald, manual_poolability, 1e-10,
                   "manual CS-ARDL poolability reproduction changed");
+{ manual_cd_stat, manual_cd_pv, manual_cd_pairs, manual_cd_avg_corr } =
+    _csardlPesaranCD(manual_unit_resid, "csardl_panel_validation");
+call assert_close(diag_matrix.cd_stat~diag_matrix.cd_pv~diag_matrix.cd_pairs~diag_matrix.cd_avg_corr,
+                  manual_cd_stat~manual_cd_pv~manual_cd_pairs~manual_cd_avg_corr,
+                  1e-10, "manual CS-ARDL CD reproduction changed");
 
 print "synthetic/csardl_panel_validation.e: PASS";

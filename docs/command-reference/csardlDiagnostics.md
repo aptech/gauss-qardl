@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Computes optional mean-group and poolability diagnostics for CS-ARDL models.
+Computes optional mean-group, poolability, and cross-sectional dependence
+diagnostics for CS-ARDL models.
 
 ## Format
 
@@ -33,8 +34,9 @@ conventions. Formula strings do not include explicit unit/time terms.
 
 `diagOut`, a `csardlDiagOut` structure containing unit-specific long-run
 coefficients, unit-specific full coefficient vectors, mean-group long-run
-coefficients and standard errors, pooled long-run coefficients, and a
-Wald-style poolability statistic.
+coefficients and standard errors, pooled long-run coefficients, a Wald-style
+poolability statistic, and a Pesaran CD residual cross-sectional dependence
+diagnostic.
 
 ## Remarks
 
@@ -43,10 +45,14 @@ separately for each unit. The poolability statistic compares unit-specific
 long-run coefficients with the pooled CS-ARDL long-run coefficients using the
 unit-specific delta-method covariance matrices.
 
+The Pesaran CD diagnostic is computed from the balanced matrix of unit-level
+residuals returned by the same unit-specific diagnostic regressions. The
+reported fields are `cd_stat`, `cd_pv`, `cd_pairs`, and `cd_avg_corr`.
+
 This is a diagnostic convenience layer for the first CS-ARDL implementation.
 Deterministic validation recomputes mean-group coefficients, mean-group
-standard errors, and the poolability Wald statistic from unit-specific fits.
-TODO: validate the diagnostic distribution and finite-sample behavior against
+standard errors, the poolability Wald statistic, and the Pesaran CD statistic
+from unit-specific fits. TODO: validate finite-sample behavior against
 published dynamic CCE/CS-ARDL designs.
 
 ## Source

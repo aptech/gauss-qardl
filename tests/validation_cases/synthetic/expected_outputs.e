@@ -118,6 +118,10 @@ call assert_close(rdOut.serial_stat~rdOut.serial_df~rdOut.serial_pv~
                   rdOut.normality_stat~rdOut.normality_df~rdOut.normality_pv,
                   read_expected("synthetic/diagnostics/ardl_residual_diag.csv"),
                   tol, "ARDL residual diagnostic fixture changed");
+call assert_close(rdOut.cusum_stat~rdOut.cusum_pv~rdOut.cusum_crit5~
+                  rdOut.cusumsq_stat~rdOut.cusumsq_pv~rdOut.cusumsq_crit5,
+                  read_expected("synthetic/diagnostics/ardl_stability_diag.csv"),
+                  tol, "ARDL stability diagnostic fixture changed");
 
 { fstat, cv } = ardlbounds(data, 2, 1);
 call assert_close(fstat|vec(cv),
@@ -138,6 +142,10 @@ call assert_close(rdOut.serial_stat~rdOut.serial_df~rdOut.serial_pv~
                   rdOut.normality_stat~rdOut.normality_df~rdOut.normality_pv,
                   read_expected("synthetic/diagnostics/qardl_residual_diag.csv"),
                   tol, "QARDL residual diagnostic fixture changed");
+call assert_close(rdOut.cusum_stat~rdOut.cusum_pv~rdOut.cusum_crit5~
+                  rdOut.cusumsq_stat~rdOut.cusumsq_pv~rdOut.cusumsq_crit5,
+                  read_expected("synthetic/diagnostics/qardl_stability_diag.csv"),
+                  tol, "QARDL stability diagnostic fixture changed");
 
 boot_data = data[1:250, .];
 { ci_beta, ci_gamma, ci_phi, boot_diag } =
@@ -198,5 +206,8 @@ call assert_close(diagOut.mean_group_bigbt,
 call assert_close(diagOut.poolability_wald~diagOut.poolability_df~diagOut.poolability_pv,
                   read_expected("synthetic/diagnostics/csardl_poolability.csv"),
                   tol, "CS-ARDL poolability diagnostic fixture changed");
+call assert_close(diagOut.cd_stat~diagOut.cd_pv~diagOut.cd_pairs~diagOut.cd_avg_corr,
+                  read_expected("synthetic/diagnostics/csardl_cd.csv"),
+                  tol, "CS-ARDL cross-sectional dependence diagnostic fixture changed");
 
 print "synthetic/expected_outputs.e: PASS";

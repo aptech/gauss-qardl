@@ -9,6 +9,9 @@
 - `ardlResidualDiagnostics` and `printARDLResidualDiagnostics` for
   time-series ARDL-family residual serial-correlation, heteroskedasticity, and
   normality checks.
+- Residual CUSUM and CUSUMSQ stability diagnostics in
+  `ardlResidualDiagnostics`, with deterministic ARDL/QARDL validation
+  fixtures.
 - Direct levels-form and ECM estimator calls now print GAUSS-style result
   tables by default, with a final `print_results = 0` option for silent
   scripts, tests, simulations, rolling windows, and bootstrap workflows.
@@ -24,6 +27,8 @@
 - Optional CS-ARDL mean-group and poolability diagnostics, plus deterministic
   synthetic NARDL/CS-ARDL benchmark entry points and published-validation
   tracking notes.
+- Pesaran CD residual cross-sectional dependence diagnostics in
+  `csardlDiagnostics`, with deterministic balanced-panel validation fixtures.
 - User-facing OLS ARDL workflow with `ardl`, `ardlFull`, `printARDL`,
   `predictARDL`, `forecastARDL`, `ardlOut`, and `ardlFullOut`.
 - QARDL prediction and forecast hooks: `predictQARDL` and `forecastQARDL`.
@@ -71,7 +76,7 @@
   files directly.
 - Usage-guide diagnostic workflow notes documenting implemented diagnostics
   and TODO gaps for standalone residual serial-correlation,
-  heteroskedasticity, normality, and classical stability tests.
+  heteroskedasticity, normality, residual stability, and CS-ARDL panel tests.
 - `CITATION.cff`, `CITATION.md`, and a QARDL software release article for
   users who need a preferred citation for the package.
 - Licensing guidance explaining why MIT does not prevent ports/translations

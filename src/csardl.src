@@ -18,7 +18,6 @@
 **
 **  Output:     csaOut    struct csardlOut.
 */
-#include qardl.sdf
 proc (struct csardlOut) = csardl(data, ppp, qqq, cs_lags = 0, formula = "", print_results = 1);
     local Y, ONEX, csavg, unit_ids, unit_nobs, bt, k0, phi_start, cross_start;
     local gam, phi, denom, bigbt, cross_avg_coef;
@@ -311,7 +310,8 @@ endp;
 /*
 **> csardlDiagnostics
 **
-**  Purpose:    Optional mean-group and poolability diagnostics for CS-ARDL.
+**  Purpose:    Optional mean-group, poolability, and cross-sectional
+**              dependence diagnostics for CS-ARDL.
 **              Estimates the same cross-sectionally augmented ARDL equation
 **              unit-by-unit, reports mean-group long-run coefficients, and
 **              computes a Wald-style poolability diagnostic for equality of
@@ -323,8 +323,9 @@ endp;
 proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, formula = "", print_results = 1);
     local unit_ids, T, nunits, k0, max_lag, n_param, unit_nobs;
     local ii, jj, Y_i, X_i, bt_i, resid_i, cov_i, sigma2_i, beta_i, beta_cov_i;
-    local unit_bigbt, unit_phi, unit_bt, unit_sigma2, mean_group_bigbt, mean_group_se;
+    local unit_bigbt, unit_phi, unit_bt, unit_sigma2, unit_resid, mean_group_bigbt, mean_group_se;
     local pooled_bigbt, poolability_wald, poolability_df, poolability_pv, diff, V_i;
+    local cd_stat, cd_pv, cd_pairs, cd_avg_corr;
     local depvar, xvars, unitvar, timevar;
 
     { depvar, xvars, unitvar, timevar } = _csardlMetadataNames(data, formula);
@@ -356,6 +357,7 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
     unit_phi = zeros(nunits, ppp);
     unit_bt = zeros(nunits, n_param);
     unit_sigma2 = zeros(nunits, 1);
+    unit_resid = zeros(unit_nobs, nunits);
     poolability_wald = 0;
 
     ii = 1;
@@ -373,6 +375,7 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
         unit_phi[ii, .] = bt_i[2+k0:1+k0+ppp]';
         unit_bt[ii, .] = bt_i';
         unit_sigma2[ii] = sigma2_i;
+        unit_resid[., ii] = resid_i;
 
         diff = beta_i - pooled_bigbt;
         V_i = _qardlSafeInv(beta_cov_i, "csardlDiagnostics", "unit long-run covariance");
@@ -392,6 +395,7 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
 
     poolability_df = (nunits - 1)*k0;
     poolability_pv = cdfchic(poolability_wald, poolability_df);
+    { cd_stat, cd_pv, cd_pairs, cd_avg_corr } = _csardlPesaranCD(unit_resid, "csardlDiagnostics");
 
     struct csardlDiagOut diagOut;
     diagOut.model_family = "CS-ARDL-Diagnostics";
@@ -426,6 +430,10 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
     diagOut.poolability_wald = poolability_wald;
     diagOut.poolability_pv = poolability_pv;
     diagOut.poolability_df = poolability_df;
+    diagOut.cd_stat = cd_stat;
+    diagOut.cd_pv = cd_pv;
+    diagOut.cd_pairs = cd_pairs;
+    diagOut.cd_avg_corr = cd_avg_corr;
 
     if print_results;
         call printCSARDLDiagnostics(diagOut);
@@ -434,10 +442,50 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
     retp(diagOut);
 endp;
 
+proc (4) = _csardlPesaranCD(unit_resid, caller);
+    local TT, nunits, ii, jj, ui, uj, denom, rho_ij, rho_sum, npairs;
+    local cd_stat, cd_pv, cd_avg_corr;
+
+    TT = rows(unit_resid);
+    nunits = cols(unit_resid);
+    if nunits < 2;
+        errorlog caller $+ ": at least two units are required for Pesaran CD diagnostics";
+        end;
+    endif;
+
+    rho_sum = 0;
+    npairs = 0;
+    ii = 1;
+    do until ii >= nunits;
+        ui = unit_resid[., ii] - meanc(unit_resid[., ii]);
+        jj = ii + 1;
+        do until jj > nunits;
+            uj = unit_resid[., jj] - meanc(unit_resid[., jj]);
+            denom = sqrt((ui'*ui) * (uj'*uj));
+            if denom <= 1e-14;
+                errorlog caller $+ ": unit residual variance is too small for Pesaran CD diagnostics";
+                end;
+            endif;
+
+            rho_ij = (ui'*uj) / denom;
+            rho_sum = rho_sum + rho_ij;
+            npairs = npairs + 1;
+            jj = jj + 1;
+        endo;
+        ii = ii + 1;
+    endo;
+
+    cd_avg_corr = rho_sum / npairs;
+    cd_stat = sqrt((2 * TT) / (nunits * (nunits - 1))) * rho_sum;
+    cd_pv = 2 * cdfnc(abs(cd_stat));
+
+    retp(cd_stat, cd_pv, npairs, cd_avg_corr);
+endp;
+
 /*
 **> printCSARDLDiagnostics
 **
-**  Purpose:    Print CS-ARDL mean-group and poolability diagnostics.
+**  Purpose:    Print CS-ARDL mean-group, poolability, and CD diagnostics.
 */
 proc (0) = printCSARDLDiagnostics(struct csardlDiagOut diagOut);
     local ii;
@@ -470,6 +518,10 @@ proc (0) = printCSARDLDiagnostics(struct csardlDiagOut diagOut);
     sprintf("Poolability Wald: %16.6f    df: %8.0f    p-value: %12.6f    Sig: %-3s",
             diagOut.poolability_wald, diagOut.poolability_df, diagOut.poolability_pv,
             _qardlSignifStars(diagOut.poolability_pv));
+    sprintf("Pesaran CD:       %16.6f    pairs: %5.0f    p-value: %12.6f    Sig: %-3s",
+            diagOut.cd_stat, diagOut.cd_pairs, diagOut.cd_pv,
+            _qardlSignifStars(diagOut.cd_pv));
+    sprintf("Average residual correlation: %12.6f", diagOut.cd_avg_corr);
     print eq_line;
     print note;
 endp;

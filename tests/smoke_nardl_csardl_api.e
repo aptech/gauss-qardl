@@ -210,6 +210,9 @@ call assert_true(rows(diagOut.unit_bigbt) == nunits and cols(diagOut.unit_bigbt)
 call assert_true(diagOut.poolability_df == (nunits-1)*2 and
                  diagOut.poolability_pv >= 0 and diagOut.poolability_pv <= 1,
                  "csardlDiagnostics poolability statistic invalid");
+call assert_true(diagOut.cd_pairs == nunits*(nunits-1)/2 and
+                 diagOut.cd_pv >= 0 and diagOut.cd_pv <= 1,
+                 "csardlDiagnostics CD statistic invalid");
 
 cs_fit = predictCSARDL(csaOut, panel);
 call assert_close(cs_fit, cX*expected_cbt, 1e-10, "predictCSARDL did not use stored design");

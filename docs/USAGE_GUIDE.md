@@ -221,8 +221,8 @@ Unbalanced panels and missing panel cells are not currently supported; align or
 balance the panel before estimation. Formula strings do not include explicit
 unit/time terms, so choose identifiers by ordering and typing the dataframe
 columns according to the GAUSS panel-data convention.
-Use `csardlDiagnostics` for the optional mean-group and poolability diagnostic
-layer:
+Use `csardlDiagnostics` for the optional mean-group, poolability, and
+cross-sectional dependence diagnostic layer:
 
 ```gauss
 diagOut = csardlDiagnostics(df_panel, cfOut.pst, cfOut.qst, cfOut.cs_lags,
@@ -354,7 +354,8 @@ values, residuals, and residual variance fields.
 
 The standard CS-ARDL workflow currently includes pooled coefficient
 diagnostics, cross-sectional-average controls, fitted values, residuals,
-residual variance fields, and optional mean-group/poolability diagnostics.
+residual variance fields, and optional mean-group, poolability, and Pesaran CD
+residual cross-sectional dependence diagnostics.
 
 Bounds testing support is summarized in
 [BOUNDS_TESTING_SUPPORT.md](BOUNDS_TESTING_SUPPORT.md). The legacy
@@ -363,10 +364,10 @@ Bounds testing support is summarized in
 Cases I-V directly.
 
 `ardlResidualDiagnostics` currently covers Ljung-Box serial-correlation,
-Breusch-Pagan-style heteroskedasticity using fitted values, and Jarque-Bera
-normality checks for ARDL, QARDL, QARDL-ECM, NARDL, and NARDL-ECM outputs.
-Classical structural-stability tests and unit-aware CS-ARDL panel residual
-diagnostics remain TODO.
+Breusch-Pagan-style heteroskedasticity using fitted values, Jarque-Bera
+normality, and residual CUSUM/CUSUMSQ stability checks for ARDL, QARDL,
+QARDL-ECM, NARDL, and NARDL-ECM outputs. Full recursive-residual stability
+tests and unit-aware CS-ARDL panel residual diagnostics remain TODO.
 
 ## Quantile Impulse Responses
 
@@ -425,9 +426,10 @@ applied inference.
 - Rolling window length is fixed internally at 10 percent of the sample.
 - Bootstrap defaults are convenient starting points; applied work should
   report the chosen number of replications, block length, and seed.
-- Residual serial-correlation, heteroskedasticity, and normality diagnostics
-  are available for time-series ARDL-family outputs. Classical
-  structural-stability tests and CS-ARDL panel residual diagnostics are TODO.
+- Residual serial-correlation, heteroskedasticity, normality, and
+  residual-bridge CUSUM/CUSUMSQ stability diagnostics are available for
+  time-series ARDL-family outputs. Full recursive-residual stability tests and
+  CS-ARDL panel residual diagnostics are TODO.
 - `p = 0` models are not currently supported. `q = 0` is supported for levels,
   ECM, lag-selection, QIRF, and ARDL bounds workflows.
 

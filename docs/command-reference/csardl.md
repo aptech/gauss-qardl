@@ -52,7 +52,8 @@ default maximum search bounds are `8` and `8`; `cs_lags` defaults to `0`.
 
 `csardlDiagnostics` estimates the same cross-sectionally augmented equation
 unit-by-unit, reports mean-group long-run coefficients, and computes a
-Wald-style poolability diagnostic against the pooled long-run coefficients.
+Wald-style poolability diagnostic against the pooled long-run coefficients
+plus a Pesaran CD residual cross-sectional dependence diagnostic.
 
 Published-result validation cases are still TODO. The current benchmark
 coverage uses deterministic synthetic datasets, including balanced-panel

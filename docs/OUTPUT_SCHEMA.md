@@ -46,9 +46,9 @@ store `pmax` and `qmax` for the search bounds.
 | `nardlDynMultOut` | NARDL-Dynamic-Multipliers | model family, formula, names, horizon | Contains `pos`, `neg`, and `asymmetry` multiplier matrices. |
 | `csardlOut` | CS-ARDL | common metadata, `unitvar`, `timevar`, `qvec` | `estimation_start/end` are within-unit time indices. |
 | `csardlECMOut` | CS-ARDL-ECM | common metadata, `unitvar`, `timevar`, `qvec` | Uses pooled long-run coefficients from CS-ARDL levels estimation. |
-| `csardlDiagOut` | CS-ARDL diagnostics | common metadata, `unitvar`, `timevar`, `qvec` | Covers mean-group and poolability diagnostics. |
+| `csardlDiagOut` | CS-ARDL diagnostics | common metadata, `unitvar`, `timevar`, `qvec`, `cd_stat` | Covers mean-group, poolability, and Pesaran CD residual cross-sectional dependence diagnostics. |
 | `csardlFullOut` | CS-ARDL | common workflow metadata, `unitvar`, `timevar`, `pmax`, `qmax` | Propagates formula/name metadata to `.csa` and `.ecm`. |
-| `ardlResidualDiagOut` | ARDL-family residual diagnostics | `source_model_family`, `nobs`, `nseries`, `lags` | Covers Ljung-Box, Breusch-Pagan-style, and Jarque-Bera diagnostics for time-series outputs. |
+| `ardlResidualDiagOut` | ARDL-family residual diagnostics | `source_model_family`, `nobs`, `nseries`, `lags`, `stability_available` | Covers Ljung-Box, Breusch-Pagan-style, Jarque-Bera, and residual CUSUM/CUSUMSQ diagnostics for time-series outputs. |
 
 ## Formula And Matrix Parity
 
@@ -107,3 +107,6 @@ current implementation.
   this schema baseline does not change existing public signatures.
 - CS-ARDL panel residual diagnostics are not part of `ardlResidualDiagOut`;
   unit-aware panel residual tests remain a panel-diagnostics milestone.
+- `ardlResidualDiagOut` stability fields are residual-bridge CUSUM/CUSUMSQ
+  checks. Full recursive-residual stability tests require design-matrix
+  metadata that is not yet standardized across all outputs.

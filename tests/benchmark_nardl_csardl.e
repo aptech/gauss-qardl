@@ -101,7 +101,8 @@ diagOut = csardlDiagnostics(panel, 2, 1, 1, "", 0);
 call assert_true(csaOut.nunits == 12 and csaOut.nobs > 900,
                  "CS-ARDL benchmark output shape changed");
 call assert_true(rows(diagOut.mean_group_bigbt) == 2 and
-                 diagOut.poolability_pv >= 0 and diagOut.poolability_pv <= 1,
+                 diagOut.poolability_pv >= 0 and diagOut.poolability_pv <= 1 and
+                 diagOut.cd_pv >= 0 and diagOut.cd_pv <= 1,
                  "CS-ARDL diagnostics benchmark output shape changed");
 
 print "NARDL beta_pos:";
@@ -114,5 +115,7 @@ print "CS-ARDL mean-group long-run beta:";
 print diagOut.mean_group_bigbt';
 print "CS-ARDL poolability Wald, df, p-value:";
 print diagOut.poolability_wald~diagOut.poolability_df~diagOut.poolability_pv;
+print "CS-ARDL Pesaran CD, p-value, average residual correlation:";
+print diagOut.cd_stat~diagOut.cd_pv~diagOut.cd_avg_corr;
 
 print "benchmark_nardl_csardl.e: PASS";

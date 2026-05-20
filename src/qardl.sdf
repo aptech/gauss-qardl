@@ -616,6 +616,12 @@ struct csardlDiagOut {
     scalar poolability_wald;
     scalar poolability_pv;
     scalar poolability_df;
+
+    // Pesaran CD cross-sectional dependence diagnostic for unit residuals
+    scalar cd_stat;
+    scalar cd_pv;
+    scalar cd_pairs;
+    scalar cd_avg_corr;
 };
 
 struct ardlResidualDiagOut {
@@ -642,6 +648,19 @@ struct ardlResidualDiagOut {
     matrix normality_stat;
     matrix normality_df;
     matrix normality_pv;
+
+    // Residual CUSUM and CUSUMSQ stability diagnostics
+    scalar stability_available;
+    matrix cusum_stat;
+    matrix cusum_pv;
+    matrix cusum_crit5;
+    matrix cusumsq_stat;
+    matrix cusumsq_pv;
+    matrix cusumsq_crit5;
+
+    // Diagnostic paths, one column per residual series
+    matrix cusum_path;
+    matrix cusumsq_path;
 };
 
 struct csardlFullOut {

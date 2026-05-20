@@ -66,7 +66,8 @@ n = 90;
 t = seqa(1, 1, n);
 x1 = sin(t/5) + 0.01*t;
 x2 = cos(t/7) - 0.005*t;
-y = 1 + 0.42*x1 - 0.18*x2 + 0.35*lagn(zeros(1, 1)|seqa(1, 1, n-1), 0)/n;
+y = 1 + 0.42*x1 - 0.18*x2 + 0.35*lagn(zeros(1, 1)|seqa(1, 1, n-1), 0)/n
+    + 0.03*sin(t/3);
 data = y~x1~x2;
 df = asDF(data, "y", "x1", "x2");
 formula = "y ~ x1 + x2";
@@ -94,6 +95,9 @@ call assert_string(rd_schema.model_family, "ARDL-Residual-Diagnostics", "residua
 call assert_string(rd_schema.source_model_family, "ARDL", "residual diagnostic source metadata");
 call assert_true(rd_schema.nobs == ar_formula.nobs and rd_schema.nseries == 1 and rd_schema.lags == 3,
                  "residual diagnostic dimension metadata");
+call assert_true(rd_schema.stability_available == 1 and rows(rd_schema.cusum_path) == ar_formula.nobs and
+                 cols(rd_schema.cusum_path) == 1 and rd_schema.cusum_crit5[1] > 0,
+                 "residual diagnostic stability metadata");
 
 struct qardlOut qa_matrix;
 struct qardlOut qa_formula;
@@ -225,6 +229,8 @@ call assert_string(cdiag.formula, formula, "CS-ARDL diagnostics formula metadata
 call assert_string(cdiag.unitvar, "unit", "CS-ARDL diagnostics unit metadata");
 call assert_true(cdiag.estimation_start == 2 and cdiag.estimation_end == TT,
                  "CS-ARDL diagnostics estimation range metadata");
+call assert_true(cdiag.cd_pairs == nunits*(nunits-1)/2 and cdiag.cd_pv >= 0 and cdiag.cd_pv <= 1,
+                 "CS-ARDL diagnostics CD metadata");
 
 struct csardlFullOut cf;
 cf = csardlFull(panel_df, 1, 1, 1, formula, 0, "bic");

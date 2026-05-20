@@ -47,8 +47,7 @@ df = dftype(df, META_TYPE_CATEGORY, "unit");
 formula = "y ~ x1 + x2";
 
 // Fixed-order pooled CS-ARDL levels estimator.
-struct csardlOut csaOut;
-csaOut = csardl(panel, 1, 1, 1, "", 0);
+csaOut = csardl(panel, 1, 1, 1, "", 1);
 
 print;
 print "CS-ARDL fixed-order example";
@@ -57,7 +56,7 @@ print "p q cs_lags units nobs: " csaOut.p~csaOut.q~csaOut.cs_lags~csaOut.nunits~
 print "Pooled long-run beta";
 print csaOut.bigbt;
 
-printCSARDL(csaOut);
+//printCSARDL(csaOut);
 
 // Formula-string workflow with information-criterion lag selection.
 // Omitting pend/qend uses the package default maximum lag search bounds.

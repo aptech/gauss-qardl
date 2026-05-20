@@ -21,8 +21,10 @@ Nothing. Results are printed to the GAUSS output window.
 
 ## Remarks
 
-The printed table includes the Ljung-Box, Breusch-Pagan-style, and
-Jarque-Bera statistics with chi-squared p-values and significance codes.
+The printed table includes Ljung-Box, Breusch-Pagan-style, Jarque-Bera,
+residual CUSUM, and residual CUSUMSQ statistics with p-values and
+significance codes. CUSUM and CUSUMSQ p-values use the residual-bridge
+approximation described in `ardlResidualDiagnostics`.
 
 ## Examples
 

@@ -80,12 +80,15 @@ The validation case checks the optional diagnostic layer by:
   stored unit-level long-run coefficients
 - recomputing the poolability Wald statistic from unit-specific long-run
   covariance matrices
+- recomputing the Pesaran CD statistic from the balanced matrix of
+  unit-specific residuals
 - confirming formula/dataframe diagnostics match matrix diagnostics after
   sorting
 
 The current poolability statistic is a Wald-style diagnostic convenience
-measure. Its finite-sample distribution and exact published-reference behavior
-remain TODO.
+measure. The Pesaran CD statistic adds residual cross-sectional dependence
+coverage. Finite-sample behavior and exact published-reference behavior remain
+TODO for both diagnostic families.
 
 ## Unsupported Cases
 
