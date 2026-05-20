@@ -63,6 +63,8 @@ sections.
 - [wtestsrg](command-reference/wtestsrg.md)
 - [wtestconst](command-reference/wtestconst.md)
 - [wtestsym](command-reference/wtestsym.md)
+- [ardlResidualDiagnostics](command-reference/ardlResidualDiagnostics.md)
+- [printARDLResidualDiagnostics](command-reference/printARDLResidualDiagnostics.md)
 - [csardlDiagnostics](command-reference/csardlDiagnostics.md)
 
 ## Bootstrap, Rolling, And Dynamics

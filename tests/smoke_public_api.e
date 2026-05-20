@@ -20,6 +20,7 @@ new;
 #include ../src/wtestconst.src
 #include ../src/ardlbounds.src
 #include ../src/qirf.src
+#include ../src/diagnostics.src
 
 proc (0) = assert_true(ok, msg);
     if not ok;
@@ -94,6 +95,12 @@ call assert_true(rows(qaOut.bt) == 7 and cols(qaOut.bt) == rows(tau), "qardl bt 
 call assert_true(rows(qaOut.qvec) == 2 and qaOut.qvec[1] == 1 and qaOut.qvec[2] == 1,
                  "qardl qvec metadata invalid");
 
+struct ardlResidualDiagOut rdiagOut;
+rdiagOut = ardlResidualDiagnostics(qaOut, 4);
+call assert_true(rdiagOut.nobs == qaOut.nobs and rdiagOut.nseries == rows(tau) and
+                 rows(rdiagOut.serial_stat) == rows(tau) and rdiagOut.lags == 4,
+                 "ardlResidualDiagnostics QARDL output shape changed");
+
 qardl_fit = predictQARDL(qaOut, data);
 { predY, predX, theta_start, phi_start } = _qardlBuildLevelsDesignX(data, qaOut.p, qaOut.qvec);
 call assert_close(qardl_fit, predX*qaOut.bt, 1e-10, "predictQARDL fitted values changed");
@@ -114,6 +121,12 @@ call assert_close(predictARDL(arOut, data), arX*expected_ar_bt, 1e-10,
                   "predictARDL fitted values changed");
 call assert_true(rows(forecastARDL(arOut, data, 3)) == 3 and cols(forecastARDL(arOut, data, 3)) == 1,
                  "forecastARDL returned wrong shape");
+rdiagOut = ardlResidualDiagnostics(arOut, 4);
+call assert_true(rdiagOut.nobs == arOut.nobs and rdiagOut.nseries == 1 and
+                 rdiagOut.serial_pv[1] >= 0 and rdiagOut.serial_pv[1] <= 1 and
+                 rdiagOut.hetero_pv[1] >= 0 and rdiagOut.hetero_pv[1] <= 1 and
+                 rdiagOut.normality_pv[1] >= 0 and rdiagOut.normality_pv[1] <= 1,
+                 "ardlResidualDiagnostics ARDL output invalid");
 
 struct ardlFullOut afOut;
 afOut = ardlFull(data, 2, 2, "", 0, "bic");

@@ -30,7 +30,8 @@
         "wtestsym.src",
         "wtestconst.src",
         "ardlbounds.src",
-        "qirf.src"
+        "qirf.src",
+        "diagnostics.src"
     ],
     "version": "3.0.0"
 }

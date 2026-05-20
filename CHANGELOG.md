@@ -6,6 +6,9 @@
 - LaTeX export helpers for publication-ready QARDL result tables.
 
 ### Added
+- `ardlResidualDiagnostics` and `printARDLResidualDiagnostics` for
+  time-series ARDL-family residual serial-correlation, heteroskedasticity, and
+  normality checks.
 - Direct levels-form and ECM estimator calls now print GAUSS-style result
   tables by default, with a final `print_results = 0` option for silent
   scripts, tests, simulations, rolling windows, and bootstrap workflows.

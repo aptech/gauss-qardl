@@ -21,7 +21,7 @@ Prints a GAUSS-style results table to the console.
 ## Remarks
 
 The table follows the QARDL print style and includes standard errors,
-z-statistics, p-values, confidence limits, and significance asterisks.
+z-statistics, p-values, and significance asterisks.
 
 ## Examples
 

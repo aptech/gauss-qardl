@@ -22,6 +22,7 @@ new;
 #include src/wtestconst.src
 #include src/ardlbounds.src
 #include src/qirf.src
+#include src/diagnostics.src
 
 proc (0) = assert_close(actual, expected, tol, msg);
     local diff;
@@ -110,6 +111,14 @@ call assert_close(forecastARDL(arOut, data, 3),
                   read_expected("synthetic/forecasts/ardl_qardl_data_h3.csv"),
                   tol, "ARDL forecast fixture changed");
 
+struct ardlResidualDiagOut rdOut;
+rdOut = ardlResidualDiagnostics(arOut, 4);
+call assert_close(rdOut.serial_stat~rdOut.serial_df~rdOut.serial_pv~
+                  rdOut.hetero_stat~rdOut.hetero_df~rdOut.hetero_pv~
+                  rdOut.normality_stat~rdOut.normality_df~rdOut.normality_pv,
+                  read_expected("synthetic/diagnostics/ardl_residual_diag.csv"),
+                  tol, "ARDL residual diagnostic fixture changed");
+
 { fstat, cv } = ardlbounds(data, 2, 1);
 call assert_close(fstat|vec(cv),
                   read_expected("synthetic/diagnostics/ardl_bounds_case3.csv"),
@@ -123,6 +132,12 @@ call assert_close(qaOut.bigbt,
 call assert_close(forecastARDL(qaOut, data, 3),
                   read_expected("synthetic/forecasts/qardl_qardl_data_h3.csv"),
                   tol, "QARDL forecast fixture changed");
+rdOut = ardlResidualDiagnostics(qaOut, 4);
+call assert_close(rdOut.serial_stat~rdOut.serial_df~rdOut.serial_pv~
+                  rdOut.hetero_stat~rdOut.hetero_df~rdOut.hetero_pv~
+                  rdOut.normality_stat~rdOut.normality_df~rdOut.normality_pv,
+                  read_expected("synthetic/diagnostics/qardl_residual_diag.csv"),
+                  tol, "QARDL residual diagnostic fixture changed");
 
 boot_data = data[1:250, .];
 { ci_beta, ci_gamma, ci_phi, boot_diag } =

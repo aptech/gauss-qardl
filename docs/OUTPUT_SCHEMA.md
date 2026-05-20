@@ -48,6 +48,7 @@ store `pmax` and `qmax` for the search bounds.
 | `csardlECMOut` | CS-ARDL-ECM | common metadata, `unitvar`, `timevar`, `qvec` | Uses pooled long-run coefficients from CS-ARDL levels estimation. |
 | `csardlDiagOut` | CS-ARDL diagnostics | common metadata, `unitvar`, `timevar`, `qvec` | Covers mean-group and poolability diagnostics. |
 | `csardlFullOut` | CS-ARDL | common workflow metadata, `unitvar`, `timevar`, `pmax`, `qmax` | Propagates formula/name metadata to `.csa` and `.ecm`. |
+| `ardlResidualDiagOut` | ARDL-family residual diagnostics | `source_model_family`, `nobs`, `nseries`, `lags` | Covers Ljung-Box, Breusch-Pagan-style, and Jarque-Bera diagnostics for time-series outputs. |
 
 ## Formula And Matrix Parity
 
@@ -104,3 +105,5 @@ current implementation.
   broader package-level policy for other model families.
 - Additional control structures may still be needed for long positional APIs;
   this schema baseline does not change existing public signatures.
+- CS-ARDL panel residual diagnostics are not part of `ardlResidualDiagOut`;
+  unit-aware panel residual tests remain a panel-diagnostics milestone.

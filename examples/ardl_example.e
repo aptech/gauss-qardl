@@ -31,6 +31,10 @@ print arOut.bigbt;
 
 printARDL(arOut);
 
+struct ardlResidualDiagOut diagOut;
+diagOut = ardlResidualDiagnostics(arOut, 4);
+printARDLResidualDiagnostics(diagOut);
+
 // Integrated workflow: lag selection, ARDL bounds test, and ARDL estimation.
 // Omitting pend/qend uses the package default maximum lag search bounds.
 struct ardlFullOut afOut;

@@ -339,10 +339,14 @@ The standard QARDL workflow currently includes:
 - Bootstrap diagnostic wrappers that report requested, completed, and failed
   replications.
 - Rolling QARDL and QARDL-ECM workflows for exploratory stability analysis.
+- Residual diagnostics for time-series ARDL-family outputs through
+  `ardlResidualDiagnostics` and `printARDLResidualDiagnostics`.
 
 The standard ARDL workflow currently includes OLS covariance output, fitted
-values, residuals, residual variance, ARDL bounds-test integration through
-`ardlFull`, and `predictARDL`/`forecastARDL` hooks.
+values, residuals, residual variance, residual serial-correlation,
+heteroskedasticity, and normality diagnostics through
+`ardlResidualDiagnostics`, ARDL bounds-test integration through `ardlFull`,
+and `predictARDL`/`forecastARDL` hooks.
 
 The standard NARDL workflow currently includes long-run and short-run
 asymmetry Wald tests, a UECM bounds F-statistic, dynamic multipliers, fitted
@@ -358,10 +362,11 @@ Bounds testing support is summarized in
 `ardlboundsCase`, `ardlboundsCaseCV`, and the simulation APIs support PSS
 Cases I-V directly.
 
-TODO: standalone residual serial-correlation, heteroskedasticity, normality,
-and classical structural-stability tests are not implemented yet. Use robust
-or HAC covariance estimates, bootstrap diagnostics, rolling workflows, and
-model-specific diagnostic fields as the currently supported checks.
+`ardlResidualDiagnostics` currently covers Ljung-Box serial-correlation,
+Breusch-Pagan-style heteroskedasticity using fitted values, and Jarque-Bera
+normality checks for ARDL, QARDL, QARDL-ECM, NARDL, and NARDL-ECM outputs.
+Classical structural-stability tests and unit-aware CS-ARDL panel residual
+diagnostics remain TODO.
 
 ## Quantile Impulse Responses
 
@@ -420,8 +425,9 @@ applied inference.
 - Rolling window length is fixed internally at 10 percent of the sample.
 - Bootstrap defaults are convenient starting points; applied work should
   report the chosen number of replications, block length, and seed.
-- Standalone residual serial-correlation, heteroskedasticity, normality, and
-  classical structural-stability diagnostic tests are TODO.
+- Residual serial-correlation, heteroskedasticity, and normality diagnostics
+  are available for time-series ARDL-family outputs. Classical
+  structural-stability tests and CS-ARDL panel residual diagnostics are TODO.
 - `p = 0` models are not currently supported. `q = 0` is supported for levels,
   ECM, lag-selection, QIRF, and ARDL bounds workflows.
 

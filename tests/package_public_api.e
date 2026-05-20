@@ -95,6 +95,10 @@ call assert_true(rows(predictARDL(arOut, data)) == arOut.nobs and rows(forecastA
                  "ARDL predict/forecast output changed");
 call assert_true(rows(forecastARDL(arOut, data, 2, "", future_x)) == 2,
                  "ARDL future_x forecast output changed");
+struct ardlResidualDiagOut rdiagOut;
+rdiagOut = ardlResidualDiagnostics(arOut, 4);
+call assert_true(rdiagOut.nobs == arOut.nobs and rdiagOut.nseries == 1 and rdiagOut.lags == 4,
+                 "ardlResidualDiagnostics ARDL output invalid");
 
 struct ardlFullOut afOut;
 afOut = ardlFull(data, 2, 2, "", 0, "bic");

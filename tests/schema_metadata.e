@@ -20,6 +20,7 @@ new;
 #include ../src/wtestconst.src
 #include ../src/ardlbounds.src
 #include ../src/qirf.src
+#include ../src/diagnostics.src
 
 proc (0) = assert_true(ok, msg);
     if not ok;
@@ -87,6 +88,12 @@ call assert_true(rows(ar_formula.qvec) == 2 and ar_formula.qvec[1] == 1 and ar_f
                  "ARDL qvec metadata");
 call assert_true(rows(ar_formula.fitted) == ar_formula.nobs and rows(ar_formula.resid) == ar_formula.nobs,
                  "ARDL fitted/residual metadata");
+struct ardlResidualDiagOut rd_schema;
+rd_schema = ardlResidualDiagnostics(ar_formula, 3);
+call assert_string(rd_schema.model_family, "ARDL-Residual-Diagnostics", "residual diagnostic family metadata");
+call assert_string(rd_schema.source_model_family, "ARDL", "residual diagnostic source metadata");
+call assert_true(rd_schema.nobs == ar_formula.nobs and rd_schema.nseries == 1 and rd_schema.lags == 3,
+                 "residual diagnostic dimension metadata");
 
 struct qardlOut qa_matrix;
 struct qardlOut qa_formula;

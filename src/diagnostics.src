@@ -1,0 +1,270 @@
+/*
+**> ardlResidualDiagnostics
+**
+**  Purpose:    Compute core residual diagnostics for ARDL-family time-series
+**              output structures. The first diagnostic layer includes:
+**              Ljung-Box serial-correlation tests, Breusch-Pagan-style
+**              heteroskedasticity tests using fitted values, and Jarque-Bera
+**              normality tests.
+**
+**  Format:     dOut = ardlResidualDiagnostics(modelOut);
+**              dOut = ardlResidualDiagnostics(modelOut, max_lags);
+**
+**  Input:      modelOut   ardlOut, qardlOut, qardlECMOut, nardlOut, or
+**                         nardlECMOut.
+**              max_lags   Optional Ljung-Box lag count. If 0, uses
+**                         min(12, trunc(sqrt(nobs))).
+**
+**  Output:     ardlResidualDiagOut structure.
+**
+**  Remarks:    CS-ARDL panel residual diagnostics are intentionally deferred
+**              to the panel diagnostics milestone because stacked-panel
+**              residual serial-correlation tests require unit-aware handling.
+*/
+#include qardl.sdf
+
+proc (struct ardlResidualDiagOut) = ardlResidualDiagnostics(modelOut, max_lags = 0);
+    if isStructType(modelOut, "ardlOut");
+        retp(_ardlDiagARDL(modelOut, max_lags));
+    elseif isStructType(modelOut, "qardlOut");
+        retp(_ardlDiagQARDL(modelOut, max_lags));
+    elseif isStructType(modelOut, "qardlECMOut");
+        retp(_ardlDiagQARDLECM(modelOut, max_lags));
+    elseif isStructType(modelOut, "nardlOut");
+        retp(_ardlDiagNARDL(modelOut, max_lags));
+    elseif isStructType(modelOut, "nardlECMOut");
+        retp(_ardlDiagNARDLECM(modelOut, max_lags));
+    elseif isStructType(modelOut, "csardlOut") or isStructType(modelOut, "csardlECMOut");
+        errorlog "ardlResidualDiagnostics: CS-ARDL panel residual diagnostics are not yet supported; use csardlDiagnostics for current panel diagnostics";
+        end;
+    endif;
+
+    errorlog "ardlResidualDiagnostics: unsupported model output structure";
+    end;
+endp;
+
+proc (struct ardlResidualDiagOut) = _ardlDiagARDL(struct ardlOut arOut, max_lags);
+    retp(_ardlDiagFromMatrices(arOut.resid, arOut.fitted, arOut.model_family, max_lags));
+endp;
+
+proc (struct ardlResidualDiagOut) = _ardlDiagQARDL(struct qardlOut qaOut, max_lags);
+    retp(_ardlDiagFromMatrices(qaOut.resid, qaOut.fitted, qaOut.model_family, max_lags));
+endp;
+
+proc (struct ardlResidualDiagOut) = _ardlDiagQARDLECM(struct qardlECMOut qECMOut, max_lags);
+    retp(_ardlDiagFromMatrices(qECMOut.resid, qECMOut.fitted, qECMOut.model_family, max_lags));
+endp;
+
+proc (struct ardlResidualDiagOut) = _ardlDiagNARDL(struct nardlOut naOut, max_lags);
+    retp(_ardlDiagFromMatrices(naOut.resid, naOut.fitted, naOut.model_family, max_lags));
+endp;
+
+proc (struct ardlResidualDiagOut) = _ardlDiagNARDLECM(struct nardlECMOut nECMOut, max_lags);
+    retp(_ardlDiagFromMatrices(nECMOut.resid, nECMOut.fitted, nECMOut.model_family, max_lags));
+endp;
+
+proc (0) = printARDLResidualDiagnostics(struct ardlResidualDiagOut dOut);
+    local ii, header, note, table_width, eq_line, dash_line, label;
+
+    header = "Series  Test                 Statistic       df      P>|ChiSq|    Sig.";
+    note = _qardlSignifNote();
+    table_width = maxc(strlen(header)|84|strlen(note));
+    eq_line = _qardlTableBorder("=", table_width);
+    dash_line = _qardlTableBorder("-", table_width);
+
+    print eq_line;
+    print "ARDL Residual Diagnostics";
+    print eq_line;
+    sprintf("%-26s%12.0f        %-26s%12.0f", "No. of obs:", dOut.nobs,
+            "No. series:", dOut.nseries);
+    sprintf("%-26s%12.0f        %-26s%12s", "Ljung-Box lags:", dOut.lags,
+            "Source model:", dOut.source_model_family);
+    print dash_line;
+    print header;
+    print dash_line;
+
+    ii = 1;
+    do until ii > dOut.nseries;
+        label = ntos(ii);
+        sprintf("%-7s %-18s%14.6f%9.0f%14.6f%7s",
+                label, "Ljung-Box", dOut.serial_stat[ii], dOut.serial_df[ii],
+                dOut.serial_pv[ii], _qardlSignifStars(dOut.serial_pv[ii]));
+        sprintf("%-7s %-18s%14.6f%9.0f%14.6f%7s",
+                label, "Breusch-Pagan", dOut.hetero_stat[ii], dOut.hetero_df[ii],
+                dOut.hetero_pv[ii], _qardlSignifStars(dOut.hetero_pv[ii]));
+        sprintf("%-7s %-18s%14.6f%9.0f%14.6f%7s",
+                label, "Jarque-Bera", dOut.normality_stat[ii], dOut.normality_df[ii],
+                dOut.normality_pv[ii], _qardlSignifStars(dOut.normality_pv[ii]));
+        if ii < dOut.nseries;
+            print dash_line;
+        endif;
+        ii = ii + 1;
+    endo;
+
+    print eq_line;
+    print note;
+endp;
+
+proc (struct ardlResidualDiagOut) = _ardlDiagFromMatrices(resid, fitted, source_model_family, max_lags);
+    local nobs, nseries, lags, ii;
+    struct ardlResidualDiagOut dOut;
+
+    call _ardlDiagValidateInputs(resid, fitted, max_lags);
+
+    nobs = rows(resid);
+    nseries = cols(resid);
+    lags = max_lags;
+    if lags == 0;
+        lags = _ardlDiagDefaultLags(nobs);
+    endif;
+
+    if lags >= nobs;
+        errorlog "ardlResidualDiagnostics: max_lags must be less than the number of residual observations";
+        end;
+    endif;
+
+    dOut.model_family = "ARDL-Residual-Diagnostics";
+    dOut.source_model_family = source_model_family;
+    dOut.nobs = nobs;
+    dOut.nseries = nseries;
+    dOut.lags = lags;
+    dOut.serial_stat = zeros(nseries, 1);
+    dOut.serial_df = lags*ones(nseries, 1);
+    dOut.serial_pv = zeros(nseries, 1);
+    dOut.hetero_stat = zeros(nseries, 1);
+    dOut.hetero_df = zeros(nseries, 1);
+    dOut.hetero_pv = zeros(nseries, 1);
+    dOut.normality_stat = zeros(nseries, 1);
+    dOut.normality_df = 2*ones(nseries, 1);
+    dOut.normality_pv = zeros(nseries, 1);
+
+    ii = 1;
+    do until ii > nseries;
+        { dOut.serial_stat[ii], dOut.serial_pv[ii] } =
+            _ardlDiagLjungBox(resid[., ii], lags);
+        { dOut.hetero_stat[ii], dOut.hetero_df[ii], dOut.hetero_pv[ii] } =
+            _ardlDiagBreuschPagan(resid[., ii], fitted[., minc(ii|cols(fitted))]);
+        { dOut.normality_stat[ii], dOut.normality_pv[ii] } =
+            _ardlDiagJarqueBera(resid[., ii]);
+        ii = ii + 1;
+    endo;
+
+    retp(dOut);
+endp;
+
+proc (0) = _ardlDiagValidateInputs(resid, fitted, max_lags);
+    if rows(resid) < 5 or cols(resid) < 1;
+        errorlog "ardlResidualDiagnostics: residual matrix must have at least five rows";
+        end;
+    endif;
+
+    if rows(fitted) /= rows(resid);
+        errorlog "ardlResidualDiagnostics: fitted values and residuals must have the same number of rows";
+        end;
+    endif;
+
+    if cols(fitted) /= 1 and cols(fitted) /= cols(resid);
+        errorlog "ardlResidualDiagnostics: fitted values must have either one column or match residual columns";
+        end;
+    endif;
+
+    if ismiss(resid) or ismiss(fitted);
+        errorlog "ardlResidualDiagnostics: fitted values and residuals cannot contain missing values";
+        end;
+    endif;
+
+    if rows(max_lags) * cols(max_lags) /= 1 or max_lags < 0 or round(max_lags) /= max_lags;
+        errorlog "ardlResidualDiagnostics: max_lags must be a non-negative integer";
+        end;
+    endif;
+endp;
+
+proc (1) = _ardlDiagDefaultLags(nobs);
+    local lags;
+
+    lags = trunc(sqrt(nobs));
+    if lags < 1;
+        lags = 1;
+    endif;
+    if lags > 12;
+        lags = 12;
+    endif;
+    if lags > nobs - 1;
+        lags = nobs - 1;
+    endif;
+
+    retp(lags);
+endp;
+
+proc (2) = _ardlDiagLjungBox(e, lags);
+    local nobs, u, denom, hh, acf_h, qstat;
+
+    nobs = rows(e);
+    u = e - meanc(e);
+    denom = u'*u;
+    if denom <= 1e-14;
+        errorlog "ardlResidualDiagnostics: residual variance is too small for Ljung-Box diagnostics";
+        end;
+    endif;
+
+    qstat = 0;
+    hh = 1;
+    do until hh > lags;
+        acf_h = (u[hh+1:nobs]'*u[1:nobs-hh]) / denom;
+        qstat = qstat + acf_h^2 / (nobs - hh);
+        hh = hh + 1;
+    endo;
+    qstat = nobs*(nobs + 2)*qstat;
+
+    retp(qstat, cdfchic(qstat, lags));
+endp;
+
+proc (3) = _ardlDiagBreuschPagan(e, fitted);
+    local nobs, y, z, z_inv, rnk, bt, yhat, rss, tss, r2, stat, df;
+
+    nobs = rows(e);
+    y = e .* e;
+    z = ones(nobs, 1)~fitted;
+    { z_inv, rnk } = _qardlWaldInvAndRank(z'*z, "ardlResidualDiagnostics", "Breusch-Pagan auxiliary moment matrix");
+
+    df = rnk - 1;
+    if df < 1;
+        errorlog "ardlResidualDiagnostics: fitted values have no usable variation for Breusch-Pagan diagnostics";
+        end;
+    endif;
+
+    bt = z_inv*z'*y;
+    yhat = z*bt;
+    rss = (y - yhat)'*(y - yhat);
+    tss = (y - meanc(y))'*(y - meanc(y));
+    if tss <= 1e-14;
+        errorlog "ardlResidualDiagnostics: squared residual variance is too small for Breusch-Pagan diagnostics";
+        end;
+    endif;
+
+    r2 = 1 - rss/tss;
+    if r2 < 0;
+        r2 = 0;
+    endif;
+    stat = nobs*r2;
+
+    retp(stat, df, cdfchic(stat, df));
+endp;
+
+proc (2) = _ardlDiagJarqueBera(e);
+    local nobs, u, m2, skew, kurt, jb;
+
+    nobs = rows(e);
+    u = e - meanc(e);
+    m2 = meanc(u .* u);
+    if m2 <= 1e-14;
+        errorlog "ardlResidualDiagnostics: residual variance is too small for Jarque-Bera diagnostics";
+        end;
+    endif;
+
+    skew = meanc(u .* u .* u) / (m2^(3/2));
+    kurt = meanc(u .* u .* u .* u) / (m2^2);
+    jb = (nobs/6) * (skew^2 + ((kurt - 3)^2)/4);
+
+    retp(jb, cdfchic(jb, 2));
+endp;

@@ -618,6 +618,32 @@ struct csardlDiagOut {
     scalar poolability_df;
 };
 
+struct ardlResidualDiagOut {
+    // Standardized diagnostic metadata
+    string model_family;
+    string source_model_family;
+
+    // Residual matrix dimensions and Ljung-Box lag count
+    scalar nobs;
+    scalar nseries;
+    scalar lags;
+
+    // Ljung-Box serial-correlation diagnostics, one row per residual series
+    matrix serial_stat;
+    matrix serial_df;
+    matrix serial_pv;
+
+    // Breusch-Pagan-style heteroskedasticity diagnostics using fitted values
+    matrix hetero_stat;
+    matrix hetero_df;
+    matrix hetero_pv;
+
+    // Jarque-Bera normality diagnostics
+    matrix normality_stat;
+    matrix normality_df;
+    matrix normality_pv;
+};
+
 struct csardlFullOut {
     // Standardized workflow metadata
     string model_family;
