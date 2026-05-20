@@ -47,4 +47,60 @@ if ($unlisted.Count -gt 0) {
     throw "src files not listed in package.json: $($unlisted -join ', ')"
 }
 
+$commandRefPath = Join-Path $RepoRoot "docs\COMMAND_REFERENCE.md"
+if (-not (Test-Path -LiteralPath $commandRefPath)) {
+    throw "docs/COMMAND_REFERENCE.md not found at $commandRefPath"
+}
+
+$commandRef = Get-Content -LiteralPath $commandRefPath -Raw
+$docCommandNames = New-Object System.Collections.Generic.List[string]
+$linkedDocPaths = New-Object System.Collections.Generic.List[string]
+
+$linkMatches = [regex]::Matches($commandRef, '\[([A-Za-z_][A-Za-z0-9_]*)\]\(command-reference/([^)]+\.md)\)')
+foreach ($match in $linkMatches) {
+    $docCommandNames.Add($match.Groups[1].Value)
+    $linkedDocPaths.Add($match.Groups[2].Value)
+}
+
+$slashMatches = [regex]::Matches($commandRef, '(?m)^\s*-\s+([A-Za-z_][A-Za-z0-9_]*)\s*/\s*([A-Za-z_][A-Za-z0-9_]*)\s*$')
+foreach ($match in $slashMatches) {
+    $docCommandNames.Add($match.Groups[1].Value)
+    $docCommandNames.Add($match.Groups[2].Value)
+}
+
+$docCommands = @($docCommandNames | Sort-Object -Unique)
+if ($docCommands.Count -eq 0) {
+    throw "docs/COMMAND_REFERENCE.md does not list any public commands"
+}
+
+$missingDocPages = @()
+foreach ($relPath in ($linkedDocPaths | Sort-Object -Unique)) {
+    $fullPath = Join-Path (Join-Path $RepoRoot "docs\command-reference") $relPath
+    if (-not (Test-Path -LiteralPath $fullPath)) {
+        $missingDocPages += $relPath
+    }
+}
+
+if ($missingDocPages.Count -gt 0) {
+    throw "docs/COMMAND_REFERENCE.md references missing command pages: $($missingDocPages -join ', ')"
+}
+
+$sourceText = ""
+foreach ($entry in $srcEntries) {
+    if ([System.IO.Path]::GetExtension($entry) -ne ".src") {
+        continue
+    }
+
+    $sourceText += "`n"
+    $sourceText += Get-Content -LiteralPath (Join-Path $srcDir $entry) -Raw
+}
+
+$procMatches = [regex]::Matches($sourceText, '(?m)^\s*proc(?:\s*\([^)]*\))?\s*(?:=\s*)?([A-Za-z_][A-Za-z0-9_]*)\s*\(')
+$exportedProcs = @($procMatches | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+$missingDocumentedProcs = $docCommands | Where-Object { $exportedProcs -notcontains $_ }
+
+if ($missingDocumentedProcs.Count -gt 0) {
+    throw "docs/COMMAND_REFERENCE.md documents procedures not found in package.json source files: $($missingDocumentedProcs -join ', ')"
+}
+
 Write-Host "verify_package_manifest.ps1: PASS"

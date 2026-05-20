@@ -53,5 +53,8 @@ print "Rolling QARDL windows: " rolling_dims[2];
 print "Rolling ECM windows:   " rows(rECMOut.rho);
 
 // New rolling plot helpers handle the multi-quantile output structures.
+plotOpenWindow();
 plotRollingQARDL(rqaOut, tau, 0, 1, 0.05);
+
+plotOpenWindow;
 plotRollingQARDLECM(rECMOut, tau, 0, 1, 0.05);

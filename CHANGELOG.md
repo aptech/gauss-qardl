@@ -76,6 +76,12 @@
   prediction/forecast hooks, and supported diagnostics.
 - Examples now use `library qardl;` only and no longer include package source
   files directly.
+- Package manifest verification now checks that procedures documented in
+  `docs/COMMAND_REFERENCE.md` are implemented by files listed in `package.json`.
+- Release artifact tooling: `scripts/build_package.ps1`,
+  `scripts/build_lcg.ps1`,
+  `scripts/verify_release_artifact.ps1`, and
+  `scripts/run_release_verification.ps1`.
 - Usage-guide diagnostic workflow notes documenting implemented diagnostics
   and TODO gaps for standalone residual serial-correlation,
   heteroskedasticity, normality, residual stability, and CS-ARDL panel tests.
@@ -92,6 +98,9 @@
   columns, including ECM and poolability/asymmetry diagnostic output.
 - Standardized ARDL-family printed significance-code notes and table borders
   so border widths match compact and confidence-interval table layouts.
+- Corrected the installed-package NARDL formula prediction smoke test so it
+  uses the same dataframe used to estimate the default-lag NARDL model.
+- Updated package metadata and citation files to version `3.0.1`.
 
 ## 3.0.0 - 2026-05-03
 

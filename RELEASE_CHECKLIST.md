@@ -14,28 +14,34 @@ Use this checklist before publishing a GAUSS QARDL release.
 
 ## Release Steps
 
-1. Confirm `package.json` version matches the intended release artifact.
-2. Run the source-tree release gate:
+1. Confirm `package.json`, `CHANGELOG.md`, `CITATION.cff`,
+   `CITATION.md`, and the intended artifact name use the same release version.
+2. Build and verify the GAUSS application package:
 
    ```powershell
-   powershell -ExecutionPolicy Bypass -File tests\run_source_tests.ps1
+   powershell -ExecutionPolicy Bypass -File scripts\build_package.ps1 -Force
    ```
 
-3. Run the modern example smoke suite:
+3. Run the full source, benchmark, example, artifact, and installed-package
+   release gate after installing the rebuilt package:
 
    ```powershell
-   powershell -ExecutionPolicy Bypass -File tests\run_examples_smoke.ps1
+   powershell -ExecutionPolicy Bypass -File scripts\run_release_verification.ps1
    ```
 
-4. Build/reinstall the GAUSS application package.
-5. Run the installed-package release gate:
+   To have the script install the rebuilt artifact into the default GAUSS
+   package directory before running the installed-package test, add
+   `-InstallArtifact`. This replaces the existing `qardl` package under
+   `C:\gauss26\pkgs` unless `-GaussHome` or `-InstallRoot` points elsewhere.
+
+4. If running the installed-package gate manually:
 
    ```powershell
    & 'C:\gauss26\tgauss.exe' -nb -b -x -e 'd="C:\\path\\to\\gauss-qardl\\tests"; chdir ^d; run package_public_api.e;'
    ```
 
-6. Create the release zip named for the package version, for example
-   `qardl_3.0.0.zip`.
-7. Update `CHANGELOG.md`, `README.md`, and `GOLD_STANDARD_TODO.md`.
-8. Attach the zip to the GitHub Release or commit it only if release artifacts
+5. Confirm the release zip is named for the package version, for example
+   `qardl 3.0.1.zip`.
+6. Update `CHANGELOG.md`, `README.md`, and `GOLD_STANDARD_TODO.md`.
+7. Attach the zip to the GitHub Release or commit it only if release artifacts
    are intentionally tracked in this repository.

@@ -158,6 +158,19 @@ After rebuilding and reinstalling the package, verify the installed public API:
 run tests/package_public_api.e;
 ```
 
+Build and verify a release artifact:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\build_package.ps1 -Force
+```
+
+Run the release gate, including optional artifact installation into the GAUSS
+package directory:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_release_verification.ps1 -InstallArtifact
+```
+
 Release steps are tracked in [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
 The current release-readiness inventory and backlog are in
 [GOLD_STANDARD_TODO.md](GOLD_STANDARD_TODO.md).

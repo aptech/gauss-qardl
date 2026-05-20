@@ -6,8 +6,8 @@ authors:
   - family-names: Clower
     given-names: Eric
     affiliation: "Aptech Systems, Inc."
-version: 3.0.0
-date-released: "2026-05-03"
+version: 3.0.1
+date-released: "2026-05-20"
 repository-code: "https://github.com/aptech/gauss-qardl"
 url: "https://github.com/aptech/gauss-qardl"
 abstract: "GAUSS application package for Quantile Autoregressive Distributed Lag estimation, QARDL-ECM estimation, ARDL bounds testing, robust and HAC covariance, bootstrap tools, rolling estimation, QIRF, plotting, export, and applied econometric workflows."

@@ -236,10 +236,11 @@ y_default = zeros(n_default, 1);
 for tt(2, n_default, 1);
     y_default[tt] = 0.35*y_default[tt-1] + 0.45*x1_default[tt] - 0.25*x2_default[tt] + 0.10*rndn(1, 1);
 endfor;
-nfOut = nardlFull(y_default~x1_default~x2_default, verbose = 0);
+n_default_df = asDF(y_default~x1_default~x2_default, "y", "x1", "x2");
+nfOut = nardlFull(n_default_df, formula = "y ~ x1 + x2", verbose = 0);
 call assert_true(nfOut.pst >= 1 and nfOut.pst <= 8 and nfOut.qst >= 0 and nfOut.qst <= 8,
                  "nardlFull default lag bounds invalid");
-call assert_true(rows(predictNARDL(nfOut.na, nardl_df, "y ~ x1 + x2")) == nfOut.na.nobs,
+call assert_true(rows(predictNARDL(nfOut.na, n_default_df, "y ~ x1 + x2")) == nfOut.na.nobs,
                  "predictNARDL formula output changed");
 
 panel = make_package_csardl_panel(4, 60);
