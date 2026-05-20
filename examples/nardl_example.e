@@ -38,10 +38,20 @@ print "NARDL fixed-order example";
 print "-------------------------";
 print "p q k nobs: " naOut.p~naOut.q~naOut.k~naOut.nobs;
 print "Bounds F-stat: " naOut.bounds_fstat;
-print "Long-run beta_pos | beta_neg";
-print naOut.beta_pos~naOut.beta_neg;
-print "Long-run asymmetry tests: statistic | p-value";
-print naOut.asymmetry_wald~naOut.asymmetry_pv;
+print "Long-run coefficients";
+print "Name          beta_pos      beta_neg";
+ii = 1;
+do until ii > naOut.k;
+    sprintf("x%-9d%14.6f%14.6f", ii, naOut.beta_pos[ii], naOut.beta_neg[ii]);
+    ii = ii + 1;
+endo;
+print "Long-run asymmetry tests";
+print "Name        statistic       p-value";
+ii = 1;
+do until ii > naOut.k;
+    sprintf("x%-9d%14.6f%14.6f", ii, naOut.asymmetry_wald[ii], naOut.asymmetry_pv[ii]);
+    ii = ii + 1;
+endo;
 
 printNARDL(naOut);
 
