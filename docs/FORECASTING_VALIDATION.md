@@ -69,6 +69,9 @@ not statistically implemented for ARDL, QARDL, NARDL, or CS-ARDL outputs.
 QIRF and bootstrap coefficient interval workflows are separate and should not
 be interpreted as forecast intervals.
 
+See `docs/INFERENCE_INTERVALS.md` for the broader ARDL-family interval support
+matrix and remaining design decisions.
+
 ## Remaining Gaps
 
 - Add expected-error tests for malformed `future_x` paths once the GAUSS test

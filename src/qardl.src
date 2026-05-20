@@ -2068,6 +2068,7 @@ proc (0) = printARDL(struct ardlOut arOut);
             "No. regressors:", arOut.k);
     sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", arOut.p,
             "DL lags (q):", arOut.q);
+    print "Covariance: " $+ arOut.covariance_type;
     print dash_line;
     print header;
     print dash_line;
@@ -2136,6 +2137,7 @@ proc (0) = printQARDL(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
             "DL lags (q):", qaOut.q);
     sprintf("%-26s%12.0f        %-26s%12.4f", "No. quantiles:", ss,
             "CI level:", level);
+    print "Covariance: " $+ qaOut.covariance_type;
     print dash_line;
     print header;
     print dash_line;
@@ -2238,6 +2240,7 @@ proc (0) = printQARDLECM(struct qardlECMOut qECMOut, tau = { 0.25, 0.5, 0.75 });
             "No. regressors:", qECMOut.k);
     sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", qECMOut.p,
             "DL lags (q):", qECMOut.q);
+    print "Covariance: " $+ qECMOut.covariance_type;
     sprintf("%-26s%12.0f        %-26s%12.4f", "No. quantiles:", ss,
             "CI level:", level);
     print dash_line;

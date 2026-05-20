@@ -231,6 +231,9 @@ call assert_true(cdiag.estimation_start == 2 and cdiag.estimation_end == TT,
                  "CS-ARDL diagnostics estimation range metadata");
 call assert_true(cdiag.cd_pairs == nunits*(nunits-1)/2 and cdiag.cd_pv >= 0 and cdiag.cd_pv <= 1,
                  "CS-ARDL diagnostics CD metadata");
+call assert_true(cdiag.slope_hetero_df == (nunits-1)*2 and
+                 cdiag.slope_hetero_pv >= 0 and cdiag.slope_hetero_pv <= 1,
+                 "CS-ARDL diagnostics slope heterogeneity metadata");
 
 struct csardlFullOut cf;
 cf = csardlFull(panel_df, 1, 1, 1, formula, 0, "bic");

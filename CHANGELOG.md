@@ -29,6 +29,13 @@
   tracking notes.
 - Pesaran CD residual cross-sectional dependence diagnostics in
   `csardlDiagnostics`, with deterministic balanced-panel validation fixtures.
+- Mean-group-centered CS-ARDL long-run slope heterogeneity diagnostics in
+  `csardlDiagnostics`, with deterministic balanced-panel validation fixtures.
+- `ardlLongRun` for unified extraction of stored long-run coefficients and
+  long-run covariance matrices from ARDL, QARDL, NARDL, CS-ARDL, and matching
+  full-workflow outputs.
+- `docs/INFERENCE_INTERVALS.md` documenting covariance, bootstrap interval,
+  forecast interval, simultaneous-band, and Wald p-value support by workflow.
 - Invalid-input source tests for CS-ARDL unbalanced and unstacked panels,
   including formula-based diagnostic calls.
 - User-facing OLS ARDL workflow with `ardl`, `ardlFull`, `printARDL`,

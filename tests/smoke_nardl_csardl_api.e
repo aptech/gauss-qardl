@@ -83,6 +83,9 @@ call assert_close(naOut.bigbt, expected_beta_pos | expected_beta_neg, 1e-10,
                   "nardl long-run coefficients do not match formula");
 call assert_close(naOut.bigbt_cov, expected_bigbt_cov, 1e-10,
                   "nardl long-run covariance does not match delta method");
+{ lr_beta, lr_cov } = ardlLongRun(naOut);
+call assert_close(lr_beta, naOut.bigbt, 1e-12, "ardlLongRun NARDL beta changed");
+call assert_close(lr_cov, naOut.bigbt_cov, 1e-12, "ardlLongRun NARDL covariance changed");
 call assert_true(rows(naOut.asymmetry_wald) == 2 and minc(naOut.asymmetry_pv) >= 0 and maxc(naOut.asymmetry_pv) <= 1,
                  "nardl asymmetry tests invalid");
 call assert_true(naOut.bounds_fstat > 0 and naOut.sigma2 > 0,
@@ -190,6 +193,9 @@ call assert_close(csaOut.bigbt, expected_cbeta, 1e-10,
                   "csardl long-run coefficients do not match formula");
 call assert_close(csaOut.bigbt_cov, expected_cbigbt_cov, 1e-10,
                   "csardl long-run covariance does not match delta method");
+{ lr_beta, lr_cov } = ardlLongRun(csaOut);
+call assert_close(lr_beta, csaOut.bigbt, 1e-12, "ardlLongRun CS-ARDL beta changed");
+call assert_close(lr_cov, csaOut.bigbt_cov, 1e-12, "ardlLongRun CS-ARDL covariance changed");
 call assert_true(csaOut.sigma2 > 0 and rows(csaOut.cross_avg_coef) > 0,
                  "csardl diagnostics invalid");
 call assert_true(csaOut.nunits == nunits and csaOut.nobs == rows(cY) and csaOut.cs_lags == 1,
@@ -210,6 +216,9 @@ call assert_true(rows(diagOut.unit_bigbt) == nunits and cols(diagOut.unit_bigbt)
 call assert_true(diagOut.poolability_df == (nunits-1)*2 and
                  diagOut.poolability_pv >= 0 and diagOut.poolability_pv <= 1,
                  "csardlDiagnostics poolability statistic invalid");
+call assert_true(diagOut.slope_hetero_df == (nunits-1)*2 and
+                 diagOut.slope_hetero_pv >= 0 and diagOut.slope_hetero_pv <= 1,
+                 "csardlDiagnostics slope heterogeneity statistic invalid");
 call assert_true(diagOut.cd_pairs == nunits*(nunits-1)/2 and
                  diagOut.cd_pv >= 0 and diagOut.cd_pv <= 1,
                  "csardlDiagnostics CD statistic invalid");

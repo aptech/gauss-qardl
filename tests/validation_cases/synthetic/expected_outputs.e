@@ -206,6 +206,9 @@ call assert_close(diagOut.mean_group_bigbt,
 call assert_close(diagOut.poolability_wald~diagOut.poolability_df~diagOut.poolability_pv,
                   read_expected("synthetic/diagnostics/csardl_poolability.csv"),
                   tol, "CS-ARDL poolability diagnostic fixture changed");
+call assert_close(diagOut.slope_hetero_wald~diagOut.slope_hetero_df~diagOut.slope_hetero_pv,
+                  read_expected("synthetic/diagnostics/csardl_slope_heterogeneity.csv"),
+                  tol, "CS-ARDL slope heterogeneity diagnostic fixture changed");
 call assert_close(diagOut.cd_stat~diagOut.cd_pv~diagOut.cd_pairs~diagOut.cd_avg_corr,
                   read_expected("synthetic/diagnostics/csardl_cd.csv"),
                   tol, "CS-ARDL cross-sectional dependence diagnostic fixture changed");

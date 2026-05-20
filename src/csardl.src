@@ -310,12 +310,14 @@ endp;
 /*
 **> csardlDiagnostics
 **
-**  Purpose:    Optional mean-group, poolability, and cross-sectional
-**              dependence diagnostics for CS-ARDL.
+**  Purpose:    Optional mean-group, poolability, long-run slope
+**              heterogeneity, and cross-sectional dependence diagnostics
+**              for CS-ARDL.
 **              Estimates the same cross-sectionally augmented ARDL equation
 **              unit-by-unit, reports mean-group long-run coefficients, and
 **              computes a Wald-style poolability diagnostic for equality of
-**              unit long-run coefficients to the pooled CS-ARDL estimate.
+**              unit long-run coefficients to the pooled CS-ARDL estimate,
+**              plus a mean-group-centered slope heterogeneity diagnostic.
 **
 **  Format:     diagOut = csardlDiagnostics(data, ppp, qqq);
 **              diagOut = csardlDiagnostics(data, ppp, qqq, cs_lags, formula, print_results);
@@ -325,6 +327,7 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
     local ii, jj, Y_i, X_i, bt_i, resid_i, cov_i, sigma2_i, beta_i, beta_cov_i;
     local unit_bigbt, unit_phi, unit_bt, unit_sigma2, unit_resid, mean_group_bigbt, mean_group_se;
     local pooled_bigbt, poolability_wald, poolability_df, poolability_pv, diff, V_i;
+    local slope_hetero_wald, slope_hetero_df, slope_hetero_pv;
     local cd_stat, cd_pv, cd_pairs, cd_avg_corr;
     local depvar, xvars, unitvar, timevar;
 
@@ -395,6 +398,24 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
 
     poolability_df = (nunits - 1)*k0;
     poolability_pv = cdfchic(poolability_wald, poolability_df);
+
+    slope_hetero_wald = 0;
+    ii = 1;
+    do until ii > nunits;
+        { Y_i, X_i } = _csardlBuildUnitDesign(data, ppp, qqq, cs_lags, ii);
+        bt_i = _qardlSafeInv(X_i'*X_i, "csardlDiagnostics", "unit moment matrix")*X_i'*Y_i;
+        resid_i = Y_i - X_i*bt_i;
+        { cov_i, sigma2_i } = _csardlOLSCov(X_i, resid_i, "csardlDiagnostics");
+        beta_i = _csardlLongRunBeta(bt_i, ppp, k0);
+        beta_cov_i = _csardlLongRunCov(bt_i, cov_i, ppp, qqq, cs_lags, k0);
+        diff = beta_i - mean_group_bigbt;
+        V_i = _qardlSafeInv(beta_cov_i, "csardlDiagnostics", "unit long-run covariance");
+        slope_hetero_wald = slope_hetero_wald + diff'*V_i*diff;
+        ii = ii + 1;
+    endo;
+
+    slope_hetero_df = (nunits - 1)*k0;
+    slope_hetero_pv = cdfchic(slope_hetero_wald, slope_hetero_df);
     { cd_stat, cd_pv, cd_pairs, cd_avg_corr } = _csardlPesaranCD(unit_resid, "csardlDiagnostics");
 
     struct csardlDiagOut diagOut;
@@ -430,6 +451,9 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
     diagOut.poolability_wald = poolability_wald;
     diagOut.poolability_pv = poolability_pv;
     diagOut.poolability_df = poolability_df;
+    diagOut.slope_hetero_wald = slope_hetero_wald;
+    diagOut.slope_hetero_pv = slope_hetero_pv;
+    diagOut.slope_hetero_df = slope_hetero_df;
     diagOut.cd_stat = cd_stat;
     diagOut.cd_pv = cd_pv;
     diagOut.cd_pairs = cd_pairs;
@@ -485,7 +509,8 @@ endp;
 /*
 **> printCSARDLDiagnostics
 **
-**  Purpose:    Print CS-ARDL mean-group, poolability, and CD diagnostics.
+**  Purpose:    Print CS-ARDL mean-group, poolability, slope heterogeneity,
+**              and CD diagnostics.
 */
 proc (0) = printCSARDLDiagnostics(struct csardlDiagOut diagOut);
     local ii;
@@ -505,6 +530,7 @@ proc (0) = printCSARDLDiagnostics(struct csardlDiagOut diagOut);
     sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", diagOut.p,
             "DL lags (q):", diagOut.q);
     sprintf("%-26s%12.0f", "CS lags:", diagOut.cs_lags);
+    print "Covariance: " $+ diagOut.covariance_type;
     print dash_line;
     print header;
     print dash_line;
@@ -518,6 +544,9 @@ proc (0) = printCSARDLDiagnostics(struct csardlDiagOut diagOut);
     sprintf("Poolability Wald: %16.6f    df: %8.0f    p-value: %12.6f    Sig: %-3s",
             diagOut.poolability_wald, diagOut.poolability_df, diagOut.poolability_pv,
             _qardlSignifStars(diagOut.poolability_pv));
+    sprintf("Slope heterogeneity:%14.6f    df: %8.0f    p-value: %12.6f    Sig: %-3s",
+            diagOut.slope_hetero_wald, diagOut.slope_hetero_df, diagOut.slope_hetero_pv,
+            _qardlSignifStars(diagOut.slope_hetero_pv));
     sprintf("Pesaran CD:       %16.6f    pairs: %5.0f    p-value: %12.6f    Sig: %-3s",
             diagOut.cd_stat, diagOut.cd_pairs, diagOut.cd_pv,
             _qardlSignifStars(diagOut.cd_pv));
@@ -557,6 +586,7 @@ proc (0) = printCSARDL(struct csardlOut csaOut);
             "DL lags (q):", csaOut.q);
     sprintf("%-26s%12.0f        %-26s%12.0f", "CS lags:", csaOut.cs_lags,
             "No. regressors:", csaOut.k);
+    print "Covariance: " $+ csaOut.covariance_type;
     print dash_line;
     print header;
     print dash_line;
@@ -611,6 +641,7 @@ proc (0) = printCSARDLECM(struct csardlECMOut cECMOut);
             "No. units:", cECMOut.nunits);
     sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", cECMOut.p,
             "DL lags (q):", cECMOut.q);
+    print "Covariance: " $+ cECMOut.covariance_type;
     print dash_line;
     print header;
     print dash_line;

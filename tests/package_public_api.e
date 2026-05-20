@@ -70,6 +70,9 @@ qaOut = qardl(data, pst, qst, tau, "iid", 0, 0);
 call assert_true(rows(qaOut.bigbt) == 2*rows(tau), "qardl beta shape changed");
 call assert_true(qaOut.model_family $== "QARDL" and qaOut.covariance_type $== "iid" and rows(qaOut.xvars) == 2,
                  "qardl schema metadata changed");
+{ lr_beta, lr_cov } = ardlLongRun(qaOut);
+call assert_true(rows(lr_beta) == rows(qaOut.bigbt) and rows(lr_cov) == rows(qaOut.bigbt_cov),
+                 "ardlLongRun QARDL output changed");
 call assert_true(rows(qaOut.fitted) == qaOut.nobs and cols(qaOut.fitted) == rows(tau),
                  "qardl fitted metadata changed");
 call assert_true(rows(predictQARDL(qaOut, data)) == qaOut.nobs,
@@ -91,6 +94,9 @@ call assert_true(rows(arOut.bigbt) == 2 and arOut.nobs > 0 and arOut.sigma2 > 0,
                  "ardl output changed");
 call assert_true(arOut.model_family $== "ARDL" and arOut.covariance_type $== "ols" and rows(arOut.qvec) == 2,
                  "ardl schema metadata changed");
+{ lr_beta, lr_cov } = ardlLongRun(arOut);
+call assert_true(rows(lr_beta) == rows(arOut.bigbt) and rows(lr_cov) == rows(arOut.bigbt_cov),
+                 "ardlLongRun ARDL output changed");
 call assert_true(rows(predictARDL(arOut, data)) == arOut.nobs and rows(forecastARDL(arOut, data, 2)) == 2,
                  "ARDL predict/forecast output changed");
 call assert_true(rows(forecastARDL(arOut, data, 2, "", future_x)) == 2,
@@ -208,6 +214,9 @@ struct nardlOut naOut;
 naOut = nardl(nardl_data, 1, 1, "", 0);
 call assert_true(rows(naOut.beta_pos) == 2 and rows(naOut.asymmetry_pv) == 2,
                  "nardl output changed");
+{ lr_beta, lr_cov } = ardlLongRun(naOut);
+call assert_true(rows(lr_beta) == rows(naOut.bigbt) and rows(lr_cov) == rows(naOut.bigbt_cov),
+                 "ardlLongRun NARDL output changed");
 call assert_true(rows(predictARDL(naOut, nardl_data)) == naOut.nobs and
                  rows(forecastARDL(naOut, nardl_data, 2)) == 2,
                  "NARDL unified predict/forecast dispatch changed");
@@ -252,6 +261,9 @@ struct csardlOut csaOut;
 csaOut = csardl(panel, 1, 1, 1, "", 0);
 call assert_true(csaOut.nunits == 4 and rows(csaOut.bigbt) == 2,
                  "csardl output changed");
+{ lr_beta, lr_cov } = ardlLongRun(csaOut);
+call assert_true(rows(lr_beta) == rows(csaOut.bigbt) and rows(lr_cov) == rows(csaOut.bigbt_cov),
+                 "ardlLongRun CS-ARDL output changed");
 call assert_true(rows(predictARDL(csaOut, panel)) == csaOut.nobs and
                  rows(forecastARDL(csaOut, panel, 2)) == 2,
                  "CSARDL unified predict/forecast dispatch changed");
@@ -270,7 +282,8 @@ call assert_true(cfOut.pst >= 1 and cfOut.pst <= 8 and cfOut.qst >= 0 and cfOut.
 struct csardlDiagOut diagOut;
 diagOut = csardlDiagnostics(panel_df, 1, 1, 1, "y ~ x1 + x2", 0);
 call assert_true(diagOut.poolability_df == 6 and diagOut.poolability_pv >= 0 and diagOut.poolability_pv <= 1 and
-                 diagOut.cd_pairs == 6 and diagOut.cd_pv >= 0 and diagOut.cd_pv <= 1,
+                 diagOut.cd_pairs == 6 and diagOut.cd_pv >= 0 and diagOut.cd_pv <= 1 and
+                 diagOut.slope_hetero_df == 6 and diagOut.slope_hetero_pv >= 0 and diagOut.slope_hetero_pv <= 1,
                  "csardlDiagnostics output changed");
 call assert_true(rows(forecastCSARDL(cfOut.csa, panel_df, 2, "y ~ x1 + x2")) == 2,
                  "forecastCSARDL formula output changed");

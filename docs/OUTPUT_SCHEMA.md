@@ -46,9 +46,21 @@ store `pmax` and `qmax` for the search bounds.
 | `nardlDynMultOut` | NARDL-Dynamic-Multipliers | model family, formula, names, horizon | Contains `pos`, `neg`, and `asymmetry` multiplier matrices. |
 | `csardlOut` | CS-ARDL | common metadata, `unitvar`, `timevar`, `qvec` | `estimation_start/end` are within-unit time indices. |
 | `csardlECMOut` | CS-ARDL-ECM | common metadata, `unitvar`, `timevar`, `qvec` | Uses pooled long-run coefficients from CS-ARDL levels estimation. |
-| `csardlDiagOut` | CS-ARDL diagnostics | common metadata, `unitvar`, `timevar`, `qvec`, `cd_stat` | Covers mean-group, poolability, and Pesaran CD residual cross-sectional dependence diagnostics. |
+| `csardlDiagOut` | CS-ARDL diagnostics | common metadata, `unitvar`, `timevar`, `qvec`, `cd_stat`, `slope_hetero_wald` | Covers mean-group, poolability, long-run slope heterogeneity, and Pesaran CD residual cross-sectional dependence diagnostics. |
 | `csardlFullOut` | CS-ARDL | common workflow metadata, `unitvar`, `timevar`, `pmax`, `qmax` | Propagates formula/name metadata to `.csa` and `.ecm`. |
 | `ardlResidualDiagOut` | ARDL-family residual diagnostics | `source_model_family`, `nobs`, `nseries`, `lags`, `stability_available` | Covers Ljung-Box, Breusch-Pagan-style, Jarque-Bera, and residual CUSUM/CUSUMSQ diagnostics for time-series outputs. |
+
+## Long-Run Extraction
+
+The `ardlLongRun(modelOut)` helper returns the stored long-run coefficient
+surface and matching covariance matrix for `ardlOut`, `qardlOut`, `nardlOut`,
+`csardlOut`, and the matching full-workflow output structures. It is intended
+for reporting, validation fixtures, and downstream tools that should not need
+to know each structure's nested field names.
+
+`ardlLongRun` does not recompute long-run estimates, and it is intentionally
+scoped to levels and full-workflow outputs until ECM long-run covariance fields
+are standardized across all model families.
 
 ## Formula And Matrix Parity
 
@@ -107,6 +119,9 @@ current implementation.
   this schema baseline does not change existing public signatures.
 - CS-ARDL panel residual diagnostics are not part of `ardlResidualDiagOut`;
   unit-aware panel residual tests remain a panel-diagnostics milestone.
+- `csardlDiagOut.slope_hetero_*` fields store a mean-group-centered
+  Wald-style long-run slope heterogeneity diagnostic. Published finite-sample
+  validation remains pending.
 - `ardlResidualDiagOut` stability fields are residual-bridge CUSUM/CUSUMSQ
   checks. Full recursive-residual stability tests require design-matrix
   metadata that is not yet standardized across all outputs.

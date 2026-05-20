@@ -617,6 +617,11 @@ struct csardlDiagOut {
     scalar poolability_pv;
     scalar poolability_df;
 
+    // Wald-style long-run slope heterogeneity diagnostic around mean-group slopes
+    scalar slope_hetero_wald;
+    scalar slope_hetero_pv;
+    scalar slope_hetero_df;
+
     // Pesaran CD cross-sectional dependence diagnostic for unit residuals
     scalar cd_stat;
     scalar cd_pv;

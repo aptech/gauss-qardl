@@ -11,6 +11,7 @@ sections.
 - [ARDL-family output schema](OUTPUT_SCHEMA.md)
 - [Bounds testing support matrix](BOUNDS_TESTING_SUPPORT.md)
 - [Prediction and forecast validation](FORECASTING_VALIDATION.md)
+- [Inference and interval support matrix](INFERENCE_INTERVALS.md)
 
 ## Core Workflow
 
@@ -84,6 +85,7 @@ sections.
 ## Output, Plotting, And Export
 
 - [printARDL](command-reference/printARDL.md)
+- [ardlLongRun](command-reference/ardlLongRun.md)
 - [predictARDL](command-reference/predictARDL.md)
 - [forecastARDL](command-reference/forecastARDL.md)
 - [printQARDL](command-reference/printQARDL.md)

@@ -75,10 +75,11 @@ print "ECM alpha rho:     " cECMOut.alpha~cECMOut.rho;
 printCSARDLECM(cECMOut);
 
 // Optional diagnostic layer: unit-specific long-run coefficients, mean-group
-// estimates, and a Wald-style poolability check.
+// estimates, Wald-style poolability/slope-heterogeneity checks, and Pesaran CD.
 struct csardlDiagOut diagOut;
 diagOut = csardlDiagnostics(df, cfOut.pst, cfOut.qst, cfOut.cs_lags, formula, 0);
 printCSARDLDiagnostics(diagOut);
+print "Slope heterogeneity p-value: " diagOut.slope_hetero_pv;
 
 fit = predictARDL(cfOut.csa, df, formula);
 fcst = forecastARDL(cfOut.csa, df, 3, formula);

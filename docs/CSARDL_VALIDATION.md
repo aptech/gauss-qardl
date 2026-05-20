@@ -80,6 +80,8 @@ The validation case checks the optional diagnostic layer by:
   stored unit-level long-run coefficients
 - recomputing the poolability Wald statistic from unit-specific long-run
   covariance matrices
+- recomputing the mean-group-centered long-run slope heterogeneity Wald
+  statistic from unit-specific long-run covariance matrices
 - recomputing the Pesaran CD statistic from the balanced matrix of
   unit-specific residuals
 - confirming formula/dataframe diagnostics match matrix diagnostics after
@@ -87,8 +89,11 @@ The validation case checks the optional diagnostic layer by:
 
 The current poolability statistic is a Wald-style diagnostic convenience
 measure. The Pesaran CD statistic adds residual cross-sectional dependence
-coverage. Finite-sample behavior and exact published-reference behavior remain
-TODO for both diagnostic families.
+coverage. The long-run slope heterogeneity statistic is also a Wald-style
+diagnostic convenience measure centered on the mean-group long-run slopes; it
+is not yet validated as a Pesaran-Yamagata style published replication.
+Finite-sample behavior and exact published-reference behavior remain TODO for
+these diagnostic families.
 
 ## Unsupported Cases
 

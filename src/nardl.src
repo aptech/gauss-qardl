@@ -327,6 +327,7 @@ proc (0) = printNARDL(struct nardlOut naOut);
     sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", naOut.p,
             "DL lags (q):", naOut.q);
     sprintf("%-26s%12.4f", "Bounds F-stat:", naOut.bounds_fstat);
+    print "Covariance: " $+ naOut.covariance_type;
     print dash_line;
     print header;
     print dash_line;
@@ -404,6 +405,7 @@ proc (0) = printNARDLECM(struct nardlECMOut nECMOut);
             "No. regressors:", nECMOut.k);
     sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", nECMOut.p,
             "DL lags (q):", nECMOut.q);
+    print "Covariance: " $+ nECMOut.covariance_type;
     print dash_line;
     print header;
     print dash_line;

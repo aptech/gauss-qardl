@@ -56,3 +56,79 @@ proc (1) = forecastARDL(modelOut, data, h = 1, formula = "", future_x = error(0)
     errorlog "forecastARDL: unsupported model output structure";
     end;
 endp;
+
+/*
+**> ardlLongRun
+**
+**  Purpose:    Extract long-run coefficients and covariance matrices from
+**              ARDL-family levels or full-workflow outputs.
+**
+**  Format:     { beta, beta_cov } = ardlLongRun(modelOut);
+**
+**  Input:      modelOut   ardlOut, qardlOut, nardlOut, csardlOut, or the
+**                         matching full-workflow output.
+*/
+proc (2) = ardlLongRun(modelOut);
+    local beta, beta_cov;
+
+    if isStructType(modelOut, "ardlOut");
+        { beta, beta_cov } = _ardlLongRunARDL(modelOut);
+        retp(beta, beta_cov);
+    elseif isStructType(modelOut, "qardlOut");
+        { beta, beta_cov } = _ardlLongRunQARDL(modelOut);
+        retp(beta, beta_cov);
+    elseif isStructType(modelOut, "nardlOut");
+        { beta, beta_cov } = _ardlLongRunNARDL(modelOut);
+        retp(beta, beta_cov);
+    elseif isStructType(modelOut, "csardlOut");
+        { beta, beta_cov } = _ardlLongRunCSARDL(modelOut);
+        retp(beta, beta_cov);
+    elseif isStructType(modelOut, "ardlFullOut");
+        { beta, beta_cov } = _ardlLongRunARDLFull(modelOut);
+        retp(beta, beta_cov);
+    elseif isStructType(modelOut, "qardlFullOut");
+        { beta, beta_cov } = _ardlLongRunQARDLFull(modelOut);
+        retp(beta, beta_cov);
+    elseif isStructType(modelOut, "nardlFullOut");
+        { beta, beta_cov } = _ardlLongRunNARDLFull(modelOut);
+        retp(beta, beta_cov);
+    elseif isStructType(modelOut, "csardlFullOut");
+        { beta, beta_cov } = _ardlLongRunCSARDLFull(modelOut);
+        retp(beta, beta_cov);
+    endif;
+
+    errorlog "ardlLongRun: unsupported model output structure";
+    end;
+endp;
+
+proc (2) = _ardlLongRunARDL(struct ardlOut arOut);
+    retp(arOut.bigbt, arOut.bigbt_cov);
+endp;
+
+proc (2) = _ardlLongRunQARDL(struct qardlOut qaOut);
+    retp(qaOut.bigbt, qaOut.bigbt_cov);
+endp;
+
+proc (2) = _ardlLongRunNARDL(struct nardlOut naOut);
+    retp(naOut.bigbt, naOut.bigbt_cov);
+endp;
+
+proc (2) = _ardlLongRunCSARDL(struct csardlOut csaOut);
+    retp(csaOut.bigbt, csaOut.bigbt_cov);
+endp;
+
+proc (2) = _ardlLongRunARDLFull(struct ardlFullOut out);
+    retp(out.ar.bigbt, out.ar.bigbt_cov);
+endp;
+
+proc (2) = _ardlLongRunQARDLFull(struct qardlFullOut out);
+    retp(out.qa.bigbt, out.qa.bigbt_cov);
+endp;
+
+proc (2) = _ardlLongRunNARDLFull(struct nardlFullOut out);
+    retp(out.na.bigbt, out.na.bigbt_cov);
+endp;
+
+proc (2) = _ardlLongRunCSARDLFull(struct csardlFullOut out);
+    retp(out.csa.bigbt, out.csa.bigbt_cov);
+endp;

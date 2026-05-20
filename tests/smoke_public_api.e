@@ -94,6 +94,9 @@ call assert_true(rows(qaOut.rho) == rows(tau), "qardl rho has wrong row count");
 call assert_true(rows(qaOut.bt) == 7 and cols(qaOut.bt) == rows(tau), "qardl bt has wrong shape");
 call assert_true(rows(qaOut.qvec) == 2 and qaOut.qvec[1] == 1 and qaOut.qvec[2] == 1,
                  "qardl qvec metadata invalid");
+{ lr_beta, lr_cov } = ardlLongRun(qaOut);
+call assert_close(lr_beta, qaOut.bigbt, 1e-12, "ardlLongRun QARDL beta changed");
+call assert_close(lr_cov, qaOut.bigbt_cov, 1e-12, "ardlLongRun QARDL covariance changed");
 
 struct ardlResidualDiagOut rdiagOut;
 rdiagOut = ardlResidualDiagnostics(qaOut, 4);
@@ -122,6 +125,9 @@ arOut = ardl(data, 2, 1, "", 0);
 { arY, arX, ar_theta_start, ar_phi_start } = _qardlBuildLevelsDesignX(data, 2, ones(2, 1));
 expected_ar_bt = _qardlSafeInv(arX'*arX, "smoke_public_api", "expected ARDL moment matrix")*arX'*arY;
 call assert_close(arOut.bt, expected_ar_bt, 1e-10, "ardl bt does not match OLS design");
+{ lr_beta, lr_cov } = ardlLongRun(arOut);
+call assert_close(lr_beta, arOut.bigbt, 1e-12, "ardlLongRun ARDL beta changed");
+call assert_close(lr_cov, arOut.bigbt_cov, 1e-12, "ardlLongRun ARDL covariance changed");
 call assert_close(predictARDL(arOut, data), arX*expected_ar_bt, 1e-10,
                   "predictARDL fitted values changed");
 call assert_true(rows(forecastARDL(arOut, data, 3)) == 3 and cols(forecastARDL(arOut, data, 3)) == 1,
