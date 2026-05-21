@@ -365,6 +365,10 @@ proc (0) = plotQIRF(struct qirfOut qOut, show_bands = 0, alpha = 0.05);
         show_bands = 0;
     endif;
 
+    if show_bands;
+        print "plotQIRF: confidence bands are pointwise percentile bootstrap bands.";
+    endif;
+
     ss      = rows(qOut.tau);
     H       = qOut.H;
     horizons = seqa(0, 1, H+1);
@@ -388,7 +392,7 @@ proc (0) = plotQIRF(struct qirfOut qOut, show_bands = 0, alpha = 0.05);
 
     for jj(1, ss, 1);
         plotLayout(1, ss, jj);
-        plotSetTitle(&myPlot, shock_lbl $+ " QIRF  \\tau=" $+ ntos(qOut.tau[jj]));
+        plotSetTitle(&myPlot, "\\text{" $+ shock_lbl $+ " QIRF }\\tau = " $+ ntos(qOut.tau[jj]));
 
         if show_bands;
             plotXY(myPlot, horizons, qOut.irf_lb[., jj]~qOut.irf[., jj]~qOut.irf_ub[., jj]~zeros(H+1, 1));

@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Computes QIRF point estimates with block-bootstrap confidence bands.
+Computes QIRF point estimates with pointwise percentile block-bootstrap
+confidence bands.
 
 ## Format
 

@@ -46,9 +46,13 @@ print "beta  " wt_beta~pv_beta;
 print "gamma " wt_gamma~pv_gamma;
 print "phi   " wt_phi~pv_phi;
 
+// QIRF bands are pointwise percentile bootstrap bands.
 qOut = blockBootstrapQIRF(shiller, qfOut.qa.p, qfOut.qa.q, 20, tau, 1, 1,
                           10, 0, 0.10, 24680, "moving",
                           "real_dividend ~ real_earnings");
-                          
+
+print;
+print "QIRF confidence bands are pointwise percentile bootstrap bands.";
+
 plotQARDLbands(qfOut.qa, tau, 0.05);
 plotQIRF(qOut, 1);

@@ -25,7 +25,8 @@ Nothing. Produces GAUSS plots.
 
 ## Remarks
 
-Use after computing QIRFs with `qirf` or `blockBootstrapQIRF`. If
+Use after computing QIRFs with `qirf` or `blockBootstrapQIRF`. Bands produced
+by `blockBootstrapQIRF` are pointwise percentile bootstrap bands. If
 `show_bands = 1` but `qOut.bands_available` is `0`, the response paths are
 plotted without bands.
 
