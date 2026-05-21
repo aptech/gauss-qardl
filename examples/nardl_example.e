@@ -9,6 +9,7 @@ cls;
 ** nonlinear ARDL levels estimator and model-specific diagnostics.
 */
 
+// Step 1: Create a small synthetic nonlinear time-series dataset.
 rndseed 260520;
 nnn = 160;
 x1 = cumsumc(rndn(nnn, 1));
@@ -24,12 +25,15 @@ do until tt > nnn;
     tt = tt + 1;
 endo;
 
+// Step 2: Arrange the data as [y, x1, x2].
 data = y~x1~x2;
 
-// Fixed-order levels estimator. Set the final argument to 1 to print here.
+// Step 3: Estimate a fixed-order NARDL levels model.
+//         Set the final argument to 1 to print directly from nardl().
 struct nardlOut naOut;
 naOut = nardl(data, 1, 1, "", 0);
 
+// Step 4: Access key output fields directly from the returned structure.
 print;
 print "NARDL fixed-order example";
 print "-------------------------";
@@ -50,6 +54,7 @@ do until ii > naOut.k;
     ii = ii + 1;
 endo;
 
+// Step 5: Print the standard formatted NARDL table, including asymmetry tests.
 printNARDL(naOut);
 
 /*

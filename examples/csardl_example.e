@@ -8,6 +8,7 @@ cls;
 ** The matrix panel is balanced and stacked by unit: [unit, y, x1, x2].
 */
 
+// Step 1: Define a helper to create a balanced panel stacked by unit.
 proc (1) = make_csardl_example_panel(nunits, tobs);
     local panel, rr, ii, tidx, x1_prev, x2_prev, y_prev;
     local common1, common2, x1v, x2v, yv;
@@ -38,11 +39,13 @@ proc (1) = make_csardl_example_panel(nunits, tobs);
     retp(panel);
 endp;
 
+// Step 2: Create the matrix panel [unit, y, x1, x2].
 panel = make_csardl_example_panel(8, 70);
 
-// Fixed-order pooled CS-ARDL levels estimator.
+// Step 3: Estimate a fixed-order pooled CS-ARDL levels model.
 csaOut = csardl(panel, 1, 1, 1, "", 0);
 
+// Step 4: Access selected output fields directly from the returned structure.
 print;
 print "CS-ARDL fixed-order example";
 print "---------------------------";
@@ -50,10 +53,12 @@ print "p q cs_lags units nobs: " csaOut.p~csaOut.q~csaOut.cs_lags~csaOut.nunits~
 print "Pooled long-run beta";
 print csaOut.bigbt;
 
+// Step 5: Print the standard formatted CS-ARDL coefficient table.
 printCSARDL(csaOut);
 
-// Optional diagnostic layer: unit-specific long-run coefficients, mean-group
-// estimates, Wald-style poolability/slope-heterogeneity checks, and Pesaran CD.
+// Step 6: Run the optional mean-group and poolability diagnostic layer.
+//         This reports unit-specific long-run coefficients, mean-group
+//         estimates, Wald-style checks, and Pesaran CD.
 struct csardlDiagOut diagOut;
 diagOut = csardlDiagnostics(panel, 1, 1, 1, "", 0);
 printCSARDLDiagnostics(diagOut);
