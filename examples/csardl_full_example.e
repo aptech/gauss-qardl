@@ -3,9 +3,10 @@ library qardl;
 cls;
 
 /*
-** CS-ARDL step-by-step estimation example.
+** CS-ARDL full-workflow example.
 **
-** The matrix panel is balanced and stacked by unit: [unit, y, x1, x2].
+** Dataframe workflows include unit/time metadata so CS-ARDL can infer the
+** panel id and time columns using GAUSS panel-data conventions.
 */
 
 proc (1) = make_csardl_example_panel(nunits, tobs);
@@ -39,25 +40,34 @@ proc (1) = make_csardl_example_panel(nunits, tobs);
 endp;
 
 panel = make_csardl_example_panel(8, 70);
+_time = vec(seqa(1, 1, 70)*ones(1, 8));
+df = asDF(panel[., 1]~_time~panel[., 2:4], "unit", "time", "y", "x1", "x2");
+df = dftype(df, META_TYPE_CATEGORY, "unit");
+formula = "y ~ x1 + x2";
 
-// Fixed-order pooled CS-ARDL levels estimator.
-csaOut = csardl(panel, 1, 1, 1, "", 0);
+// Omitting pend/qend uses the package default maximum lag search bounds.
+struct csardlFullOut cfOut;
+cfOut = csardlFull(df, cs_lags = 1, formula = formula, verbose = 0, criterion = "bic");
+
+struct csardlECMOut cECMOut;
+cECMOut = csardlECM(df, cfOut.pst, cfOut.qst, cfOut.cs_lags, formula, 0);
 
 print;
-print "CS-ARDL fixed-order example";
-print "---------------------------";
-print "p q cs_lags units nobs: " csaOut.p~csaOut.q~csaOut.cs_lags~csaOut.nunits~csaOut.nobs;
-print "Pooled long-run beta";
-print csaOut.bigbt;
+print "CS-ARDL formula full workflow";
+print "-----------------------------";
+print "BIC-selected p, q: " cfOut.pst~cfOut.qst;
+print "ECM alpha rho:     " cECMOut.alpha~cECMOut.rho;
 
-printCSARDL(csaOut);
+printCSARDL(cfOut.csa);
+printCSARDLECM(cECMOut);
 
-// Optional diagnostic layer: unit-specific long-run coefficients, mean-group
-// estimates, Wald-style poolability/slope-heterogeneity checks, and Pesaran CD.
-struct csardlDiagOut diagOut;
-diagOut = csardlDiagnostics(panel, 1, 1, 1, "", 0);
-printCSARDLDiagnostics(diagOut);
-print "Slope heterogeneity p-value: " diagOut.slope_hetero_pv;
+fit = predictARDL(cfOut.csa, df, formula);
+fcst = forecastARDL(cfOut.csa, df, 3, formula);
+
+print;
+print "Prediction rows and 3-step forecast";
+print rows(fit);
+print fcst;
 
 /*
 ** TODO: Add published-result CS-ARDL validation once exact DGP grids,

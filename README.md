@@ -143,11 +143,14 @@ The `examples/` directory contains runnable GAUSS programs:
 | File | Description |
 | --- | --- |
 | `demo.e` | Modern end-to-end workflow with `qardlFull`, tests, QIRF, bootstrap, and plots |
-| `ardl_example.e` | OLS ARDL estimation, formula input, full workflow, prediction, and forecast |
+| `ardl_example.e` | Step-by-step OLS ARDL estimation, lag selection, printing, and diagnostics |
+| `ardl_full_example.e` | Integrated ARDL workflow with bounds testing, prediction, and forecast |
 | `qardlestimation.e` | Simulated-data workflow with p-values, QIRF, and ECM bootstrap |
 | `qardl_est_tests.e` | Estimation, formatted output, automatic tests, and custom Wald restrictions |
-| `nardl_example.e` | NARDL fixed-order, formula, lag-selection, prediction, and forecast workflow |
-| `csardl_example.e` | CS-ARDL panel workflow with formula input, prediction, forecast, and diagnostics |
+| `nardl_example.e` | Step-by-step fixed-order NARDL estimation and asymmetry diagnostics |
+| `nardl_full_example.e` | Integrated NARDL workflow with formula input, ECM output, prediction, and forecast |
+| `csardl_example.e` | Step-by-step fixed-order CS-ARDL panel estimation and diagnostics |
+| `csardl_full_example.e` | Integrated CS-ARDL formula workflow with ECM output, prediction, and forecast |
 | `rolling_forecast_example.e` | Rolling-origin ARDL forecasts with supplied future regressor paths |
 | `rolling_qardl.e` | Rolling QARDL and rolling QARDL-ECM workflows |
 | `sp500.e` | Shiller dividend/earnings application using formula support |

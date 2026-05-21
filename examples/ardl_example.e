@@ -3,7 +3,7 @@ library qardl;
 cls;
 
 /*
-** ARDL estimation example.
+** ARDL step-by-step estimation example.
 **
 ** This example uses the same formula and output conventions as the QARDL
 ** workflow, but estimates the levels-form ARDL by OLS.
@@ -34,27 +34,3 @@ printARDL(arOut);
 struct ardlResidualDiagOut diagOut;
 diagOut = ardlResidualDiagnostics(arOut, 4);
 printARDLResidualDiagnostics(diagOut);
-
-// Integrated workflow: lag selection, ARDL bounds test, and ARDL estimation.
-// Omitting pend/qend uses the package default maximum lag search bounds.
-struct ardlFullOut afOut;
-afOut = ardlFull(shiller, formula = formula, verbose = 0, criterion = "bic");
-
-print;
-print "ARDL full workflow";
-print "------------------";
-print "Bounds F-stat: " afOut.ardl_fstat;
-print "Selected p, q: " afOut.pst~afOut.qst;
-
-fit = predictARDL(afOut.ar, shiller, formula);
-fcst = forecastARDL(afOut.ar, shiller, 3, formula);
-
-print;
-print "Prediction rows and 3-step forecast";
-print rows(fit);
-print fcst;
-
-/*
-** TODO: Validate ARDL forecast examples against published applied workflows
-**       once exact references and data transformations are selected.
-*/

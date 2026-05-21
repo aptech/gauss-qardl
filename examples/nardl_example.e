@@ -3,11 +3,10 @@ library qardl;
 cls;
 
 /*
-** NARDL estimation example.
+** NARDL step-by-step estimation example.
 **
 ** This example uses a small synthetic time-series dataset to show the
-** nonlinear ARDL levels estimator, the integrated workflow, formula strings,
-** ECM output, prediction/forecast hooks, and model-specific diagnostics.
+** nonlinear ARDL levels estimator and model-specific diagnostics.
 */
 
 rndseed 260520;
@@ -26,8 +25,6 @@ do until tt > nnn;
 endo;
 
 data = y~x1~x2;
-df = asDF(data, "y", "x1", "x2");
-formula = "y ~ x1 + x2";
 
 // Fixed-order levels estimator. Set the final argument to 1 to print here.
 struct nardlOut naOut;
@@ -54,33 +51,6 @@ do until ii > naOut.k;
 endo;
 
 printNARDL(naOut);
-
-// Formula-string integrated workflow with information-criterion lag selection.
-// Omitting pend/qend uses the package default maximum lag search bounds.
-struct nardlFullOut nfOut;
-nfOut = nardlFull(df, formula = formula, verbose = 0, criterion = "bic");
-
-struct nardlECMOut nECMOut;
-nECMOut = nardlECM(df, nfOut.pst, nfOut.qst, formula, 0);
-
-print;
-print "NARDL formula workflow";
-print "----------------------";
-print "BIC-selected p, q: " nfOut.pst~nfOut.qst;
-print "ECM alpha rho:     " nECMOut.alpha~nECMOut.rho;
-print "Short-run asymmetry p-values";
-print nfOut.na.short_run_pv;
-
-printNARDLECM(nECMOut);
-
-// Unified prediction and forecast hooks infer the model type.
-fit = predictARDL(nfOut.na, df, formula);
-fcst = forecastARDL(nfOut.na, df, 3, formula);
-
-print;
-print "Prediction rows and 3-step forecast";
-print rows(fit);
-print fcst;
 
 /*
 ** TODO: Add published-result NARDL validation once exact datasets and

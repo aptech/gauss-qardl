@@ -8,13 +8,16 @@ $examplesDir = Join-Path $RepoRoot "examples"
 $examples = @(
     "demo.e",
     "ardl_example.e",
+    "ardl_full_example.e",
     "qardlestimation.e",
     "qardl_est_tests.e",
     "rolling_qardl.e",
     "sp500.e",
     "rolling_forecast_example.e",
     "nardl_example.e",
+    "nardl_full_example.e",
     "csardl_example.e",
+    "csardl_full_example.e",
     "replicate_cho_dividend_policy.e",
     "wald_tests_sim.e"
 )
