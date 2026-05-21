@@ -70,6 +70,9 @@ proc (struct csardlOut) = csardl(data, ppp, qqq, cs_lags = 0, formula = "", prin
     csaOut.nobs = rows(Y);
     csaOut.k = k0;
     csaOut.nunits = rows(unit_ids);
+    csaOut.design_rank = rank(ONEX);
+    csaOut.design_cols = cols(ONEX);
+    csaOut.design_condition = sqrt(_qardlConditionNumber(ONEX'ONEX));
     csaOut.bigbt = bigbt;
     csaOut.bigbt_cov = bigbt_cov;
     csaOut.phi = phi;
@@ -144,6 +147,9 @@ proc (struct csardlECMOut) = csardlECM(data, ppp, qqq, cs_lags = 0, formula = ""
     cECMOut.nobs = rows(Y_ecm);
     cECMOut.k = cols(data) - 2;
     cECMOut.nunits = csaOut.nunits;
+    cECMOut.design_rank = rank(ONEX_ecm);
+    cECMOut.design_cols = cols(ONEX_ecm);
+    cECMOut.design_condition = sqrt(_qardlConditionNumber(ONEX_ecm'ONEX_ecm));
     cECMOut.beta_lr = csaOut.bigbt;
     cECMOut.rho_ols = csaOut.rho;
     cECMOut.alpha = bt_ecm[1];

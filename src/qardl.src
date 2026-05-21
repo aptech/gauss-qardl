@@ -112,6 +112,9 @@ proc (struct ardlOut) = ardl(data, ppp, qqq, formula = "", print_results = 1);
     arOut.qvec = qvec;
     arOut.nobs = rows(Y);
     arOut.k = k0;
+    arOut.design_rank = rank(ONEX);
+    arOut.design_cols = cols(ONEX);
+    arOut.design_condition = sqrt(_qardlConditionNumber(ONEX'ONEX));
     arOut.bigbt = bigbt;
     arOut.bigbt_cov = bigbt_cov;
     arOut.phi = phi;
@@ -373,6 +376,9 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_ty
         qaOutQ0.qvec = qqq*ones(k0, 1);
         qaOutQ0.nobs = rows(Y_qr);
         qaOutQ0.k = k0;
+        qaOutQ0.design_rank = rank(ONEX_qr);
+        qaOutQ0.design_cols = cols(ONEX_qr);
+        qaOutQ0.design_condition = sqrt(_qardlConditionNumber(ONEX_qr'ONEX_qr));
         qaOutQ0.bigbt = bigbt;
         qaOutQ0.bigbt_cov = bigbtmm;
         qaOutQ0.phi = bigphi;
@@ -605,6 +611,9 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_ty
     qaOut.qvec = qqq*ones(k0, 1);
     qaOut.nobs = rows(Y);
     qaOut.k = k0;
+    qaOut.design_rank = rank(ONEX_qr);
+    qaOut.design_cols = cols(ONEX_qr);
+    qaOut.design_condition = sqrt(_qardlConditionNumber(ONEX_qr'ONEX_qr));
     qaOut.bigbt = bigbt;
     qaOut.bigbt_cov = bigbtmm;
     qaOut.phi = bigphi;
@@ -770,6 +779,9 @@ proc (struct qardlOut) = qardlX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }, cov_
     qaOut.qvec = qvec;
     qaOut.nobs = rows(Y);
     qaOut.k = k0;
+    qaOut.design_rank = rank(ONEX);
+    qaOut.design_cols = cols(ONEX);
+    qaOut.design_condition = sqrt(_qardlConditionNumber(ONEX'ONEX));
     qaOut.bigbt = bigbt;
     qaOut.bigbt_cov = bigbtmm;
     qaOut.phi = bigphi;
@@ -1043,6 +1055,9 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, 
     qECMOut.qvec      = qqq*ones(k0, 1);
     qECMOut.nobs      = N_ecm;
     qECMOut.k         = k0;
+    qECMOut.design_rank = rank(ONEX_ecm);
+    qECMOut.design_cols = cols(ONEX_ecm);
+    qECMOut.design_condition = sqrt(_qardlConditionNumber(ONEX_ecm'ONEX_ecm));
     qECMOut.beta_lr   = beta_lr_ols;
     qECMOut.rho_ols   = rho_ols;
     qECMOut.alpha     = bt_ecm[1, .]';
@@ -1230,6 +1245,9 @@ proc (struct qardlECMOut) = qardlECMX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }
     qECMOut.qvec = qvec;
     qECMOut.nobs = N_ecm;
     qECMOut.k = k0;
+    qECMOut.design_rank = rank(ONEX_ecm);
+    qECMOut.design_cols = cols(ONEX_ecm);
+    qECMOut.design_condition = sqrt(_qardlConditionNumber(ONEX_ecm'ONEX_ecm));
     qECMOut.beta_lr = beta_lr_ols;
     qECMOut.rho_ols = rho_ols;
     qECMOut.alpha = bt_ecm[1, .]';
@@ -4360,7 +4378,7 @@ proc (2) = _qardlFormulaNames(formula, k0);
         retp("y", _qardlDefaultXVars(k0));
     endif;
 
-    lhs = strtrim(strsect(formula, 1, tilde_pos - 1));
+    lhs = _qardlCleanFormulaName(strsect(formula, 1, tilde_pos - 1));
     remaining = strtrim(strsect(formula, tilde_pos + 1, strlen(formula)));
     xvars = "";
     n_x = 0;
@@ -4368,10 +4386,10 @@ proc (2) = _qardlFormulaNames(formula, k0);
     do while strlen(remaining) > 0;
         pos = strindx(remaining, "+", 1);
         if pos == 0;
-            part = strtrim(remaining);
+            part = _qardlCleanFormulaName(remaining);
             remaining = "";
         else;
-            part = strtrim(strsect(remaining, 1, pos - 1));
+            part = _qardlCleanFormulaName(strsect(remaining, 1, pos - 1));
             remaining = strtrim(strsect(remaining, pos + 1, strlen(remaining)));
         endif;
 
@@ -4441,7 +4459,7 @@ proc (1) = _applyFormula(data, formula);
     endif;
 
     // LHS: y variable name
-    lhs = strtrim(strsect(formula, 1, tilde_pos - 1));
+    lhs = _qardlCleanFormulaName(strsect(formula, 1, tilde_pos - 1));
 
     // RHS: parse "x1 + x2 + ..." into a string array
     remaining = strtrim(strsect(formula, tilde_pos + 1, strlen(formula)));
@@ -4451,10 +4469,10 @@ proc (1) = _applyFormula(data, formula);
     do while strlen(remaining) > 0;
         pos = strindx(remaining, "+", 1);
         if pos == 0;
-            part      = strtrim(remaining);
+            part      = _qardlCleanFormulaName(remaining);
             remaining = "";
         else;
-            part      = strtrim(strsect(remaining, 1, pos - 1));
+            part      = _qardlCleanFormulaName(strsect(remaining, 1, pos - 1));
             remaining = strtrim(strsect(remaining, pos + 1, strlen(remaining)));
         endif;
         if strlen(part) > 0;
@@ -4485,4 +4503,21 @@ proc (1) = _applyFormula(data, formula);
     data = data[., y_idx | x_idx];
 
     retp(data);
+endp;
+
+proc (1) = _qardlCleanFormulaName(name);
+    local cleaned, first_char, last_char, nchar;
+
+    cleaned = strtrim(name);
+    nchar = strlen(cleaned);
+    if nchar >= 2;
+        first_char = strsect(cleaned, 1, 1);
+        last_char = strsect(cleaned, nchar, 1);
+        if (first_char $== "'" and last_char $== "'") or
+           (first_char $== "`" and last_char $== "`");
+            cleaned = strsect(cleaned, 2, nchar - 2);
+        endif;
+    endif;
+
+    retp(strtrim(cleaned));
 endp;

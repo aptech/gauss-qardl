@@ -36,15 +36,24 @@ and full-workflow outputs.
 | QARDL bootstrap coefficient intervals | Implemented | Synthetic fixtures and author-demo validation notes. |
 | QIRF bootstrap bands | Implemented | Stored numerical fixtures and plot smoke coverage. |
 | Plot confidence-band controls | Implemented where interval data exist | Plot helpers fall back gracefully when bands are missing. |
-| Forecast intervals | TODO | `forecastARDL` returns point forecasts only. |
-| Prediction intervals | TODO | `predictARDL` returns fitted values only. |
-| Simultaneous bands | TODO | Current QIRF and coefficient intervals are pointwise. |
+| Forecast intervals | Deferred | `forecastARDL` returns point forecasts only; no standard interval fields are exposed until a validated method is selected. |
+| Prediction intervals | Deferred | `predictARDL` returns fitted values only; no standard interval fields are exposed until a validated method is selected. |
+| Simultaneous bands | Deferred | Current QIRF and coefficient intervals are pointwise. |
 
 ## Wald And Diagnostic P-Values
 
 Current Wald, long-run asymmetry, residual diagnostic, and CS-ARDL panel
-diagnostic p-values are asymptotic. Small-sample and bootstrap p-values remain
-TODO unless a specific published practice is selected and validated.
+diagnostic p-values are asymptotic. Small-sample and bootstrap p-values are
+intentionally deferred unless a specific published practice is selected and
+validated.
+
+## Prediction And Forecast Interval Fields
+
+No prediction or forecast interval fields are currently attached to
+`predictARDL` or `forecastARDL` outputs because those functions return matrices
+of fitted values or point forecasts. Interval result structures should be added
+only when model-family-specific uncertainty calculations are implemented and
+validated.
 
 ## Remaining Design Decisions
 
@@ -54,5 +63,5 @@ TODO unless a specific published practice is selected and validated.
   before exposing interval plots for forecasts.
 - Decide whether QARDL coefficient paths and QIRFs need simultaneous bands in
   addition to the current pointwise bands.
-- Add expected-error tests for missing or malformed interval data after the
-  GAUSS test harness has a standard expected-error capture pattern.
+- Extend forecast interval support after statistically validated bootstrap or
+  analytic intervals are available for each model family.

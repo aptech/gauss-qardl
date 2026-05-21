@@ -17,6 +17,26 @@ $cases = @(
         Expected = "ardl: not enough observations for the requested lag orders"
     },
     @{
+        Name = "ardl_missing_data"
+        Script = "invalid_input_cases/ardl_missing_data.e"
+        Expected = "ardl: data contains missing values; clean or align the sample before estimation"
+    },
+    @{
+        Name = "forecast_futurex_bad_shape"
+        Script = "invalid_input_cases/forecast_futurex_bad_shape.e"
+        Expected = "forecastARDL: future_x must have at least h rows and one column per regressor"
+    },
+    @{
+        Name = "forecast_futurex_missing"
+        Script = "invalid_input_cases/forecast_futurex_missing.e"
+        Expected = "forecastARDL: future_x contains missing values"
+    },
+    @{
+        Name = "csardl_futurex_unsupported"
+        Script = "invalid_input_cases/csardl_futurex_unsupported.e"
+        Expected = "forecastCSARDL: future_x paths are not yet supported for panel forecasts"
+    },
+    @{
         Name = "csardl_unbalanced_diagnostics"
         Script = "invalid_input_cases/csardl_unbalanced_diagnostics.e"
         Expected = "csardlDiagnostics: panel must be balanced and stacked by unit"

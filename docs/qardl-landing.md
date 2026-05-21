@@ -268,6 +268,7 @@ Exports QARDL-ECM results to CSV files.
 - [Feature Support Matrix](FEATURE_SUPPORT_MATRIX.md)
 - [Diagnostics Guide](DIAGNOSTICS_GUIDE.md)
 - [Forecasting Guide](FORECASTING_GUIDE.md)
+- [Data Handling And Lag Alignment](DATA_HANDLING.md)
 - [Inference Interval Support](INFERENCE_INTERVALS.md)
 - [Reporting And Plotting Support](REPORTING_AND_PLOTTING.md)
 - [Performance And Numerical Reliability](PERFORMANCE_NUMERICAL_RELIABILITY.md)

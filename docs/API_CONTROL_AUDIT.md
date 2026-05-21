@@ -48,12 +48,13 @@ When a control structure is added, use the existing package style:
 - Add source and installed-package tests for both positional and control paths.
 - Document every control member in the command reference.
 
-## Current Milestone 1 Outcome
+## Current Outcome
 
 - No new public control structures were added.
 - No existing public signatures were changed.
 - Output metadata now records the resolved formula, variable names, covariance
-  type, deterministic case, lag metadata, and selection criterion.
-- `getDefault...Control` helpers remain deferred until a concrete control
-  structure is added.
-
+  type, deterministic case, lag metadata, selection criterion, effective sample
+  range, and numerical design diagnostics.
+- `getDefault...Control` helpers are intentionally deferred until a concrete
+  control-structure API is introduced. This is a compatibility decision, not a
+  missing implementation in the current public API.

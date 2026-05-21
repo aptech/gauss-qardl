@@ -27,6 +27,11 @@ struct ardlOut {
     // Number of regressors
     scalar k;
 
+    // Numerical diagnostics for the estimation design matrix
+    scalar design_rank;
+    scalar design_cols;
+    scalar design_condition;
+
     // Long-run parameter
     matrix bigbt;
 
@@ -95,6 +100,11 @@ struct qardlOut {
     // Number of regressors
     scalar k;
 
+    // Numerical diagnostics for the estimation design matrix
+    scalar design_rank;
+    scalar design_cols;
+    scalar design_condition;
+
     // Long-run parameter
     matrix bigbt;
 
@@ -161,6 +171,11 @@ struct qardlECMOut {
 
     // Number of regressors
     scalar k;
+
+    // Numerical diagnostics for the ECM design matrix
+    scalar design_rank;
+    scalar design_cols;
+    scalar design_condition;
 
     // OLS long-run coefficients used to construct the error correction term (k x 1)
     matrix beta_lr;
@@ -251,6 +266,11 @@ struct nardlOut {
     // Number of original regressors
     scalar k;
 
+    // Numerical diagnostics for the estimation design matrix
+    scalar design_rank;
+    scalar design_cols;
+    scalar design_condition;
+
     // Long-run positive and negative parameters stacked [beta_pos; beta_neg]
     matrix bigbt;
 
@@ -334,6 +354,11 @@ struct nardlECMOut {
 
     // Number of original regressors
     scalar k;
+
+    // Numerical diagnostics for the ECM design matrix
+    scalar design_rank;
+    scalar design_cols;
+    scalar design_condition;
 
     // Long-run positive and negative coefficients from the levels estimator
     matrix beta_pos;
@@ -452,6 +477,11 @@ struct csardlOut {
     // Number of cross-sectional units
     scalar nunits;
 
+    // Numerical diagnostics for the pooled estimation design matrix
+    scalar design_rank;
+    scalar design_cols;
+    scalar design_condition;
+
     // Long-run pooled coefficients
     matrix bigbt;
 
@@ -529,6 +559,11 @@ struct csardlECMOut {
     // Number of original regressors and cross-sectional units
     scalar k;
     scalar nunits;
+
+    // Numerical diagnostics for the pooled ECM design matrix
+    scalar design_rank;
+    scalar design_cols;
+    scalar design_condition;
 
     // Long-run coefficients from the levels estimator
     matrix beta_lr;

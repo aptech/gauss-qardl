@@ -46,6 +46,9 @@
   guide.
 - `docs/PERFORMANCE_NUMERICAL_RELIABILITY.md`, numerical-reliability source
   tests, ARDL rank/tiny-sample negative tests, and a timing smoke-test runner.
+- `docs/DATA_HANDLING.md`, design rank/conditioning metadata on main estimator
+  outputs, and negative tests for missing data and malformed forecast
+  `future_x` paths.
 - Invalid-input source tests for CS-ARDL unbalanced and unstacked panels,
   including formula-based diagnostic calls.
 - User-facing OLS ARDL workflow with `ardl`, `ardlFull`, `printARDL`,

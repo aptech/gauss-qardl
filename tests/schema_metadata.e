@@ -78,6 +78,9 @@ struct ardlOut ar_formula;
 ar_matrix = ardl(data, 1, 1, "", 0);
 ar_formula = ardl(df, 1, 1, formula, 0);
 call assert_close(ar_formula.bt, ar_matrix.bt, 1e-10, "ARDL formula and matrix estimates differ");
+quoted_formula = "`y` ~ `x1` + `x2`";
+call assert_close(applyQARDLFormula(df, quoted_formula), data, 1e-12,
+                  "quoted formula names no longer resolve to dataframe columns");
 call assert_common_metadata(ar_formula.model_family, ar_formula.formula, ar_formula.depvar,
                             ar_formula.xvars, ar_formula.covariance_type,
                             ar_formula.sample_start, ar_formula.sample_end,
@@ -87,6 +90,8 @@ call assert_string(ar_formula.deterministic, "constant", "ARDL deterministic met
 call assert_string(ar_formula.selection_criterion, "none", "ARDL selection metadata");
 call assert_true(rows(ar_formula.qvec) == 2 and ar_formula.qvec[1] == 1 and ar_formula.qvec[2] == 1,
                  "ARDL qvec metadata");
+call assert_true(ar_formula.design_rank == ar_formula.design_cols and ar_formula.design_condition >= 1,
+                 "ARDL design rank/condition metadata");
 call assert_true(rows(ar_formula.fitted) == ar_formula.nobs and rows(ar_formula.resid) == ar_formula.nobs,
                  "ARDL fitted/residual metadata");
 struct ardlResidualDiagOut rd_schema;
@@ -111,6 +116,8 @@ call assert_common_metadata(qa_formula.model_family, qa_formula.formula, qa_form
                             "QARDL", "", "iid", n, 2, n);
 call assert_true(rows(qa_formula.qvec) == 2 and qa_formula.qvec[1] == 1 and qa_formula.qvec[2] == 1,
                  "QARDL qvec metadata");
+call assert_true(qa_formula.design_rank == qa_formula.design_cols and qa_formula.design_condition >= 1,
+                 "QARDL design rank/condition metadata");
 call assert_true(rows(qa_formula.fitted) == qa_formula.nobs and cols(qa_formula.fitted) == rows(tau),
                  "QARDL fitted metadata");
 
@@ -123,6 +130,8 @@ call assert_common_metadata(qecm.model_family, qecm.formula, qecm.depvar,
                             "QARDL-ECM", "", "robust", n, 3, n);
 call assert_true(rows(qecm.bt) >= 2 and rows(qecm.fitted) == qecm.nobs and cols(qecm.fitted) == rows(tau),
                  "QARDL-ECM coefficient/fitted metadata");
+call assert_true(qecm.design_rank == qecm.design_cols and qecm.design_condition >= 1,
+                 "QARDL-ECM design rank/condition metadata");
 
 struct qardlFullOut qf;
 qf = qardlFull(df, 1, 1, tau, formula, 0, "bic", "hac", 2);
@@ -147,6 +156,8 @@ call assert_common_metadata(na_formula.model_family, na_formula.formula, na_form
                             "NARDL", formula, "ols", n, 2, n);
 call assert_true(rows(na_formula.qvec) == 2 and rows(na_formula.fitted) == na_formula.nobs,
                  "NARDL qvec/fitted metadata");
+call assert_true(na_formula.design_rank == na_formula.design_cols and na_formula.design_condition >= 1,
+                 "NARDL design rank/condition metadata");
 struct nardlDynMultOut ndm;
 ndm = nardlDynamicMultipliers(na_formula, 3);
 call assert_string(ndm.model_family, "NARDL-Dynamic-Multipliers", "NARDL multiplier model_family metadata");
@@ -163,6 +174,8 @@ call assert_common_metadata(necm.model_family, necm.formula, necm.depvar,
                             "NARDL-ECM", formula, "ols", n, 3, n);
 call assert_true(rows(necm.qvec) == 2 and rows(necm.fitted) == necm.nobs,
                  "NARDL-ECM qvec/fitted metadata");
+call assert_true(necm.design_rank == necm.design_cols and necm.design_condition >= 1,
+                 "NARDL-ECM design rank/condition metadata");
 
 struct nardlFullOut nf;
 nf = nardlFull(df, 1, 1, formula, 0, "bic");
@@ -209,6 +222,8 @@ call assert_string(csa_formula.unitvar, "unit", "CS-ARDL unit variable metadata"
 call assert_string(csa_formula.timevar, "time", "CS-ARDL time variable metadata");
 call assert_true(rows(csa_formula.qvec) == 2 and csa_formula.nunits == nunits,
                  "CS-ARDL qvec/panel metadata");
+call assert_true(csa_formula.design_rank == csa_formula.design_cols and csa_formula.design_condition >= 1,
+                 "CS-ARDL design rank/condition metadata");
 
 struct csardlECMOut cecm;
 cecm = csardlECM(panel_df, 1, 1, 1, formula, 0);
@@ -221,6 +236,8 @@ call assert_string(cecm.unitvar, "unit", "CS-ARDL-ECM unit variable metadata");
 call assert_string(cecm.timevar, "time", "CS-ARDL-ECM time variable metadata");
 call assert_true(rows(cecm.qvec) == 2 and rows(cecm.fitted) == cecm.nobs,
                  "CS-ARDL-ECM qvec/fitted metadata");
+call assert_true(cecm.design_rank == cecm.design_cols and cecm.design_condition >= 1,
+                 "CS-ARDL-ECM design rank/condition metadata");
 
 struct csardlDiagOut cdiag;
 cdiag = csardlDiagnostics(panel_df, 1, 1, 1, formula, 0);

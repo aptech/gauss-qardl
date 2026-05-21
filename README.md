@@ -101,6 +101,9 @@ style:
   diagnostic workflows, interpretation notes, and current TODO gaps.
 - [Forecasting guide](docs/FORECASTING_GUIDE.md): unified prediction and
   forecasting calls, future-regressor-path behavior, and interval policy.
+- [Data handling and lag alignment](docs/DATA_HANDLING.md): missing-value
+  policy, effective estimation samples, formula parity, and future regressor
+  path validation.
 - [Published replication notes](docs/PUBLISHED_REPLICATIONS.md): replication
   targets and the Cho-Kim-Shin dividend-policy scaffold.
 - [QARDL validation](docs/QARDL_VALIDATION.md): author-demo validation,

@@ -26,6 +26,9 @@ where applicable:
 - `sample_start`, `sample_end`: input row-index range used by the call.
 - `estimation_start`, `estimation_end`: effective estimation range after lag
   alignment. For CS-ARDL outputs, these are within-unit time indices.
+- `design_rank`, `design_cols`, `design_condition`: numerical diagnostics for
+  the estimation design matrix where a model is estimated from an explicit
+  design.
 
 Lag metadata is stored in the existing scalar fields `p` and `q`, plus `qvec`
 where a per-regressor distributed-lag vector is available. Full workflows also
@@ -113,8 +116,8 @@ current implementation.
   estimators use intercept specifications.
 - Full covariance matrices for all QARDL-ECM coefficients are not yet exposed;
   QARDL-ECM currently exposes `alpha_cov` and `rho_cov`.
-- Missing-data row dropping remains unsupported for CS-ARDL and needs a
-  broader package-level policy for other model families.
+- Missing-data row dropping is intentionally unsupported. Clean and align data
+  before estimation; see `docs/DATA_HANDLING.md`.
 - Additional control structures may still be needed for long positional APIs;
   this schema baseline does not change existing public signatures.
 - CS-ARDL panel residual diagnostics are not part of `ardlResidualDiagOut`;
