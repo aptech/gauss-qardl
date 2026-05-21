@@ -520,11 +520,12 @@ endp;
 */
 proc (0) = printCSARDLDiagnostics(struct csardlDiagOut diagOut);
     local ii;
-    local header, note, table_width, eq_line, dash_line;
+    local header, diag_header, note, table_width, eq_line, dash_line;
 
     header = "Name                  Pooled       Mean Group       MG Std. Err.";
+    diag_header = "Diagnostic                  Statistic    Ref.       Ref N      P-value    Sig.";
     note = _qardlSignifNote();
-    table_width = maxc(strlen(header)|87|strlen(note));
+    table_width = maxc(strlen(header)|strlen(diag_header)|87|strlen(note));
     eq_line = _qardlTableBorder("=", table_width);
     dash_line = _qardlTableBorder("-", table_width);
 
@@ -547,17 +548,22 @@ proc (0) = printCSARDLDiagnostics(struct csardlDiagOut diagOut);
         ii = ii + 1;
     endo;
     print dash_line;
-    sprintf("%-25s%13.6f    %-8s%8.0f    p-value: %12.6f    Sig: %-3s",
+    print diag_header;
+    print dash_line;
+    sprintf("%-25s%13.6f    %-8s%8.0f %12.6f    %-3s",
             "Poolability Wald:",
-            diagOut.poolability_wald, "df:", diagOut.poolability_df, diagOut.poolability_pv,
+            diagOut.poolability_wald, "df:", diagOut.poolability_df,
+            diagOut.poolability_pv,
             _qardlSignifStars(diagOut.poolability_pv));
-    sprintf("%-25s%13.6f    %-8s%8.0f    p-value: %12.6f    Sig: %-3s",
+    sprintf("%-25s%13.6f    %-8s%8.0f %12.6f    %-3s",
             "Slope heterogeneity:",
-            diagOut.slope_hetero_wald, "df:", diagOut.slope_hetero_df, diagOut.slope_hetero_pv,
+            diagOut.slope_hetero_wald, "df:", diagOut.slope_hetero_df,
+            diagOut.slope_hetero_pv,
             _qardlSignifStars(diagOut.slope_hetero_pv));
-    sprintf("%-25s%13.6f    %-8s%8.0f    p-value: %12.6f    Sig: %-3s",
+    sprintf("%-25s%13.6f    %-8s%8.0f %12.6f    %-3s",
             "Pesaran CD:",
-            diagOut.cd_stat, "pairs:", diagOut.cd_pairs, diagOut.cd_pv,
+            diagOut.cd_stat, "pairs:", diagOut.cd_pairs,
+            diagOut.cd_pv,
             _qardlSignifStars(diagOut.cd_pv));
     print "Average residual";
     sprintf("%-25s%13.6f", "correlation:", diagOut.cd_avg_corr);
