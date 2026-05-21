@@ -13,6 +13,11 @@ sections.
 - [Prediction and forecast validation](FORECASTING_VALIDATION.md)
 - [Inference and interval support matrix](INFERENCE_INTERVALS.md)
 - [Reporting and plotting support](REPORTING_AND_PLOTTING.md)
+- [Migration guide](MIGRATION_GUIDE.md)
+- [Methodology notes](METHODOLOGY_NOTES.md)
+- [Feature support matrix](FEATURE_SUPPORT_MATRIX.md)
+- [Diagnostics guide](DIAGNOSTICS_GUIDE.md)
+- [Forecasting guide](FORECASTING_GUIDE.md)
 
 ## Core Workflow
 

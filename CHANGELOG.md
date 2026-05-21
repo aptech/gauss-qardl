@@ -41,6 +41,9 @@
   confidence-interval column controls.
 - `docs/REPORTING_AND_PLOTTING.md` plus an opt-in headless-safe plot smoke
   runner for reporting and plotting support.
+- Milestone 12 documentation guides: migration from QARDL-only versions,
+  methodology notes, feature support matrix, diagnostics guide, and forecasting
+  guide.
 - Invalid-input source tests for CS-ARDL unbalanced and unstacked panels,
   including formula-based diagnostic calls.
 - User-facing OLS ARDL workflow with `ardl`, `ardlFull`, `printARDL`,

@@ -67,7 +67,8 @@ qfOut = qardlFull(macro, tau = tau,
   final `print_results = 0` option for silent scripting.
 - Integrated workflows: `ardlFull`, `qardlFull`, `nardlFull`, `csardlFull`,
   with default maximum lag search bounds of `8` and `8`.
-- Formula dataframe support: `applyQARDLFormula`.
+- Formula dataframe support across ARDL-family workflows, including
+  GAUSS-style panel identifier inference for CS-ARDL dataframe formulas.
 - Lag selection with BIC, AIC, HQ, and HQC: `pqorder`, `pqorderRange`,
   `pqorderGrid`, `pqorderX`, `pqorderXGrid`.
 - ARDL bounds testing for Pesaran-Shin-Smith Cases I-V, with bundled
@@ -75,7 +76,8 @@ qfOut = qardlFull(macro, tau = tau,
 - Robust and Newey-West/Bartlett HAC covariance paths.
 - Cross-quantile Wald tests, p-value helpers, QIRF with bootstrap confidence
   bands, rolling estimation, block bootstrap confidence intervals,
-  confidence-band plot options, and CSV export.
+  confidence-band plot options, CSV export, and generic Markdown/LaTeX/CSV
+  coefficient-table export.
 
 ## Documentation
 
@@ -89,6 +91,16 @@ style:
   source, and related commands.
 - [Usage guide](docs/USAGE_GUIDE.md): workflow guidance, output conventions,
   bootstrap intervals, QIRF, and limitations.
+- [Migration guide](docs/MIGRATION_GUIDE.md): changes for users moving from
+  QARDL-only versions to the ARDL/QARDL/NARDL/CS-ARDL package.
+- [Methodology notes](docs/METHODOLOGY_NOTES.md): concise estimator-family
+  definitions and current inference policy.
+- [Feature support matrix](docs/FEATURE_SUPPORT_MATRIX.md): diagnostics,
+  forecasting, plotting, intervals, and validation support by model family.
+- [Diagnostics guide](docs/DIAGNOSTICS_GUIDE.md): residual and panel
+  diagnostic workflows, interpretation notes, and current TODO gaps.
+- [Forecasting guide](docs/FORECASTING_GUIDE.md): unified prediction and
+  forecasting calls, future-regressor-path behavior, and interval policy.
 - [Published replication notes](docs/PUBLISHED_REPLICATIONS.md): replication
   targets and the Cho-Kim-Shin dividend-policy scaffold.
 - [QARDL validation](docs/QARDL_VALIDATION.md): author-demo validation,
@@ -101,6 +113,10 @@ style:
   cases, critical-value sources, model-family integration, and validation.
 - [Prediction and forecast validation](docs/FORECASTING_VALIDATION.md):
   unified dispatch, future-regressor-path assumptions, and interval gaps.
+- [Inference interval support](docs/INFERENCE_INTERVALS.md): covariance,
+  bootstrap interval, forecast interval, and simultaneous-band support.
+- [Reporting and plotting support](docs/REPORTING_AND_PLOTTING.md): table
+  export, plot confidence-band behavior, and headless plot smoke testing.
 - [LLM reference](llms.txt): compact package guide for users who want to point
   an AI assistant at the QARDL API.
 - [3.0.1 roadmap](docs/ROADMAP_3_0_1.md): planned presentation and LaTeX
