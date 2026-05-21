@@ -272,6 +272,7 @@ Exports QARDL-ECM results to CSV files.
 - [Inference Interval Support](INFERENCE_INTERVALS.md)
 - [Reporting And Plotting Support](REPORTING_AND_PLOTTING.md)
 - [Performance And Numerical Reliability](PERFORMANCE_NUMERICAL_RELIABILITY.md)
+- [Validation Tolerances](VALIDATION_TOLERANCES.md)
 - [Published QARDL Replication Notes](PUBLISHED_REPLICATIONS.md)
 - [QARDL 3.1.0 Roadmap](ROADMAP_3_1_0.md)
 - [QARDL Release Article](QARDL_RELEASE_ARTICLE.md)

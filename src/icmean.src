@@ -1,59 +1,24 @@
 proc icmean(data, ppp, qqq, criterion = "bic");
-    local yy, xx, ee, nn, eei, xxi, yyi, ii, jj, X, onex, Y, bt, uu, rh, ic;
-
     call _qardlValidateEstimatorInputs(data, ppp, qqq, { 0.5 }, "icmean");
     criterion = lower(criterion);
     call _qardlValidateICCriterion(criterion, "icmean");
-    
-    nn = rows(data);
-    yy = data[., 1];
-    xx = data[., 2:cols(data)];
-    ee = xx[2:nn, .] - xx[1:(nn-1), .];
-    ee = zeros(1, cols(ee))|ee;
 
-    if qqq > 0;
-        eei = zeros(nn-qqq,qqq*cols(ee));
-        xxi = xx[qqq+1:nn, .];
-    else;
-        xxi = xx;
-    endif;
-    yyi = zeros(nn-ppp, ppp);
+    retp(_icmeanUnchecked(data, ppp, qqq, criterion, "icmean"));
+endp;
 
-    if qqq > 0;
-        jj = 1;
-        do until jj > cols(ee);
-            ii = 0;
-            do until ii > qqq-1;
-                eei[., ii+1+(jj-1)*qqq] = ee[(qqq+1-ii):(nn-ii), jj];
-                ii = ii + 1;
-            endo;
-            jj = jj+1;
-        endo;
-    endif;
+proc _icmeanUnchecked(data, ppp, qqq, criterion, caller);
+    local Y, ONEX, theta_start, phi_start, bt, uu, rh, ic;
+    local qvec;
 
-    ii = 1;
-    do until ii > ppp;
-        yyi[.,ii] = yy[(1+ppp-ii):(nn-ii), 1];
-        ii = ii + 1;
-    endo;
+    qvec = qqq*ones(cols(data) - 1, 1);
+    { Y, ONEX, theta_start, phi_start } = _qardlBuildLevelsDesignX(data, ppp, qvec);
+    call _qardlCheckFullColumnRank(ONEX, caller, "information-criterion design matrix");
 
-    if qqq == 0;
-        X = xxi[(rows(xxi)+1-rows(yyi)):rows(xxi), .]~yyi;
-    elseif ppp .> qqq;
-        X  = eei[(rows(eei)+1-rows(yyi)):rows(eei), .]~xxi[(rows(xxi)+1-rows(yyi)):rows(xxi), .]~yyi;
-    else;
-        X  = eei~xxi~yyi[(rows(yyi)+1-rows(xxi)):rows(yyi),.];
-    endif;
-
-    ONEX= ones(rows(X), 1)~X;
-    Y  = yy[(nn-rows(X)+1):nn, 1];
-    call _qardlCheckFullColumnRank(onex, "icmean", "information-criterion design matrix");
-    
-    bt = _qardlSafeInv(onex'*onex, "icmean", "information-criterion moment matrix")*onex'*Y;
-    uu = Y - onex*bt;
+    bt = _qardlSafeInv(ONEX'*ONEX, caller, "information-criterion moment matrix")*ONEX'*Y;
+    uu = Y - ONEX*bt;
     rh = uu^2;
 
-    ic = _qardlInformationCriterion(meanc(rh), rows(Y), cols(onex), criterion);
+    ic = _qardlInformationCriterion(meanc(rh), rows(Y), cols(ONEX), criterion);
 
     retp(ic);
 endp;
@@ -72,7 +37,7 @@ proc (2) = pqorder(data, pend = 8, qend = 8, criterion = "bic");
 endp;
 
 proc icmeanX(data, ppp, qvec, criterion = "bic");
-    local Y, ONEX, theta_start, phi_start, bt, uu, rh, ic, k0;
+    local k0;
 
     call _qardlValidateEstimatorInputs(data, ppp, 0, { 0.5 }, "icmeanX");
     k0 = cols(data) - 1;
@@ -80,10 +45,16 @@ proc icmeanX(data, ppp, qvec, criterion = "bic");
     criterion = lower(criterion);
     call _qardlValidateICCriterion(criterion, "icmeanX");
 
-    { Y, ONEX, theta_start, phi_start } = _qardlBuildLevelsDesignX(data, ppp, qvec);
-    call _qardlCheckFullColumnRank(ONEX, "icmeanX", "information-criterion design matrix");
+    retp(_icmeanXUnchecked(data, ppp, qvec, criterion, "icmeanX"));
+endp;
 
-    bt = _qardlSafeInv(ONEX'*ONEX, "icmeanX", "information-criterion moment matrix")*ONEX'*Y;
+proc _icmeanXUnchecked(data, ppp, qvec, criterion, caller);
+    local Y, ONEX, theta_start, phi_start, bt, uu, rh, ic;
+
+    { Y, ONEX, theta_start, phi_start } = _qardlBuildLevelsDesignX(data, ppp, qvec);
+    call _qardlCheckFullColumnRank(ONEX, caller, "information-criterion design matrix");
+
+    bt = _qardlSafeInv(ONEX'*ONEX, caller, "information-criterion moment matrix")*ONEX'*Y;
     uu = Y - ONEX*bt;
     rh = uu^2;
 
@@ -193,7 +164,7 @@ proc (1) = _qardlLagOrderGrid(data, pstart, pend, qstart, qend, criterion);
             idx = num_q*(jj1-1)+jj2;
             icgrid[idx, 1] = pgrid[jj1];
             icgrid[idx, 2] = qgrid[jj2];
-            icgrid[idx, 3] = icmean(data, pgrid[jj1], qgrid[jj2], criterion);
+            icgrid[idx, 3] = _icmeanUnchecked(data, pgrid[jj1], qgrid[jj2], criterion, "pqorderGrid");
             jj2 = jj2 + 1;
         endo;
         jj1 = jj1 + 1;
@@ -219,7 +190,7 @@ proc (1) = _qardlLagOrderGridX(data, pstart, pend, qend, criterion);
             qvec = _qardlQVectorFromIndex(qqidx, k0, qend);
             icgrid[idx, 1] = pp;
             icgrid[idx, 2:1+k0] = qvec';
-            icgrid[idx, k0+2] = icmeanX(data, pp, qvec, criterion);
+            icgrid[idx, k0+2] = _icmeanXUnchecked(data, pp, qvec, criterion, "pqorderXGrid");
             idx = idx + 1;
             qqidx = qqidx + 1;
         endo;

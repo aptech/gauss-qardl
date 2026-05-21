@@ -49,5 +49,6 @@ print "phi   " wt_phi~pv_phi;
 qOut = blockBootstrapQIRF(shiller, qfOut.qa.p, qfOut.qa.q, 20, tau, 1, 1,
                           10, 0, 0.10, 24680, "moving",
                           "real_dividend ~ real_earnings");
+                          
 plotQARDLbands(qfOut.qa, tau, 0.05);
 plotQIRF(qOut, 1);

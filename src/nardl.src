@@ -252,6 +252,7 @@ proc (1) = nardlOrderGrid(data, pend = 8, qend = 8, criterion = "bic");
 
     call _qardlValidateLagScalar(pend, "nardlOrderGrid: pend");
     call _qardlValidateLagScalarZero(qend, "nardlOrderGrid: qend");
+    criterion = lower(criterion);
     call _qardlValidateICCriterion(criterion, "nardlOrderGrid");
 
     grid = zeros(pend*(qend+1), 3);
@@ -260,7 +261,7 @@ proc (1) = nardlOrderGrid(data, pend = 8, qend = 8, criterion = "bic");
     do until p > pend;
         q = 0;
         do until q > qend;
-            ic = nardlICMean(data, p, q, criterion);
+            ic = _nardlICMeanUnchecked(data, p, q, criterion, "nardlOrderGrid");
             grid[row, .] = p~q~ic;
             row = row + 1;
             q = q + 1;
@@ -277,15 +278,20 @@ endp;
 **  Purpose:    Compute AIC/BIC/HQ/HQC for a specified NARDL lag order.
 */
 proc (1) = nardlICMean(data, ppp, qqq, criterion = "bic");
-    local Y, ONEX, x_pos, x_neg, bt, resid, N, K, s2, ic;
-
     call _nardlValidateEstimatorInputs(data, ppp, qqq, "nardlICMean");
+    criterion = lower(criterion);
     call _qardlValidateICCriterion(criterion, "nardlICMean");
 
-    { Y, ONEX, x_pos, x_neg } = _nardlBuildDesign(data, ppp, qqq);
-    call _qardlCheckFullColumnRank(ONEX, "nardlICMean", "levels design matrix");
+    retp(_nardlICMeanUnchecked(data, ppp, qqq, criterion, "nardlICMean"));
+endp;
 
-    bt = _qardlSafeInv(ONEX'*ONEX, "nardlICMean", "levels moment matrix")*ONEX'*Y;
+proc (1) = _nardlICMeanUnchecked(data, ppp, qqq, criterion, caller);
+    local Y, ONEX, x_pos, x_neg, bt, resid, N, K, s2, ic;
+
+    { Y, ONEX, x_pos, x_neg } = _nardlBuildDesign(data, ppp, qqq);
+    call _qardlCheckFullColumnRank(ONEX, caller, "levels design matrix");
+
+    bt = _qardlSafeInv(ONEX'*ONEX, caller, "levels moment matrix")*ONEX'*Y;
     resid = Y - ONEX*bt;
     N = rows(Y);
     K = cols(ONEX);

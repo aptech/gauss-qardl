@@ -264,6 +264,7 @@ proc (1) = csardlOrderGrid(data, pend = 8, qend = 8, cs_lags = 0, criterion = "b
     call _qardlValidateLagScalar(pend, "csardlOrderGrid: pend");
     call _qardlValidateLagScalarZero(qend, "csardlOrderGrid: qend");
     call _qardlValidateLagScalarZero(cs_lags, "csardlOrderGrid: cs_lags");
+    criterion = lower(criterion);
     call _qardlValidateICCriterion(criterion, "csardlOrderGrid");
 
     grid = zeros(pend*(qend+1), 3);
@@ -272,7 +273,7 @@ proc (1) = csardlOrderGrid(data, pend = 8, qend = 8, cs_lags = 0, criterion = "b
     do until p > pend;
         q = 0;
         do until q > qend;
-            ic = csardlICMean(data, p, q, cs_lags, criterion);
+            ic = _csardlICMeanUnchecked(data, p, q, cs_lags, criterion, "csardlOrderGrid");
             grid[row, .] = p~q~ic;
             row = row + 1;
             q = q + 1;
@@ -289,14 +290,19 @@ endp;
 **  Purpose:    Compute AIC/BIC/HQ/HQC for a specified CS-ARDL lag order.
 */
 proc (1) = csardlICMean(data, ppp, qqq, cs_lags = 0, criterion = "bic");
-    local Y, ONEX, csavg, unit_ids, unit_nobs, bt, resid, N, K, s2, ic;
-
     call _csardlValidateEstimatorInputs(data, ppp, qqq, cs_lags, "csardlICMean");
+    criterion = lower(criterion);
     call _qardlValidateICCriterion(criterion, "csardlICMean");
 
+    retp(_csardlICMeanUnchecked(data, ppp, qqq, cs_lags, criterion, "csardlICMean"));
+endp;
+
+proc (1) = _csardlICMeanUnchecked(data, ppp, qqq, cs_lags, criterion, caller);
+    local Y, ONEX, csavg, unit_ids, unit_nobs, bt, resid, N, K, s2, ic;
+
     { Y, ONEX, csavg, unit_ids, unit_nobs } = _csardlBuildDesign(data, ppp, qqq, cs_lags);
-    call _qardlCheckFullColumnRank(ONEX, "csardlICMean", "levels design matrix");
-    bt = _qardlSafeInv(ONEX'*ONEX, "csardlICMean", "levels moment matrix")*ONEX'*Y;
+    call _qardlCheckFullColumnRank(ONEX, caller, "levels design matrix");
+    bt = _qardlSafeInv(ONEX'*ONEX, caller, "levels moment matrix")*ONEX'*Y;
     resid = Y - ONEX*bt;
     N = rows(Y);
     K = cols(ONEX);

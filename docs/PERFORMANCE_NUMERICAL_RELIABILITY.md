@@ -32,12 +32,15 @@ only after repeated clean runs on the intended release machine.
 
 ## Current Optimization Policy
 
-The package currently prioritizes validated numerical output over aggressive
-optimization. The following optimization items remain open:
+The package prioritizes validated numerical output over aggressive
+optimization. Current performance hardening includes:
 
-- cache repeated design-matrix construction in grid-search workflows
-- reduce duplicated quantile fits in bootstrap workflows
-- add larger workload timing profiles for ARDL, QARDL, NARDL, and CS-ARDL
+- grid-search IC paths validate once at the grid boundary and use internal
+  unchecked IC evaluators for candidate models
+- QARDL bootstrap wrappers share the selectable bootstrap-method
+  implementation instead of maintaining duplicate moving-block loops
+- larger lag-grid and bootstrap smoke workloads are included in
+  `tests/performance_large_workloads.e`
 
 Performance changes should be paired with deterministic output checks to ensure
 validated coefficients, diagnostics, forecasts, and interval outputs do not
@@ -63,15 +66,14 @@ restriction covariance rank.
 
 The source test suite now includes:
 
-- invalid-input tests for rank-deficient ARDL designs
+- invalid-input tests for rank-deficient ARDL, NARDL, and CS-ARDL designs
 - invalid-input tests for too-small ARDL samples
+- invalid-input tests for constant-regressor ARDL designs
 - numerical helper tests for condition-number and Wald pseudoinverse behavior
 - existing CS-ARDL invalid panel-layout tests
 
 Remaining numerical reliability TODOs:
 
-- broaden collinearity tests across NARDL and CS-ARDL
-- add constant-regressor and singular-covariance tests by model family
 - document candidate-lag skip versus failure behavior in every lag-selection
   command reference page
-- add performance profiles for larger lag grids and bootstrap workloads
+- extend performance profiles when larger empirical workloads are added

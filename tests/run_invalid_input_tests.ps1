@@ -12,6 +12,21 @@ $cases = @(
         Expected = "ardl: levels design matrix is rank deficient"
     },
     @{
+        Name = "ardl_constant_regressor"
+        Script = "invalid_input_cases/ardl_constant_regressor.e"
+        Expected = "ardl: levels design matrix is rank deficient"
+    },
+    @{
+        Name = "nardl_rank_deficient"
+        Script = "invalid_input_cases/nardl_rank_deficient.e"
+        Expected = "nardl: levels design matrix is rank deficient"
+    },
+    @{
+        Name = "csardl_rank_deficient"
+        Script = "invalid_input_cases/csardl_rank_deficient.e"
+        Expected = "csardl: levels design matrix is rank deficient"
+    },
+    @{
         Name = "ardl_tiny_sample"
         Script = "invalid_input_cases/ardl_tiny_sample.e"
         Expected = "ardl: not enough observations for the requested lag orders"

@@ -49,6 +49,11 @@
 - `docs/DATA_HANDLING.md`, design rank/conditioning metadata on main estimator
   outputs, and negative tests for missing data and malformed forecast
   `future_x` paths.
+- Grid-search IC paths now avoid repeated public validation inside each
+  candidate evaluation, QARDL bootstrap wrappers share common method-based
+  loops, and large lag-grid/bootstrap performance smoke coverage is available.
+- `docs/VALIDATION_TOLERANCES.md` and broader numerical-reliability negative
+  tests for constant and rank-deficient model designs.
 - Invalid-input source tests for CS-ARDL unbalanced and unstacked panels,
   including formula-based diagnostic calls.
 - User-facing OLS ARDL workflow with `ardl`, `ardlFull`, `printARDL`,

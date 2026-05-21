@@ -20,6 +20,7 @@ sections.
 - [Forecasting guide](FORECASTING_GUIDE.md)
 - [Data handling and lag alignment](DATA_HANDLING.md)
 - [Performance and numerical reliability](PERFORMANCE_NUMERICAL_RELIABILITY.md)
+- [Validation tolerances](VALIDATION_TOLERANCES.md)
 
 ## Core Workflow
 

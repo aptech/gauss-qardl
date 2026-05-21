@@ -123,6 +123,9 @@ style:
 - [Performance and numerical reliability](docs/PERFORMANCE_NUMERICAL_RELIABILITY.md):
   timing smoke targets, rank/conditioning policy, and remaining reliability
   TODOs.
+- [Validation tolerances](docs/VALIDATION_TOLERANCES.md): expected-output
+  tolerance policy for deterministic, published-reference, bootstrap, and
+  performance tests.
 - [LLM reference](llms.txt): compact package guide for users who want to point
   an AI assistant at the QARDL API.
 - [3.1.0 roadmap](docs/ROADMAP_3_1_0.md): planned presentation and LaTeX
