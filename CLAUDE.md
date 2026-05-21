@@ -6,7 +6,7 @@ Context file for Claude Code sessions working on this repository.
 
 Implements the **Quantile Autoregressive Distributed Lag (QARDL)** model from Cho, Kim & Shin (2015), which extends ARDL cointegration to allow long-run and short-run parameters to vary across quantiles of the conditional distribution of `y_t`. Use cases: testing for asymmetric cointegration, studying heterogeneous adjustment speeds.
 
-The library is a **GAUSS application package** (version 3.0.1). It loads via `library qardl;` and depends only on GAUSS's built-in `quantileFit` (no external library required).
+The library is a **GAUSS application package** (version 3.1.0). It loads via `library qardl;` and depends only on GAUSS's built-in `quantileFit` (no external library required).
 
 ## Repository layout
 
@@ -46,7 +46,7 @@ tests/
   run_examples_smoke.ps1 # modern examples smoke runner
 docs/
   USAGE_GUIDE.md     # API choice, stacking, formula, bootstrap, QIRF, limitations
-package.json         # GAUSS package manifest (name: qardl, version: 3.0.1)
+package.json         # GAUSS package manifest (name: qardl, version: 3.1.0)
 GOLD_STANDARD_TODO.md # Release-readiness inventory and improvement backlog
 CHANGELOG.md         # Release notes
 RELEASE_CHECKLIST.md # Release validation steps
@@ -252,7 +252,7 @@ Long-run β uses rows `2+qqq*k0 : 1+(qqq+1)*k0` divided by `(1 − sumc(φ rows)
 
 ## Package manifest
 
-`package.json` lists all src files loaded by `library qardl`. Current version: **3.0.1**. All `.src` files in `src/` are registered, including `diagnostics.src`, `wtestconst.src`, and `qirf.src`. If you add a new `.src` file, add it to the `"src"` array and bump the patch version.
+`package.json` lists all src files loaded by `library qardl`. Current version: **3.1.0**. All `.src` files in `src/` are registered, including `diagnostics.src`, `wtestconst.src`, and `qirf.src`. If you add a new `.src` file, add it to the `"src"` array and bump the minor or patch version as appropriate.
 
 ## Source testing
 

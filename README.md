@@ -117,9 +117,12 @@ style:
   bootstrap interval, forecast interval, and simultaneous-band support.
 - [Reporting and plotting support](docs/REPORTING_AND_PLOTTING.md): table
   export, plot confidence-band behavior, and headless plot smoke testing.
+- [Performance and numerical reliability](docs/PERFORMANCE_NUMERICAL_RELIABILITY.md):
+  timing smoke targets, rank/conditioning policy, and remaining reliability
+  TODOs.
 - [LLM reference](llms.txt): compact package guide for users who want to point
   an AI assistant at the QARDL API.
-- [3.0.1 roadmap](docs/ROADMAP_3_0_1.md): planned presentation and LaTeX
+- [3.1.0 roadmap](docs/ROADMAP_3_1_0.md): planned presentation and LaTeX
   export improvements, plus historical confidence-band planning notes.
 - [Citation guide](CITATION.md) and
   [release article](docs/QARDL_RELEASE_ARTICLE.md): preferred software

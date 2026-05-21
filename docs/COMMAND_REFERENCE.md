@@ -18,6 +18,7 @@ sections.
 - [Feature support matrix](FEATURE_SUPPORT_MATRIX.md)
 - [Diagnostics guide](DIAGNOSTICS_GUIDE.md)
 - [Forecasting guide](FORECASTING_GUIDE.md)
+- [Performance and numerical reliability](PERFORMANCE_NUMERICAL_RELIABILITY.md)
 
 ## Core Workflow
 

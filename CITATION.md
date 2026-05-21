@@ -11,7 +11,7 @@ and the underlying econometric methodology.
   author       = {Clower, Eric},
   title        = {{QARDL for GAUSS: Quantile Autoregressive Distributed Lag Estimation, Inference, and Applied Workflows}},
   year         = {2026},
-  version      = {3.0.1},
+  version      = {3.1.0},
   publisher    = {Aptech Systems, Inc.},
   url          = {https://github.com/aptech/gauss-qardl},
   note         = {GAUSS application package}

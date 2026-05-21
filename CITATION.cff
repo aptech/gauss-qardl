@@ -6,7 +6,7 @@ authors:
   - family-names: Clower
     given-names: Eric
     affiliation: "Aptech Systems, Inc."
-version: 3.0.1
+version: 3.1.0
 date-released: "2026-05-20"
 repository-code: "https://github.com/aptech/gauss-qardl"
 url: "https://github.com/aptech/gauss-qardl"

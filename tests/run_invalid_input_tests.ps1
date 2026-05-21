@@ -7,6 +7,16 @@ $testsDir = Join-Path $RepoRoot "tests"
 
 $cases = @(
     @{
+        Name = "ardl_rank_deficient"
+        Script = "invalid_input_cases/ardl_rank_deficient.e"
+        Expected = "ardl: levels design matrix is rank deficient"
+    },
+    @{
+        Name = "ardl_tiny_sample"
+        Script = "invalid_input_cases/ardl_tiny_sample.e"
+        Expected = "ardl: not enough observations for the requested lag orders"
+    },
+    @{
         Name = "csardl_unbalanced_diagnostics"
         Script = "invalid_input_cases/csardl_unbalanced_diagnostics.e"
         Expected = "csardlDiagnostics: panel must be balanced and stacked by unit"

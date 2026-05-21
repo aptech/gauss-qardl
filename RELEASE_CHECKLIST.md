@@ -41,7 +41,7 @@ Use this checklist before publishing a GAUSS QARDL release.
    ```
 
 5. Confirm the release zip is named for the package version, for example
-   `qardl 3.0.1.zip`.
+   `qardl 3.1.0.zip`.
 6. Update `CHANGELOG.md`, `README.md`, and `GOLD_STANDARD_TODO.md`.
 7. Attach the zip to the GitHub Release or commit it only if release artifacts
    are intentionally tracked in this repository.

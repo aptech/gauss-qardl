@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.0.1 - Unreleased
+## 3.1.0 - Unreleased
 
 ### Planned
 - LaTeX export helpers for publication-ready QARDL result tables.
@@ -44,6 +44,8 @@
 - Milestone 12 documentation guides: migration from QARDL-only versions,
   methodology notes, feature support matrix, diagnostics guide, and forecasting
   guide.
+- `docs/PERFORMANCE_NUMERICAL_RELIABILITY.md`, numerical-reliability source
+  tests, ARDL rank/tiny-sample negative tests, and a timing smoke-test runner.
 - Invalid-input source tests for CS-ARDL unbalanced and unstacked panels,
   including formula-based diagnostic calls.
 - User-facing OLS ARDL workflow with `ardl`, `ardlFull`, `printARDL`,
@@ -115,7 +117,7 @@
   so border widths match compact and confidence-interval table layouts.
 - Corrected the installed-package NARDL formula prediction smoke test so it
   uses the same dataframe used to estimate the default-lag NARDL model.
-- Updated package metadata and citation files to version `3.0.1`.
+- Updated package metadata and citation files to version `3.1.0`.
 
 ## 3.0.0 - 2026-05-03
 
