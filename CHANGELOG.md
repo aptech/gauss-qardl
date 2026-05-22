@@ -1,9 +1,6 @@
 # Changelog
 
-## 3.1.0 - Unreleased
-
-### Planned
-- LaTeX export helpers for publication-ready QARDL result tables.
+## 3.1.0 - 2026-05-21
 
 ### Added
 - `ardlResidualDiagnostics` and `printARDLResidualDiagnostics` for
@@ -37,7 +34,8 @@
 - `docs/INFERENCE_INTERVALS.md` documenting covariance, bootstrap interval,
   forecast interval, simultaneous-band, and Wald p-value support by workflow.
 - `saveARDLTable`, `saveARDLMarkdown`, and `saveARDLLaTeX` for generic
-  ARDL-family coefficient table export with precision, significance-code, and
+  ARDL-family coefficient table export, including QARDL result tables, with
+  precision, significance-code, and
   confidence-interval column controls.
 - `docs/REPORTING_AND_PLOTTING.md` plus an opt-in headless-safe plot smoke
   runner for reporting and plotting support.

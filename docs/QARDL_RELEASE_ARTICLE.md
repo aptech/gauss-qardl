@@ -155,8 +155,9 @@ verification.
 
 The current package focuses on QARDL models with `p >= 1`. Distributed-lag
 order `q = 0` is supported. Bootstrap QIRF confidence bands are available
-through `blockBootstrapQIRF`. LaTeX export and deeper publication-ready
-presentation tools remain planned post-3.0.0 work.
+through `blockBootstrapQIRF`. Generic Markdown, LaTeX `tabular`, and CSV
+coefficient-table export is available through the ARDL-family reporting helpers.
+A package-level save-to-file plotting API remains planned future work.
 
 ## Citation Expectations
 

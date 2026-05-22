@@ -36,6 +36,15 @@ print;
 print "First few long-run beta p-values";
 print p_beta[1:minc(6|rows(p_beta))];
 
+// Save a publication-style LaTeX coefficient table. The same helper works for
+// ARDL, QARDL, NARDL, CS-ARDL, ECM, and full-workflow output structures.
+latex_path = __FILE_DIR $+ "qardl_demo_table.tex";
+saveARDLLaTeX(qfOut, latex_path, 4, 1, 0.95);
+
+print;
+print "Saved LaTeX coefficient table to:";
+print latex_path;
+
 // Automatic cross-quantile tests are usually easier than hand-building
 // restriction matrices.
 { wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi } =
