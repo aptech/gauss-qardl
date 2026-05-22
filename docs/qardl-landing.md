@@ -8,7 +8,7 @@ heterogeneous short-run dynamics. The package includes levels-form QARDL,
 two-step QARDL-ECM estimation, OLS ARDL, NARDL, CS-ARDL, ARDL bounds testing,
 lag selection, Wald tests, bootstrap confidence intervals, rolling estimation,
 quantile impulse responses, prediction/forecast hooks, plotting helpers, and
-CSV export tools.
+table export tools.
 
 The minimum supported GAUSS version is GAUSS 26.
 
@@ -226,11 +226,11 @@ Prints formatted two-step QARDL-ECM results.
 
 [predictARDL](command-reference/predictARDL.md)
 
-Returns in-sample fitted values from an estimated ARDL model.
+Returns in-sample fitted values from estimated ARDL-family models.
 
 [forecastARDL](command-reference/forecastARDL.md)
 
-Computes recursive ARDL forecasts.
+Computes recursive ARDL-family forecasts.
 
 [predictQARDL](command-reference/predictQARDL.md)
 
@@ -239,6 +239,20 @@ Returns in-sample fitted values from an estimated QARDL model.
 [forecastQARDL](command-reference/forecastQARDL.md)
 
 Computes recursive QARDL forecasts by quantile.
+
+[ardlLongRun](command-reference/ardlLongRun.md)
+
+Extracts stored long-run coefficients and covariance matrices from ARDL-family
+outputs.
+
+[ardlResidualDiagnostics](command-reference/ardlResidualDiagnostics.md)
+
+Computes time-series residual diagnostics for ARDL-family outputs.
+
+[csardlDiagnostics](command-reference/csardlDiagnostics.md)
+
+Computes optional CS-ARDL mean-group, poolability, heterogeneity, and
+cross-sectional dependence diagnostics.
 
 [plotQARDL](command-reference/plotQARDL.md)
 
@@ -252,13 +266,33 @@ Plots QARDL parameter paths with confidence bands.
 
 Plots quantile impulse response functions.
 
+[plotRollingQARDL](command-reference/plotRollingQARDL.md)
+
+Plots rolling QARDL coefficient paths.
+
+[plotRollingQARDLECM](command-reference/plotRollingQARDLECM.md)
+
+Plots rolling QARDL-ECM coefficient paths.
+
+[saveARDLTable](command-reference/saveARDLTable.md)
+
+Exports ARDL-family coefficient tables to CSV, Markdown, or LaTeX.
+
+[saveARDLMarkdown](command-reference/saveARDLMarkdown.md)
+
+Exports ARDL-family coefficient tables to Markdown.
+
+[saveARDLLaTeX](command-reference/saveARDLLaTeX.md)
+
+Exports ARDL-family coefficient tables to LaTeX.
+
 [saveQARDLResults](command-reference/saveQARDLResults.md)
 
-Exports levels-form QARDL results to CSV files.
+Exports levels-form QARDL matrix results to CSV files.
 
 [saveQARDLECMResults](command-reference/saveQARDLECMResults.md)
 
-Exports QARDL-ECM results to CSV files.
+Exports QARDL-ECM matrix results to CSV files.
 
 ## Further Reading
 
@@ -274,10 +308,8 @@ Exports QARDL-ECM results to CSV files.
 - [Performance And Numerical Reliability](PERFORMANCE_NUMERICAL_RELIABILITY.md)
 - [Validation Tolerances](VALIDATION_TOLERANCES.md)
 - [Published QARDL Replication Notes](PUBLISHED_REPLICATIONS.md)
-- [QARDL 3.1.0 Roadmap](ROADMAP_3_1_0.md)
-- [QARDL Release Article](QARDL_RELEASE_ARTICLE.md)
-- [QARDL Release Article PDF](QARDL_RELEASE_ARTICLE.pdf)
-- [Licensing Options](LICENSING_OPTIONS.md)
+- [QARDL 3.1.0 Release Article](QARDL_3_1_0_RELEASE_ARTICLE.md)
+- [Historical QARDL 3.0.0 Release Article](QARDL_RELEASE_ARTICLE.md)
 - [Citation Guide](../CITATION.md)
 - [LLM Reference](../llms.txt)
 - [Release Checklist](../RELEASE_CHECKLIST.md)

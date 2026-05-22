@@ -83,7 +83,7 @@ Published expected outputs should be stored under
 `tests/fixtures/expected/published/` and registered in
 `tests/fixtures/fixture_manifest.csv`.
 
-TODO: add paper-specific benchmark scripts when exact datasets,
+Future benchmark work should add paper-specific scripts when exact datasets,
 transformations, sample windows, and lag specifications are available for
 redistribution or documented user-side reproduction.
 

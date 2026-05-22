@@ -13,10 +13,10 @@ and `hac` depending on the workflow.
 
 | Family | Classical covariance | Robust covariance | HAC covariance | Notes |
 | --- | --- | --- | --- | --- |
-| ARDL | Yes | TODO | TODO | Levels-form OLS covariance is stored and printed. |
+| ARDL | Yes | Deferred | Deferred | Levels-form OLS covariance is stored and printed. |
 | QARDL | Yes | Yes | Yes | Robust and HAC paths are implemented for levels and ECM workflows. |
-| NARDL | Yes | TODO | TODO | Robust/HAC extension needs method and validation notes first. |
-| CS-ARDL | Yes | TODO | TODO | Panel robust/HAC options need a separate design decision. |
+| NARDL | Yes | Deferred | Deferred | Robust/HAC extension needs method and validation notes first. |
+| CS-ARDL | Yes | Deferred | Deferred | Panel robust/HAC options need a separate design decision. |
 
 ## Long-Run Coefficients
 

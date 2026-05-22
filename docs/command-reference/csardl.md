@@ -55,10 +55,10 @@ unit-by-unit, reports mean-group long-run coefficients, and computes a
 Wald-style poolability diagnostic against the pooled long-run coefficients
 plus a Pesaran CD residual cross-sectional dependence diagnostic.
 
-Published-result validation cases are still TODO. The current benchmark
-coverage uses deterministic synthetic datasets, including balanced-panel
-cross-sectional-average, lag-alignment, sorting, and diagnostic fixtures. See
-`docs/CSARDL_VALIDATION.md`.
+The current benchmark coverage uses deterministic synthetic datasets,
+including balanced-panel cross-sectional-average, lag-alignment, sorting, and
+diagnostic fixtures. Additional exact published dynamic CCE/CS-ARDL
+replication cases remain a validation target. See `docs/CSARDL_VALIDATION.md`.
 
 ## Source
 

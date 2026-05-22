@@ -54,11 +54,12 @@ The Pesaran CD diagnostic is computed from the balanced matrix of unit-level
 residuals returned by the same unit-specific diagnostic regressions. The
 reported fields are `cd_stat`, `cd_pv`, `cd_pairs`, and `cd_avg_corr`.
 
-This is a diagnostic convenience layer for the first CS-ARDL implementation.
+This is a diagnostic convenience layer for the CS-ARDL implementation.
 Deterministic validation recomputes mean-group coefficients, mean-group
 standard errors, the poolability Wald statistic, the slope heterogeneity Wald
-statistic, and the Pesaran CD statistic from unit-specific fits. TODO:
-validate finite-sample behavior against published dynamic CCE/CS-ARDL designs.
+statistic, and the Pesaran CD statistic from unit-specific fits. Exact
+finite-sample behavior against published dynamic CCE/CS-ARDL designs remains a
+future validation target.
 
 ## Source
 

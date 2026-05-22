@@ -5,12 +5,9 @@ each public procedure should have a page with `Purpose`, `Format`,
 `Parameters`, `Returns`, `Remarks`, `Examples`, `Source`, and `See Also`
 sections.
 
-## Shared API Notes
+## User Guides
 
-- [API control-structure audit](API_CONTROL_AUDIT.md)
-- [ARDL-family output schema](OUTPUT_SCHEMA.md)
 - [Bounds testing support matrix](BOUNDS_TESTING_SUPPORT.md)
-- [Prediction and forecast validation](FORECASTING_VALIDATION.md)
 - [Inference and interval support matrix](INFERENCE_INTERVALS.md)
 - [Reporting and plotting support](REPORTING_AND_PLOTTING.md)
 - [Migration guide](MIGRATION_GUIDE.md)
@@ -19,8 +16,14 @@ sections.
 - [Diagnostics guide](DIAGNOSTICS_GUIDE.md)
 - [Forecasting guide](FORECASTING_GUIDE.md)
 - [Data handling and lag alignment](DATA_HANDLING.md)
+
+## Validation And Developer Notes
+
+- [ARDL-family output schema](OUTPUT_SCHEMA.md)
+- [Prediction and forecast validation](FORECASTING_VALIDATION.md)
 - [Performance and numerical reliability](PERFORMANCE_NUMERICAL_RELIABILITY.md)
 - [Validation tolerances](VALIDATION_TOLERANCES.md)
+- [API control-structure audit](API_CONTROL_AUDIT.md)
 
 ## Core Workflow
 

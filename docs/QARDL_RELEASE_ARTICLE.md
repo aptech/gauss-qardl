@@ -6,6 +6,9 @@ Aptech Systems, Inc.
 Release article for QARDL 3.0.0  
 Release date: 2026-05-03
 
+This is the historical release article for QARDL 3.0.0. For the current 3.1.0
+release article, see [QARDL_3_1_0_RELEASE_ARTICLE.md](QARDL_3_1_0_RELEASE_ARTICLE.md).
+
 PDF version: [QARDL_RELEASE_ARTICLE.pdf](QARDL_RELEASE_ARTICLE.pdf)
 
 ## Abstract

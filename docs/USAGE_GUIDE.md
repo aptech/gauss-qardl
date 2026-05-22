@@ -154,7 +154,7 @@ NARDL, or CS-ARDL. QARDL returns one column per quantile. `predictQARDL` and
 Forecast helpers hold future regressor levels fixed at their last observed
 values when `future_x` is omitted. For ARDL, QARDL, and NARDL, pass an
 `h x k` `future_x` matrix to use an explicit future regressor path. CS-ARDL
-future panel paths and forecast intervals remain TODO. See
+future panel paths and forecast intervals are deferred. See
 [FORECASTING_VALIDATION.md](FORECASTING_VALIDATION.md).
 
 ## Formula And Dataframe Workflow
@@ -381,7 +381,7 @@ Cases I-V directly.
 Breusch-Pagan-style heteroskedasticity using fitted values, Jarque-Bera
 normality, and residual CUSUM/CUSUMSQ stability checks for ARDL, QARDL,
 QARDL-ECM, NARDL, and NARDL-ECM outputs. Full recursive-residual stability
-tests and unit-aware CS-ARDL panel residual diagnostics remain TODO.
+tests and unit-aware CS-ARDL panel residual diagnostics are deferred.
 
 ## Quantile Impulse Responses
 
@@ -443,7 +443,7 @@ applied inference.
 - Residual serial-correlation, heteroskedasticity, normality, and
   residual-bridge CUSUM/CUSUMSQ stability diagnostics are available for
   time-series ARDL-family outputs. Full recursive-residual stability tests and
-  CS-ARDL panel residual diagnostics are TODO.
+  unit-aware CS-ARDL panel residual diagnostics are deferred.
 - `p = 0` models are not currently supported. `q = 0` is supported for levels,
   ECM, lag-selection, QIRF, and ARDL bounds workflows.
 

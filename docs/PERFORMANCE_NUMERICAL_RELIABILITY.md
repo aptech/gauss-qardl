@@ -72,7 +72,7 @@ The source test suite now includes:
 - numerical helper tests for condition-number and Wald pseudoinverse behavior
 - existing CS-ARDL invalid panel-layout tests
 
-Remaining numerical reliability TODOs:
+Remaining numerical reliability follow-ups:
 
 - document candidate-lag skip versus failure behavior in every lag-selection
   command reference page

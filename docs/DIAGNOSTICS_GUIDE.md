@@ -21,7 +21,7 @@ Current checks include:
 | Breusch-Pagan-style auxiliary regression | heteroskedasticity | Implemented |
 | Jarque-Bera | residual normality | Implemented |
 | Residual CUSUM and CUSUMSQ | residual stability screening | Implemented |
-| Recursive-residual CUSUM/CUSUMSQ | structural stability | TODO |
+| Recursive-residual CUSUM/CUSUMSQ | structural stability | Deferred |
 
 The residual CUSUM paths are screening diagnostics. Full recursive-residual
 stability tests remain deferred until model outputs retain standardized

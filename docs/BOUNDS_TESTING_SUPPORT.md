@@ -23,8 +23,8 @@ use the simulation APIs.
 | --- | --- |
 | ARDL | `ardlFull` runs the compatibility Case III bounds test through `ardlbounds`. Users can call `ardlboundsCase` or `ardlboundsCaseSim` directly for Cases I-V. |
 | QARDL | `qardlFull` reports the same compatibility ARDL Case III bounds statistic on the underlying levels data. Quantile-specific bounds variants remain outside the current public API. |
-| NARDL | `nardl` reports a UECM bounds-style F-statistic over the lagged level terms. Case-specific PSS critical-value integration remains TODO. |
-| CS-ARDL | No PSS bounds-test integration. Panel cointegration diagnostics remain TODO. |
+| NARDL | `nardl` reports a UECM bounds-style F-statistic over the lagged level terms. Case-specific PSS critical-value integration is deferred. |
+| CS-ARDL | No PSS bounds-test integration. Panel cointegration diagnostics are deferred. |
 
 ## Active Validation
 

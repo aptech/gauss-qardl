@@ -28,10 +28,10 @@ bounds are `8` and `8`.
 Use `nardlDynamicMultipliers` to compute positive and negative dynamic
 multiplier paths from a stored `nardlOut`.
 
-Published-result validation cases are still TODO until reference datasets and
-specifications are added. The current benchmark coverage uses deterministic
-synthetic decomposition, coefficient, bounds, asymmetry, and dynamic-multiplier
-fixtures.
+The current benchmark coverage uses deterministic synthetic decomposition,
+coefficient, bounds, asymmetry, and dynamic-multiplier fixtures. Additional
+published-result validation cases can be added as reference datasets and
+specifications become available.
 
 ## Source
 

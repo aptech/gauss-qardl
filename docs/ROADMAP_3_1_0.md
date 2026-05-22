@@ -1,6 +1,10 @@
 # QARDL 3.1.0 Roadmap
 
-This roadmap captures the planned 3.1.0 release scope. The theme is
+This is a historical planning note for the 3.1.0 release. For the current
+release-facing summary, use `QARDL_3_1_0_RELEASE_ARTICLE.md`,
+`FEATURE_SUPPORT_MATRIX.md`, and the command reference.
+
+This roadmap captured the planned 3.1.0 release scope. The theme was
 presentation, plotting uncertainty, and publication-ready table export.
 
 ## Goals

@@ -38,8 +38,9 @@ When `future_x` is omitted, future regressor levels are held fixed at the last
 observed value. If supplied, `future_x` is used to compute future levels and
 differenced-regressor terms.
 
-TODO: Validate multi-step quantile forecast behavior against external QARDL
-forecast references before using it for publication results.
+Multi-step quantile forecast behavior is covered by deterministic package
+fixtures. Additional external QARDL forecast references should be used before
+treating multi-step forecasts as externally replicated publication results.
 
 ## Examples
 

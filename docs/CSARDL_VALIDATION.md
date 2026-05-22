@@ -92,7 +92,7 @@ measure. The Pesaran CD statistic adds residual cross-sectional dependence
 coverage. The long-run slope heterogeneity statistic is also a Wald-style
 diagnostic convenience measure centered on the mean-group long-run slopes; it
 is not yet validated as a Pesaran-Yamagata style published replication.
-Finite-sample behavior and exact published-reference behavior remain TODO for
+Finite-sample behavior and exact published-reference behavior remain deferred for
 these diagnostic families.
 
 ## Unsupported Cases
