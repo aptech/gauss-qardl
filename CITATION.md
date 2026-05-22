@@ -21,14 +21,14 @@ and the underlying econometric methodology.
 The software description article is available at:
 
 ```text
-docs/QARDL_RELEASE_ARTICLE.md
-docs/QARDL_RELEASE_ARTICLE.pdf
+docs/release/QARDL_3_1_0_RELEASE_ARTICLE.md
 ```
 
-The 3.1.0 release article is available at:
+The historical 3.0.0 release article is available at:
 
 ```text
-docs/QARDL_3_1_0_RELEASE_ARTICLE.md
+docs/archive/QARDL_RELEASE_ARTICLE.md
+docs/archive/QARDL_RELEASE_ARTICLE.pdf
 ```
 
 ## Methodology Citation

@@ -64,8 +64,8 @@ forecasts. When `future_x` is omitted, supported forecast paths use documented
 hold-last behavior for exogenous regressors.
 
 Forecast intervals are not yet statistically standardized across model
-families. See `docs/FORECASTING_GUIDE.md` and
-`docs/INFERENCE_INTERVALS.md`.
+families. See `docs/guides/FORECASTING_GUIDE.md` and
+`docs/guides/INFERENCE_INTERVALS.md`.
 
 ## Validation Policy
 

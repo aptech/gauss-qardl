@@ -191,14 +191,14 @@ ARDL bounds cases:
 
 Use these files for detailed help:
 
-- `docs/qardl-landing.md`
+- `docs/index.md`
 - `docs/COMMAND_REFERENCE.md`
 - `docs/USAGE_GUIDE.md`
-- `docs/PUBLISHED_REPLICATIONS.md`
-- `docs/QARDL_RELEASE_ARTICLE.md`
+- `docs/validation/PUBLISHED_REPLICATIONS.md`
+- `docs/release/QARDL_3_1_0_RELEASE_ARTICLE.md`
 - `CITATION.md`
 - `CITATION.cff`
-- `docs/LICENSING_OPTIONS.md`
+- `docs/archive/LICENSING_OPTIONS.md`
 - `examples/`
 
 ## Citation

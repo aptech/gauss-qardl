@@ -84,7 +84,7 @@ qfOut = qardlFull(macro, tau = tau,
 The technical documentation now follows the standard Aptech GAUSS library
 style:
 
-- [QARDL landing page](docs/qardl-landing.md): package overview,
+- [Documentation home](docs/index.md): package overview,
   installation, and grouped command list.
 - [Command reference](docs/COMMAND_REFERENCE.md): one page per documented
   user-facing command, with purpose, format, parameters, returns, examples,
@@ -93,49 +93,45 @@ style:
   bootstrap intervals, QIRF, and limitations.
 - [Migration guide](docs/MIGRATION_GUIDE.md): changes for users moving from
   QARDL-only versions to the ARDL/QARDL/NARDL/CS-ARDL package.
-- [Methodology notes](docs/METHODOLOGY_NOTES.md): concise estimator-family
+- [Methodology notes](docs/guides/METHODOLOGY_NOTES.md): concise estimator-family
   definitions and current inference policy.
 - [Feature support matrix](docs/FEATURE_SUPPORT_MATRIX.md): diagnostics,
   forecasting, plotting, intervals, and validation support by model family.
-- [Diagnostics guide](docs/DIAGNOSTICS_GUIDE.md): residual and panel
-  diagnostic workflows, interpretation notes, and current TODO gaps.
-- [Forecasting guide](docs/FORECASTING_GUIDE.md): unified prediction and
+- [Diagnostics guide](docs/guides/DIAGNOSTICS_GUIDE.md): residual and panel
+  diagnostic workflows and interpretation notes.
+- [Forecasting guide](docs/guides/FORECASTING_GUIDE.md): unified prediction and
   forecasting calls, future-regressor-path behavior, and interval policy.
-- [Data handling and lag alignment](docs/DATA_HANDLING.md): missing-value
+- [Data handling and lag alignment](docs/guides/DATA_HANDLING.md): missing-value
   policy, effective estimation samples, formula parity, and future regressor
   path validation.
-- [Published replication notes](docs/PUBLISHED_REPLICATIONS.md): replication
+- [Published replication notes](docs/validation/PUBLISHED_REPLICATIONS.md): replication
   targets and the Cho-Kim-Shin dividend-policy scaffold.
-- [QARDL validation](docs/QARDL_VALIDATION.md): author-demo validation,
+- [QARDL validation](docs/validation/QARDL_VALIDATION.md): author-demo validation,
   bootstrap interval fixtures, and exact empirical-replication gaps.
-- [NARDL validation](docs/NARDL_VALIDATION.md): partial-sum decomposition,
+- [NARDL validation](docs/validation/NARDL_VALIDATION.md): partial-sum decomposition,
   asymmetric effects, bounds, and dynamic-multiplier validation status.
-- [CS-ARDL validation](docs/CSARDL_VALIDATION.md): balanced-panel handling,
+- [CS-ARDL validation](docs/validation/CSARDL_VALIDATION.md): balanced-panel handling,
   cross-sectional averages, lag alignment, sorting, and diagnostics status.
-- [Bounds testing support](docs/BOUNDS_TESTING_SUPPORT.md): supported PSS
+- [Bounds testing support](docs/guides/BOUNDS_TESTING_SUPPORT.md): supported PSS
   cases, critical-value sources, model-family integration, and validation.
-- [Prediction and forecast validation](docs/FORECASTING_VALIDATION.md):
+- [Prediction and forecast validation](docs/validation/FORECASTING_VALIDATION.md):
   unified dispatch, future-regressor-path assumptions, and interval gaps.
-- [Inference interval support](docs/INFERENCE_INTERVALS.md): covariance,
+- [Inference interval support](docs/guides/INFERENCE_INTERVALS.md): covariance,
   bootstrap interval, forecast interval, and simultaneous-band support.
-- [Reporting and plotting support](docs/REPORTING_AND_PLOTTING.md): table
+- [Reporting and plotting support](docs/guides/REPORTING_AND_PLOTTING.md): table
   export, plot confidence-band behavior, and headless plot smoke testing.
-- [Performance and numerical reliability](docs/PERFORMANCE_NUMERICAL_RELIABILITY.md):
+- [Performance and numerical reliability](docs/validation/PERFORMANCE_NUMERICAL_RELIABILITY.md):
   timing smoke targets, rank/conditioning policy, and remaining reliability
   TODOs.
-- [Validation tolerances](docs/VALIDATION_TOLERANCES.md): expected-output
+- [Validation tolerances](docs/validation/VALIDATION_TOLERANCES.md): expected-output
   tolerance policy for deterministic, published-reference, bootstrap, and
   performance tests.
 - [LLM reference](llms.txt): compact package guide for users who want to point
   an AI assistant at the QARDL API.
-- [3.1.0 roadmap](docs/ROADMAP_3_1_0.md): planned presentation and LaTeX
-  export improvements, plus historical confidence-band planning notes.
 - [Citation guide](CITATION.md),
-  [3.1.0 release article](docs/QARDL_3_1_0_RELEASE_ARTICLE.md), and
-  [3.0.0 release article](docs/QARDL_RELEASE_ARTICLE.md): preferred software
+  [3.1.0 release article](docs/release/QARDL_3_1_0_RELEASE_ARTICLE.md), and
+  [3.0.0 release article](docs/archive/QARDL_RELEASE_ARTICLE.md): preferred software
   citation materials for research users.
-- [Licensing options](docs/LICENSING_OPTIONS.md): notes on choosing the final
-  release license before publication.
 
 ## Examples
 
@@ -209,10 +205,11 @@ The current release-readiness inventory and backlog are in
 If you use this library in academic, policy, consulting, or commercial
 research, please cite the QARDL software release article and the underlying
 QARDL methodology. See [CITATION.md](CITATION.md) and the
-[3.1.0 release article](docs/QARDL_3_1_0_RELEASE_ARTICLE.md). The historical
+[3.1.0 release article](docs/release/QARDL_3_1_0_RELEASE_ARTICLE.md). The historical
 3.0.0 article remains available at
-[docs/QARDL_RELEASE_ARTICLE.md](docs/QARDL_RELEASE_ARTICLE.md), with a PDF copy
-at [docs/QARDL_RELEASE_ARTICLE.pdf](docs/QARDL_RELEASE_ARTICLE.pdf).
+[docs/archive/QARDL_RELEASE_ARTICLE.md](docs/archive/QARDL_RELEASE_ARTICLE.md),
+with a PDF copy at
+[docs/archive/QARDL_RELEASE_ARTICLE.pdf](docs/archive/QARDL_RELEASE_ARTICLE.pdf).
 
 This repository also includes [CITATION.cff](CITATION.cff), which GitHub and
 software archives can use to generate citation metadata.
@@ -224,7 +221,7 @@ current package metadata lists MIT, but MIT permits redistribution and ports.
 If the intended policy is open GAUSS use while preventing direct translation or
 porting into other languages, use a reviewed source-available custom license
 instead of a standard OSI open-source license. See
-[docs/LICENSING_OPTIONS.md](docs/LICENSING_OPTIONS.md).
+[docs/archive/LICENSING_OPTIONS.md](docs/archive/LICENSING_OPTIONS.md).
 
 ## References
 

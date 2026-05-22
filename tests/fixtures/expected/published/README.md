@@ -18,4 +18,4 @@ Before adding a numerical expected-output file, document:
 5. the tolerance implied by publication rounding or independent reproduction.
 
 Pending targets are tracked in `tests/fixtures/fixture_manifest.csv` and
-`docs/PUBLISHED_REPLICATIONS.md`.
+`docs/validation/PUBLISHED_REPLICATIONS.md`.

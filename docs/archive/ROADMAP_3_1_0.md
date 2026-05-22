@@ -1,7 +1,7 @@
 # QARDL 3.1.0 Roadmap
 
 This is a historical planning note for the 3.1.0 release. For the current
-release-facing summary, use `QARDL_3_1_0_RELEASE_ARTICLE.md`,
+release-facing summary, use `docs/release/QARDL_3_1_0_RELEASE_ARTICLE.md`,
 `FEATURE_SUPPORT_MATRIX.md`, and the command reference.
 
 This roadmap captured the planned 3.1.0 release scope. The theme was
@@ -299,7 +299,7 @@ Update:
 
 - README feature list.
 - `llms.txt`.
-- `docs/qardl-landing.md`.
+- `docs/index.md`.
 - Relevant command-reference pages:
   - `printQARDL`
   - `printQARDLECM`

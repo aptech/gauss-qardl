@@ -131,7 +131,7 @@ print arOut.estimation_start~arOut.estimation_end;
 Common fields include `model_family`, `formula`, `depvar`, `xvars`,
 `deterministic`, `covariance_type`, `selection_criterion`, `sample_start`,
 `sample_end`, `estimation_start`, and `estimation_end`. Full workflows also
-store search bounds in `pmax` and `qmax`. See [OUTPUT_SCHEMA.md](OUTPUT_SCHEMA.md)
+store search bounds in `pmax` and `qmax`. See [OUTPUT_SCHEMA.md](developer/OUTPUT_SCHEMA.md)
 for the full field map.
 
 ## Prediction And Forecast Hooks
@@ -155,7 +155,7 @@ Forecast helpers hold future regressor levels fixed at their last observed
 values when `future_x` is omitted. For ARDL, QARDL, and NARDL, pass an
 `h x k` `future_x` matrix to use an explicit future regressor path. CS-ARDL
 future panel paths and forecast intervals are deferred. See
-[FORECASTING_VALIDATION.md](FORECASTING_VALIDATION.md).
+[FORECASTING_VALIDATION.md](validation/FORECASTING_VALIDATION.md).
 
 ## Formula And Dataframe Workflow
 
@@ -372,7 +372,7 @@ residual variance fields, and optional mean-group, poolability, and Pesaran CD
 residual cross-sectional dependence diagnostics.
 
 Bounds testing support is summarized in
-[BOUNDS_TESTING_SUPPORT.md](BOUNDS_TESTING_SUPPORT.md). The legacy
+[BOUNDS_TESTING_SUPPORT.md](guides/BOUNDS_TESTING_SUPPORT.md). The legacy
 `ardlbounds` wrapper and full ARDL/QARDL workflows use Case III, while
 `ardlboundsCase`, `ardlboundsCaseCV`, and the simulation APIs support PSS
 Cases I-V directly.

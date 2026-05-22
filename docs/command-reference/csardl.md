@@ -58,7 +58,7 @@ plus a Pesaran CD residual cross-sectional dependence diagnostic.
 The current benchmark coverage uses deterministic synthetic datasets,
 including balanced-panel cross-sectional-average, lag-alignment, sorting, and
 diagnostic fixtures. Additional exact published dynamic CCE/CS-ARDL
-replication cases remain a validation target. See `docs/CSARDL_VALIDATION.md`.
+replication cases remain a validation target. See `docs/validation/CSARDL_VALIDATION.md`.
 
 ## Source
 

@@ -32,8 +32,8 @@ embedded in every estimator call.
 
 Related documentation:
 
-- `docs/INFERENCE_INTERVALS.md`
-- `docs/FORECASTING_VALIDATION.md`
-- `docs/REPORTING_AND_PLOTTING.md`
-- `docs/PUBLISHED_REPLICATIONS.md`
-- `docs/OUTPUT_SCHEMA.md`
+- `docs/guides/INFERENCE_INTERVALS.md`
+- `docs/validation/FORECASTING_VALIDATION.md`
+- `docs/guides/REPORTING_AND_PLOTTING.md`
+- `docs/validation/PUBLISHED_REPLICATIONS.md`
+- `docs/developer/OUTPUT_SCHEMA.md`

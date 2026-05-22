@@ -86,7 +86,7 @@ model family, formula, dependent variable, regressor names, lag specification,
 sample range, deterministic case, covariance type, selection criterion,
 residuals, fitted values, rank diagnostics, and conditioning diagnostics.
 
-See `docs/OUTPUT_SCHEMA.md` for the current field map.
+See `docs/developer/OUTPUT_SCHEMA.md` for the current field map.
 
 ## Reporting
 
@@ -104,5 +104,5 @@ Legacy QARDL CSV export helpers remain available.
 
 The expanded model families include deterministic synthetic fixtures and
 source-tree validation gates. Exact published empirical replications are still
-tracked separately in `docs/PUBLISHED_REPLICATIONS.md` and the model-specific
+tracked separately in `docs/validation/PUBLISHED_REPLICATIONS.md` and the model-specific
 validation notes.

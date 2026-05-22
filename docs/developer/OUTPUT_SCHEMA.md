@@ -117,7 +117,7 @@ current implementation.
 - Full covariance matrices for all QARDL-ECM coefficients are not yet exposed;
   QARDL-ECM currently exposes `alpha_cov` and `rho_cov`.
 - Missing-data row dropping is intentionally unsupported. Clean and align data
-  before estimation; see `docs/DATA_HANDLING.md`.
+  before estimation; see `docs/guides/DATA_HANDLING.md`.
 - Additional control structures may still be needed for long positional APIs;
   this schema baseline does not change existing public signatures.
 - CS-ARDL panel residual diagnostics are not part of `ardlResidualDiagOut`;

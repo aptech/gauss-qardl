@@ -7,23 +7,23 @@ sections.
 
 ## User Guides
 
-- [Bounds testing support matrix](BOUNDS_TESTING_SUPPORT.md)
-- [Inference and interval support matrix](INFERENCE_INTERVALS.md)
-- [Reporting and plotting support](REPORTING_AND_PLOTTING.md)
+- [Bounds testing support matrix](guides/BOUNDS_TESTING_SUPPORT.md)
+- [Inference and interval support matrix](guides/INFERENCE_INTERVALS.md)
+- [Reporting and plotting support](guides/REPORTING_AND_PLOTTING.md)
 - [Migration guide](MIGRATION_GUIDE.md)
-- [Methodology notes](METHODOLOGY_NOTES.md)
+- [Methodology notes](guides/METHODOLOGY_NOTES.md)
 - [Feature support matrix](FEATURE_SUPPORT_MATRIX.md)
-- [Diagnostics guide](DIAGNOSTICS_GUIDE.md)
-- [Forecasting guide](FORECASTING_GUIDE.md)
-- [Data handling and lag alignment](DATA_HANDLING.md)
+- [Diagnostics guide](guides/DIAGNOSTICS_GUIDE.md)
+- [Forecasting guide](guides/FORECASTING_GUIDE.md)
+- [Data handling and lag alignment](guides/DATA_HANDLING.md)
 
 ## Validation And Developer Notes
 
-- [ARDL-family output schema](OUTPUT_SCHEMA.md)
-- [Prediction and forecast validation](FORECASTING_VALIDATION.md)
-- [Performance and numerical reliability](PERFORMANCE_NUMERICAL_RELIABILITY.md)
-- [Validation tolerances](VALIDATION_TOLERANCES.md)
-- [API control-structure audit](API_CONTROL_AUDIT.md)
+- [ARDL-family output schema](developer/OUTPUT_SCHEMA.md)
+- [Prediction and forecast validation](validation/FORECASTING_VALIDATION.md)
+- [Performance and numerical reliability](validation/PERFORMANCE_NUMERICAL_RELIABILITY.md)
+- [Validation tolerances](validation/VALIDATION_TOLERANCES.md)
+- [API control-structure audit](developer/API_CONTROL_AUDIT.md)
 
 ## Core Workflow
 

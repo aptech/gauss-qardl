@@ -31,26 +31,26 @@
 - `ardlLongRun` for unified extraction of stored long-run coefficients and
   long-run covariance matrices from ARDL, QARDL, NARDL, CS-ARDL, and matching
   full-workflow outputs.
-- `docs/INFERENCE_INTERVALS.md` documenting covariance, bootstrap interval,
+- `docs/guides/INFERENCE_INTERVALS.md` documenting covariance, bootstrap interval,
   forecast interval, simultaneous-band, and Wald p-value support by workflow.
 - `saveARDLTable`, `saveARDLMarkdown`, and `saveARDLLaTeX` for generic
   ARDL-family coefficient table export, including QARDL result tables, with
   precision, significance-code, and
   confidence-interval column controls.
-- `docs/REPORTING_AND_PLOTTING.md` plus an opt-in headless-safe plot smoke
+- `docs/guides/REPORTING_AND_PLOTTING.md` plus an opt-in headless-safe plot smoke
   runner for reporting and plotting support.
 - Milestone 12 documentation guides: migration from QARDL-only versions,
   methodology notes, feature support matrix, diagnostics guide, and forecasting
   guide.
-- `docs/PERFORMANCE_NUMERICAL_RELIABILITY.md`, numerical-reliability source
+- `docs/validation/PERFORMANCE_NUMERICAL_RELIABILITY.md`, numerical-reliability source
   tests, ARDL rank/tiny-sample negative tests, and a timing smoke-test runner.
-- `docs/DATA_HANDLING.md`, design rank/conditioning metadata on main estimator
+- `docs/guides/DATA_HANDLING.md`, design rank/conditioning metadata on main estimator
   outputs, and negative tests for missing data and malformed forecast
   `future_x` paths.
 - Grid-search IC paths now avoid repeated public validation inside each
   candidate evaluation, QARDL bootstrap wrappers share common method-based
   loops, and large lag-grid/bootstrap performance smoke coverage is available.
-- `docs/VALIDATION_TOLERANCES.md` and broader numerical-reliability negative
+- `docs/validation/VALIDATION_TOLERANCES.md` and broader numerical-reliability negative
   tests for constant and rank-deficient model designs.
 - Invalid-input source tests for CS-ARDL unbalanced and unstacked panels,
   including formula-based diagnostic calls.
@@ -73,7 +73,7 @@
   confidence bands stored in `qirfOut.irf_lb` and `qirfOut.irf_ub`.
 - Standardized ARDL-family output metadata fields for model family, formula,
   variable names, lag vectors, sample ranges, deterministic terms, covariance
-  type, and lag-selection criterion, plus `docs/OUTPUT_SCHEMA.md` and schema
+  type, and lag-selection criterion, plus `docs/developer/OUTPUT_SCHEMA.md` and schema
   parity tests.
 - Validation fixture registry, stored synthetic expected outputs, and
   `tests/run_validation_benchmarks.ps1` for deterministic ARDL/QARDL/NARDL/
@@ -93,7 +93,7 @@
   and the first date column, or first numeric fallback, as the time variable.
 - CS-ARDL validation fixtures for balanced-panel cross-sectional averages,
   lag alignment, formula row-order invariance, and mean-group/poolability
-  diagnostic reproduction, plus `docs/CSARDL_VALIDATION.md`.
+  diagnostic reproduction, plus `docs/validation/CSARDL_VALIDATION.md`.
 - Source-tree NARDL and CS-ARDL examples covering fixed-order estimation,
   formula workflows, lag/model selection, print helpers, output fields,
   prediction/forecast hooks, and supported diagnostics.

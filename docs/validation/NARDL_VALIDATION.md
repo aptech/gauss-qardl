@@ -68,4 +68,3 @@ original regressor.
 the estimated levels equation. `pos` and `neg` are responses to one-unit changes
 in the positive and negative partial-sum variables, and `asymmetry` is their
 difference.
-

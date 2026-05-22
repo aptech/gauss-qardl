@@ -50,7 +50,7 @@ are documented as unsupported and covered by expected-failure tests.
 
 ## Bounds Testing
 
-Bounds testing is documented separately in `docs/BOUNDS_TESTING_SUPPORT.md`.
+Bounds testing is documented separately in `docs/guides/BOUNDS_TESTING_SUPPORT.md`.
 ARDL supports deterministic Cases I-V through the bounds-test APIs. QARDL full
 workflows use the compatibility path where definitions overlap. NARDL reports a
 bounds-style statistic without full PSS critical-value integration.
@@ -70,8 +70,8 @@ diagnostic interpretation.
 
 Diagnostic fixture status is tracked in:
 
-- `docs/QARDL_VALIDATION.md`
-- `docs/NARDL_VALIDATION.md`
-- `docs/CSARDL_VALIDATION.md`
-- `docs/FORECASTING_VALIDATION.md`
-- `docs/PUBLISHED_REPLICATIONS.md`
+- `docs/validation/QARDL_VALIDATION.md`
+- `docs/validation/NARDL_VALIDATION.md`
+- `docs/validation/CSARDL_VALIDATION.md`
+- `docs/validation/FORECASTING_VALIDATION.md`
+- `docs/validation/PUBLISHED_REPLICATIONS.md`

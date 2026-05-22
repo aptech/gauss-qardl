@@ -52,7 +52,7 @@ maximum absolute differences, and tolerances on failure.
 CS-ARDL panel validation additionally checks known cross-sectional averages,
 levels-design lag alignment, formula row-order invariance, and manual
 mean-group, poolability, and Pesaran CD diagnostic reproduction. See
-`docs/CSARDL_VALIDATION.md`.
+`docs/validation/CSARDL_VALIDATION.md`.
 
 Invalid-input source tests run through `tests/run_invalid_input_tests.ps1`.
 They currently protect clear CS-ARDL failures for unbalanced panels,
@@ -60,18 +60,18 @@ unstacked panels, and unbalanced formula-based diagnostic inputs.
 
 Bounds-test validation checks ARDL PSS Cases I-V, the legacy Case III wrapper,
 selected published table values, and fixed-seed simulation critical values. See
-`docs/BOUNDS_TESTING_SUPPORT.md`.
+`docs/guides/BOUNDS_TESTING_SUPPORT.md`.
 
 Prediction and forecast validation checks unified dispatch, backward-compatible
 QARDL wrappers, hold-last forecasts, and explicit future-regressor paths for
-ARDL, QARDL, and NARDL. See `docs/FORECASTING_VALIDATION.md`.
+ARDL, QARDL, and NARDL. See `docs/validation/FORECASTING_VALIDATION.md`.
 
 ## Published-Result Benchmarks
 
 Published-result and published-reference cases are intentionally separate from
 synthetic validation. The current published-reference cases check selected
 Pesaran-Shin-Smith ARDL bounds critical values and the Cho-Kim-Shin QARDL
-author-demo outputs documented in `docs/QARDL_VALIDATION.md`. When exact
+author-demo outputs documented in `docs/validation/QARDL_VALIDATION.md`. When exact
 empirical datasets and specifications are available, add additional GAUSS cases
 under `tests/validation_cases/published/` and run:
 

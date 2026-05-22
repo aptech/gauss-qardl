@@ -81,15 +81,15 @@ Published-reference expected outputs are stored under
 `tests/fixtures/expected/published/`. Exact empirical published-result fixtures
 remain pending until datasets and specifications are available.
 
-See `docs/QARDL_VALIDATION.md` for the active QARDL author-demo validation
+See `docs/validation/QARDL_VALIDATION.md` for the active QARDL author-demo validation
 target, QARDL bootstrap interval fixture, and exact empirical-replication gaps.
-See `docs/NARDL_VALIDATION.md` for active NARDL decomposition, asymmetry,
+See `docs/validation/NARDL_VALIDATION.md` for active NARDL decomposition, asymmetry,
 bounds, and dynamic-multiplier validation fixtures.
-See `docs/CSARDL_VALIDATION.md` for active CS-ARDL balanced-panel,
+See `docs/validation/CSARDL_VALIDATION.md` for active CS-ARDL balanced-panel,
 cross-sectional-average, sorting, and diagnostic validation fixtures.
-See `docs/BOUNDS_TESTING_SUPPORT.md` for the bounds-testing support matrix and
+See `docs/guides/BOUNDS_TESTING_SUPPORT.md` for the bounds-testing support matrix and
 active PSS Cases I-V validation fixtures.
-See `docs/FORECASTING_VALIDATION.md` for active prediction and forecast
+See `docs/validation/FORECASTING_VALIDATION.md` for active prediction and forecast
 dispatch fixtures and current forecast-interval gaps.
 
 ## Tolerance Policy

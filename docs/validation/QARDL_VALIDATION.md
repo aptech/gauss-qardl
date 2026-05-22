@@ -100,4 +100,3 @@ to the GAUSS implementation.
 - The package does not redistribute the downloaded author archives; validation
   uses expected outputs and the bundled demo dataset already present in
   `examples/`.
-

@@ -43,7 +43,7 @@ path.
 
 CS-ARDL `future_x` panel paths are not yet supported. Forecast intervals are
 not currently implemented for `forecastARDL`; see
-`docs/FORECASTING_VALIDATION.md`.
+`docs/validation/FORECASTING_VALIDATION.md`.
 
 ## Examples
 

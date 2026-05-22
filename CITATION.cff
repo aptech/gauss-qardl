@@ -27,7 +27,7 @@ preferred-citation:
       given-names: Eric
       affiliation: "Aptech Systems, Inc."
   year: 2026
-  url: "https://github.com/aptech/gauss-qardl/blob/main/docs/QARDL_RELEASE_ARTICLE.md"
+  url: "https://github.com/aptech/gauss-qardl/blob/main/docs/release/QARDL_3_1_0_RELEASE_ARTICLE.md"
   notes: "Software description article for the QARDL GAUSS application package."
 references:
   - type: article

@@ -54,7 +54,7 @@ prefer explicit future paths.
 
 Forecast intervals are not yet standardized across ARDL, QARDL, NARDL, and
 CS-ARDL. Current forecast APIs return point forecasts. Use
-`docs/INFERENCE_INTERVALS.md` for the current uncertainty-support matrix.
+`docs/guides/INFERENCE_INTERVALS.md` for the current uncertainty-support matrix.
 
 ## Rolling-Origin Forecasts
 
@@ -66,5 +66,5 @@ out-of-sample validation design.
 ## Validation
 
 Deterministic forecast fixtures are tracked in
-`docs/FORECASTING_VALIDATION.md`. Published external forecast validation is
+`docs/validation/FORECASTING_VALIDATION.md`. Published external forecast validation is
 still a roadmap item for CS-ARDL and broader empirical examples.
