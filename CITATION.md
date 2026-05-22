@@ -25,6 +25,12 @@ docs/QARDL_RELEASE_ARTICLE.md
 docs/QARDL_RELEASE_ARTICLE.pdf
 ```
 
+The 3.1.0 release article is available at:
+
+```text
+docs/QARDL_3_1_0_RELEASE_ARTICLE.md
+```
+
 ## Methodology Citation
 
 ```bibtex

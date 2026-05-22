@@ -130,8 +130,9 @@ style:
   an AI assistant at the QARDL API.
 - [3.1.0 roadmap](docs/ROADMAP_3_1_0.md): planned presentation and LaTeX
   export improvements, plus historical confidence-band planning notes.
-- [Citation guide](CITATION.md) and
-  [release article](docs/QARDL_RELEASE_ARTICLE.md): preferred software
+- [Citation guide](CITATION.md),
+  [3.1.0 release article](docs/QARDL_3_1_0_RELEASE_ARTICLE.md), and
+  [3.0.0 release article](docs/QARDL_RELEASE_ARTICLE.md): preferred software
   citation materials for research users.
 - [Licensing options](docs/LICENSING_OPTIONS.md): notes on choosing the final
   release license before publication.
@@ -207,9 +208,11 @@ The current release-readiness inventory and backlog are in
 
 If you use this library in academic, policy, consulting, or commercial
 research, please cite the QARDL software release article and the underlying
-QARDL methodology. See [CITATION.md](CITATION.md) and
-[docs/QARDL_RELEASE_ARTICLE.md](docs/QARDL_RELEASE_ARTICLE.md). A PDF copy is
-also available at [docs/QARDL_RELEASE_ARTICLE.pdf](docs/QARDL_RELEASE_ARTICLE.pdf).
+QARDL methodology. See [CITATION.md](CITATION.md) and the
+[3.1.0 release article](docs/QARDL_3_1_0_RELEASE_ARTICLE.md). The historical
+3.0.0 article remains available at
+[docs/QARDL_RELEASE_ARTICLE.md](docs/QARDL_RELEASE_ARTICLE.md), with a PDF copy
+at [docs/QARDL_RELEASE_ARTICLE.pdf](docs/QARDL_RELEASE_ARTICLE.pdf).
 
 This repository also includes [CITATION.cff](CITATION.cff), which GitHub and
 software archives can use to generate citation metadata.
