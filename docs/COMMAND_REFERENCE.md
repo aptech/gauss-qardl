@@ -23,7 +23,6 @@ sections.
 - [Prediction and forecast validation](validation/FORECASTING_VALIDATION.md)
 - [Performance and numerical reliability](validation/PERFORMANCE_NUMERICAL_RELIABILITY.md)
 - [Validation tolerances](validation/VALIDATION_TOLERANCES.md)
-- [API control-structure audit](developer/API_CONTROL_AUDIT.md)
 
 ## Core Workflow
 

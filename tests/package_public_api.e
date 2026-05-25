@@ -277,6 +277,8 @@ panel = make_package_csardl_panel(4, 60);
 panel_time = vec(seqa(1, 1, 60)*ones(1, 4));
 panel_df = asDF(panel[., 1]~panel_time~panel[., 2:4], "unit", "time", "y", "x1", "x2");
 panel_df = dftype(panel_df, META_TYPE_CATEGORY, "unit");
+panel_df_explicit = asDF((panel_time + 1000)~panel[., 1]~panel_time~panel[., 2:4],
+                         "row_order", "panel_id", "period", "y", "x1", "x2");
 
 struct csardlOut csaOut;
 csaOut = csardl(panel, 1, 1, 1, "", 0);
@@ -302,14 +304,19 @@ call assert_true(cfOut.model_family $== "CS-ARDL" and cfOut.unitvar $== "unit" a
 cfOut = csardlFull(panel_df, cs_lags = 1, formula = "y ~ x1 + x2", verbose = 0);
 call assert_true(cfOut.pst >= 1 and cfOut.pst <= 8 and cfOut.qst >= 0 and cfOut.qst <= 8,
                  "csardlFull default lag bounds invalid");
+cfOut = csardlFull(panel_df_explicit, 1, 1, 1, "y ~ x1 + x2", 0, "bic", "panel_id", "period");
+call assert_true(cfOut.unitvar $== "panel_id" and cfOut.timevar $== "period" and
+                 maxc(abs(cfOut.csa.bigbt - csaOut.bigbt)) < 1e-10,
+                 "csardlFull explicit panel id/time output changed");
 
 struct csardlDiagOut diagOut;
-diagOut = csardlDiagnostics(panel_df, 1, 1, 1, "y ~ x1 + x2", 0);
+diagOut = csardlDiagnostics(panel_df_explicit, 1, 1, 1, "y ~ x1 + x2", 0, "panel_id", "period");
 call assert_true(diagOut.poolability_df == 6 and diagOut.poolability_pv >= 0 and diagOut.poolability_pv <= 1 and
                  diagOut.cd_pairs == 6 and diagOut.cd_pv >= 0 and diagOut.cd_pv <= 1 and
                  diagOut.slope_hetero_df == 6 and diagOut.slope_hetero_pv >= 0 and diagOut.slope_hetero_pv <= 1,
                  "csardlDiagnostics output changed");
-call assert_true(rows(forecastCSARDL(cfOut.csa, panel_df, 2, "y ~ x1 + x2")) == 2,
+call assert_true(rows(forecastCSARDL(cfOut.csa, panel_df_explicit, 2, "y ~ x1 + x2",
+                                     group_var = "panel_id", time_var = "period")) == 2,
                  "forecastCSARDL formula output changed");
 
 printQARDLECM(qECMOut, tau);

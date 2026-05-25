@@ -88,8 +88,9 @@ print arOut.xvars;   // "rates", "inflation"
 
 ## CS-ARDL Panel Metadata
 
-For formula CS-ARDL calls, `unitvar` and `timevar` record the inferred panel
-variables:
+For formula CS-ARDL calls, `unitvar` and `timevar` record the resolved panel
+variables. They are either supplied through `group_var` and `time_var` or
+inferred from dataframe metadata:
 
 - `unitvar`: first string or category variable
 - `timevar`: first date variable, falling back to the first numeric variable
@@ -101,7 +102,7 @@ unitvar = "unit_id";
 timevar = "time_index";
 ```
 
-CS-ARDL formula calls sort by the inferred unit/time variables before
+CS-ARDL formula calls sort by the resolved unit/time variables before
 estimation. The returned `estimation_start` and `estimation_end` fields are
 within-unit time indices, not total row indices.
 

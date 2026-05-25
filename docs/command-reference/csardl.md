@@ -12,9 +12,13 @@ controls. The source includes `csardl`, `csardlECM`, `csardlFull`,
 
 ```gauss
 csaOut = csardl(data, ppp, qqq);
+csaOut = csardl(data, ppp, qqq, cs_lags, formula, print_results,
+                group_var, time_var);
 cfOut = csardlFull(data);
-cfOut = csardlFull(data, pend, qend, cs_lags, formula);
-diagOut = csardlDiagnostics(data, ppp, qqq, cs_lags, formula);
+cfOut = csardlFull(data, pend, qend, cs_lags, formula, verbose, criterion,
+                   group_var, time_var);
+diagOut = csardlDiagnostics(data, ppp, qqq, cs_lags, formula, print_results,
+                            group_var, time_var);
 ```
 
 ## Remarks
@@ -29,14 +33,25 @@ time variable as the first date column, falling back to the first numeric
 column if no date column exists. The dataframe is sorted by the inferred unit
 and time variables before the estimator matrix is built.
 
+To override inference, pass the panel identifier names through the optional
+`group_var` and `time_var` string inputs. Their defaults are empty strings
+(`""`), which preserves GAUSS-style inference:
+
+```gauss
+cfOut = csardlFull(df_panel, cs_lags = 1, formula = "y ~ x1 + x2",
+                   verbose = 0, criterion = "bic",
+                   group_var = "country", time_var = "year");
+```
+
 If numeric time fallback is used, put the time column before `y` and the
 regressors so the GAUSS panel-data convention does not infer a model variable
 as the time index.
 
 Formula strings do not include explicit unit/time terms. To select panel
-identifiers, arrange and type the dataframe so the desired unit column is the
-first string/category variable and the desired time column is the first date
-variable, or first numeric variable if no date column exists.
+identifiers, either pass `group_var` and `time_var`, or arrange and type the
+dataframe so the desired unit column is the first string/category variable and
+the desired time column is the first date variable, or first numeric variable
+if no date column exists.
 
 Missing values are not dropped automatically. Clean and align the panel before
 estimation.

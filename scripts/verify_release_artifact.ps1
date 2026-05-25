@@ -56,7 +56,7 @@ if ($staleArtifacts.Count -gt 0) {
 $textSearchPaths = @(
     "README.md",
     "CHANGELOG.md",
-    "RELEASE_CHECKLIST.md",
+    ".github",
     "docs"
 )
 

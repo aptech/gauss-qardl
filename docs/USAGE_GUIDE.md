@@ -207,6 +207,9 @@ Use `csardlFull` for pooled cross-sectionally augmented ARDL panels:
 cfOut = csardlFull(panel, cs_lags = 1, verbose = 0, criterion = "bic");
 cfOut = csardlFull(df_panel, cs_lags = 1, formula = "y ~ x1 + x2",
                    verbose = 0, criterion = "bic");
+cfOut = csardlFull(df_panel, cs_lags = 1, formula = "y ~ x1 + x2",
+                   verbose = 0, criterion = "bic",
+                   group_var = "country", time_var = "year");
 printCSARDL(cfOut.csa);
 printCSARDLECM(cfOut.ecm);
 ```
@@ -219,14 +222,14 @@ first numeric column if no date column exists. CS-ARDL sorts dataframe input
 by the inferred unit/time columns before building the estimator matrix.
 Unbalanced panels and missing panel cells are not currently supported; align or
 balance the panel before estimation. Formula strings do not include explicit
-unit/time terms, so choose identifiers by ordering and typing the dataframe
-columns according to the GAUSS panel-data convention.
+unit/time terms. You can choose identifiers explicitly with `group_var` and
+`time_var`; leaving either as `""` uses the GAUSS panel-data convention.
 Use `csardlDiagnostics` for the optional mean-group, poolability, and
 cross-sectional dependence diagnostic layer:
 
 ```gauss
 diagOut = csardlDiagnostics(df_panel, cfOut.pst, cfOut.qst, cfOut.cs_lags,
-                            "y ~ x1 + x2", 0);
+                            "y ~ x1 + x2", 0, "country", "year");
 printCSARDLDiagnostics(diagOut);
 ```
 

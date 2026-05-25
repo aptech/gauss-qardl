@@ -5,8 +5,8 @@ cls;
 /*
 ** CS-ARDL full-workflow example.
 **
-** Dataframe workflows include unit/time metadata so CS-ARDL can infer the
-** panel id and time columns using GAUSS panel-data conventions.
+** Dataframe workflows can infer unit/time metadata using GAUSS panel-data
+** conventions, or you can pass explicit panel id and time column names.
 */
 
 // Step 1: Define a helper to create a balanced panel stacked by unit.
@@ -50,11 +50,13 @@ formula = "y ~ x1 + x2";
 // Step 3: Run the integrated CS-ARDL workflow. Omitting pend/qend uses the
 //         package default maximum lag search bounds.
 struct csardlFullOut cfOut;
-cfOut = csardlFull(df, cs_lags = 1, formula = formula, verbose = 0, criterion = "bic");
+cfOut = csardlFull(df, cs_lags = 1, formula = formula, verbose = 0,
+                   criterion = "bic", group_var = "unit", time_var = "time");
 
 // Step 4: Estimate the matching ECM representation at the selected lag orders.
 struct csardlECMOut cECMOut;
-cECMOut = csardlECM(df, cfOut.pst, cfOut.qst, cfOut.cs_lags, formula, 0);
+cECMOut = csardlECM(df, cfOut.pst, cfOut.qst, cfOut.cs_lags, formula, 0,
+                    "unit", "time");
 
 // Step 5: Inspect workflow-level fields from the full output structure.
 print;
@@ -68,8 +70,8 @@ printCSARDL(cfOut.csa);
 printCSARDLECM(cECMOut);
 
 // Step 7: Use the unified prediction and forecast helpers on CS-ARDL output.
-fit = predictARDL(cfOut.csa, df, formula);
-fcst = forecastARDL(cfOut.csa, df, 3, formula);
+fit = predictARDL(cfOut.csa, df, formula, "unit", "time");
+fcst = forecastARDL(cfOut.csa, df, 3, formula, group_var = "unit", time_var = "time");
 
 // Step 8: Display the fitted-sample prediction size and 3-step forecast.
 print;

@@ -54,7 +54,9 @@ panel-data conventions:
 - first string or category variable: unit
 - first date variable, or first numeric fallback: time
 
-Formula CS-ARDL input is sorted by unit and time before estimation.
+Formula CS-ARDL input is sorted by unit and time before estimation. To bypass
+inference, pass explicit names with `group_var` and `time_var`; the default
+for both is `""`, which uses the conventions above.
 
 ## Future Regressor Paths
 

@@ -6,7 +6,8 @@
 **              panel stacked by unit: [unit_id, y, x1, x2, ...].
 **
 **  Format:     csaOut = csardl(data, ppp, qqq);
-**              csaOut = csardl(data, ppp, qqq, cs_lags, formula, print_results);
+**              csaOut = csardl(data, ppp, qqq, cs_lags, formula,
+**                              print_results, group_var, time_var);
 **
 **  Input:      data      balanced panel stacked by unit.
 **              ppp       scalar, AR lag order.
@@ -15,17 +16,21 @@
 **              formula   optional formula "y ~ x1 + x2". For dataframe
 **                        input, the unit and time variables are inferred
 **                        from GAUSS panel-data metadata conventions.
+**              group_var optional panel group variable name. Empty string
+**                        uses GAUSS-style inference.
+**              time_var  optional panel time variable name. Empty string
+**                        uses GAUSS-style inference.
 **
 **  Output:     csaOut    struct csardlOut.
 */
-proc (struct csardlOut) = csardl(data, ppp, qqq, cs_lags = 0, formula = "", print_results = 1);
+proc (struct csardlOut) = csardl(data, ppp, qqq, cs_lags = 0, formula = "", print_results = 1, group_var = "", time_var = "");
     local Y, ONEX, csavg, unit_ids, unit_nobs, bt, k0, phi_start, cross_start;
     local gam, phi, denom, bigbt, cross_avg_coef;
     local fitted, resid, coef_cov, sigma2, bigbt_cov, phi_cov, gamma_cov;
     local depvar, xvars, unitvar, timevar, max_lag;
 
-    { depvar, xvars, unitvar, timevar } = _csardlMetadataNames(data, formula);
-    data = applyCSARDLFormula(data, formula);
+    { depvar, xvars, unitvar, timevar } = _csardlMetadataNames(data, formula, group_var, time_var);
+    data = applyCSARDLFormula(data, formula, group_var, time_var);
     call _csardlValidateEstimatorInputs(data, ppp, qqq, cs_lags, "csardl");
 
     { Y, ONEX, csavg, unit_ids, unit_nobs } = _csardlBuildDesign(data, ppp, qqq, cs_lags);
@@ -105,12 +110,12 @@ endp;
 **              coefficients from csardl(), with lagged error correction,
 **              lagged Dy/Dx terms, and cross-sectional-average changes.
 */
-proc (struct csardlECMOut) = csardlECM(data, ppp, qqq, cs_lags = 0, formula = "", print_results = 1);
+proc (struct csardlECMOut) = csardlECM(data, ppp, qqq, cs_lags = 0, formula = "", print_results = 1, group_var = "", time_var = "");
     local Y_ecm, ONEX_ecm, bt_ecm, fitted, resid, coef_cov, sigma2;
     local depvar, xvars, unitvar, timevar, unit_ids, T, max_lag;
 
-    { depvar, xvars, unitvar, timevar } = _csardlMetadataNames(data, formula);
-    data = applyCSARDLFormula(data, formula);
+    { depvar, xvars, unitvar, timevar } = _csardlMetadataNames(data, formula, group_var, time_var);
+    data = applyCSARDLFormula(data, formula, group_var, time_var);
     call _csardlValidateEstimatorInputs(data, ppp, qqq, cs_lags, "csardlECM");
 
     struct csardlOut csaOut;
@@ -178,20 +183,20 @@ endp;
 **
 **  Format:     cfOut = csardlFull(data);
 **              cfOut = csardlFull(data, pend, qend, cs_lags, formula,
-**                                verbose, criterion);
+**                                verbose, criterion, group_var, time_var);
 **
 **  Note:       If omitted, pend and qend default to 8 and cs_lags defaults
 **              to 0.
 */
-proc (struct csardlFullOut) = csardlFull(data, pend = 8, qend = 8, cs_lags = 0, formula = "", verbose = 1, criterion = "bic");
+proc (struct csardlFullOut) = csardlFull(data, pend = 8, qend = 8, cs_lags = 0, formula = "", verbose = 1, criterion = "bic", group_var = "", time_var = "");
     local pst, qst, depvar, xvars, unitvar, timevar;
 
     call _qardlValidateLagScalar(pend, "csardlFull: pend");
     call _qardlValidateLagScalarZero(qend, "csardlFull: qend");
     call _qardlValidateLagScalarZero(cs_lags, "csardlFull: cs_lags");
 
-    { depvar, xvars, unitvar, timevar } = _csardlMetadataNames(data, formula);
-    data = applyCSARDLFormula(data, formula);
+    { depvar, xvars, unitvar, timevar } = _csardlMetadataNames(data, formula, group_var, time_var);
+    data = applyCSARDLFormula(data, formula, group_var, time_var);
     { pst, qst } = csardlOrder(data, pend, qend, cs_lags, criterion);
 
     if verbose;
@@ -332,9 +337,10 @@ endp;
 **              plus a mean-group-centered slope heterogeneity diagnostic.
 **
 **  Format:     diagOut = csardlDiagnostics(data, ppp, qqq);
-**              diagOut = csardlDiagnostics(data, ppp, qqq, cs_lags, formula, print_results);
+**              diagOut = csardlDiagnostics(data, ppp, qqq, cs_lags, formula,
+**                                         print_results, group_var, time_var);
 */
-proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, formula = "", print_results = 1);
+proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, formula = "", print_results = 1, group_var = "", time_var = "");
     local unit_ids, T, nunits, k0, max_lag, n_param, unit_nobs;
     local ii, jj, Y_i, X_i, bt_i, resid_i, cov_i, sigma2_i, beta_i, beta_cov_i;
     local unit_bigbt, unit_phi, unit_bt, unit_sigma2, unit_resid, mean_group_bigbt, mean_group_se;
@@ -343,8 +349,8 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
     local cd_stat, cd_pv, cd_pairs, cd_avg_corr;
     local depvar, xvars, unitvar, timevar;
 
-    { depvar, xvars, unitvar, timevar } = _csardlMetadataNames(data, formula);
-    data = applyCSARDLFormula(data, formula);
+    { depvar, xvars, unitvar, timevar } = _csardlMetadataNames(data, formula, group_var, time_var);
+    data = applyCSARDLFormula(data, formula, group_var, time_var);
     call _csardlValidateEstimatorInputs(data, ppp, qqq, cs_lags, "csardlDiagnostics");
 
     { unit_ids, T } = _csardlPanelInfo(data, "csardlDiagnostics");
@@ -682,14 +688,14 @@ endp;
 **
 **  Purpose:    Return in-sample fitted values from an estimated CS-ARDL model.
 */
-proc (1) = predictCSARDL(struct csardlOut csaOut, data, formula = "");
-    retp(_predictCSARDLLevels(csaOut, data, formula));
+proc (1) = predictCSARDL(struct csardlOut csaOut, data, formula = "", group_var = "", time_var = "");
+    retp(_predictCSARDLLevels(csaOut, data, formula, group_var, time_var));
 endp;
 
-proc (1) = _predictCSARDLLevels(struct csardlOut csaOut, data, formula = "");
+proc (1) = _predictCSARDLLevels(struct csardlOut csaOut, data, formula = "", group_var = "", time_var = "");
     local Y, ONEX, csavg, unit_ids, unit_nobs;
 
-    data = applyCSARDLFormula(data, formula);
+    data = applyCSARDLFormula(data, formula, group_var, time_var);
     { Y, ONEX, csavg, unit_ids, unit_nobs } = _csardlBuildDesign(data, csaOut.p, csaOut.q, csaOut.cs_lags);
     retp(ONEX*csaOut.bt);
 endp;
@@ -701,11 +707,11 @@ endp;
 **              future regressors and cross-sectional averages fixed and
 **              returns the last fitted value for each requested horizon.
 */
-proc (1) = forecastCSARDL(struct csardlOut csaOut, data, h = 1, formula = "", future_x = error(0));
-    retp(_forecastCSARDLLevels(csaOut, data, h, formula, future_x));
+proc (1) = forecastCSARDL(struct csardlOut csaOut, data, h = 1, formula = "", future_x = error(0), group_var = "", time_var = "");
+    retp(_forecastCSARDLLevels(csaOut, data, h, formula, future_x, group_var, time_var));
 endp;
 
-proc (1) = _forecastCSARDLLevels(struct csardlOut csaOut, data, h = 1, formula = "", future_x = error(0));
+proc (1) = _forecastCSARDLLevels(struct csardlOut csaOut, data, h = 1, formula = "", future_x = error(0), group_var = "", time_var = "");
     local fitted;
 
     call _qardlValidateLagScalar(h, "forecastCSARDL: h");
@@ -714,25 +720,25 @@ proc (1) = _forecastCSARDLLevels(struct csardlOut csaOut, data, h = 1, formula =
         end;
     endif;
 
-    fitted = _predictCSARDLLevels(csaOut, data, formula);
+    fitted = _predictCSARDLLevels(csaOut, data, formula, group_var, time_var);
 
     retp(ones(h, 1)*fitted[rows(fitted)]);
 endp;
 
-proc (4) = _csardlMetadataNames(data, formula);
+proc (4) = _csardlMetadataNames(data, formula, group_var = "", time_var = "");
     local depvar, xvars, unitvar, timevar;
 
     if strlen(formula) == 0;
         depvar = "y";
         xvars = _qardlDefaultXVars(cols(data) - 2);
-        unitvar = "unit_id";
-        timevar = "time_index";
+        unitvar = _csardlDefaultOrSuppliedName(group_var, "unit_id");
+        timevar = _csardlDefaultOrSuppliedName(time_var, "time_index");
         retp(depvar, xvars, unitvar, timevar);
     endif;
 
     { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 2);
-    unitvar = _csardlInferPanelIDVar(data, "_csardlMetadataNames");
-    timevar = _csardlInferPanelTimeVarQuiet(data, "_csardlMetadataNames");
+    unitvar = _csardlResolvePanelIDVar(data, group_var, "_csardlMetadataNames");
+    timevar = _csardlResolvePanelTimeVarQuiet(data, time_var, "_csardlMetadataNames");
 
     retp(depvar, xvars, unitvar, timevar);
 endp;
@@ -741,15 +747,14 @@ endp;
 **> applyCSARDLFormula
 **
 **  Purpose:    Formula hook for CS-ARDL workflows.  The preferred dataframe
-**              formula is "y ~ x1 + x2". The unit variable is inferred as
-**              the first string/category column and the time variable is
-**              inferred as the first date column, falling back to the first
-**              numeric column.
+**              formula is "y ~ x1 + x2". If group_var or time_var are empty,
+**              the unit variable is inferred as the first string/category
+**              column and the time variable is inferred as the first date
+**              column, falling back to the first numeric column.
 */
-proc (1) = applyCSARDLFormula(data, formula);
+proc (1) = applyCSARDLFormula(data, formula, group_var = "", time_var = "");
     local tilde_pos, lhs, unit_var, y_var, xvars, n_x;
-    local colnames, unit_idx, y_idx, x_idx, remaining, pos, part;
-    local time_var;
+    local colnames, unit_idx, time_idx, y_idx, x_idx, remaining, pos, part;
 
     if strlen(formula) == 0;
         retp(data);
@@ -762,7 +767,7 @@ proc (1) = applyCSARDLFormula(data, formula);
 
     lhs = strtrim(strsect(formula, 1, tilde_pos - 1));
     if strindx(lhs, "+", 1) > 0;
-        errorlog "applyCSARDLFormula: formula must use \"y ~ x1 + x2\"; panel id/time variables are inferred from dataframe metadata";
+        errorlog "applyCSARDLFormula: formula must use \"y ~ x1 + x2\"; pass panel id/time variables through group_var and time_var";
         end;
     endif;
 
@@ -771,8 +776,8 @@ proc (1) = applyCSARDLFormula(data, formula);
         end;
     endif;
 
-    unit_var = _csardlInferPanelIDVar(data, "applyCSARDLFormula");
-    time_var = _csardlInferPanelTimeVar(data, "applyCSARDLFormula");
+    unit_var = _csardlResolvePanelIDVar(data, group_var, "applyCSARDLFormula");
+    time_var = _csardlResolvePanelTimeVar(data, time_var, "applyCSARDLFormula");
     y_var = lhs;
 
     remaining = strtrim(strsect(formula, tilde_pos + 1, strlen(formula)));
@@ -802,16 +807,20 @@ proc (1) = applyCSARDLFormula(data, formula);
         end;
     endif;
 
-    call _csardlCheckInferredTimeVar(time_var, y_var, xvars, "applyCSARDLFormula");
-    data = sortmc(data, unit_var $| time_var);
-
     colnames = lower(getcolnames(data));
     unit_idx = indsav(lower(unit_var), colnames);
+    time_idx = indsav(lower(time_var), colnames);
     y_idx = indsav(lower(y_var), colnames);
     x_idx = indsav(lower(xvars), colnames);
+    call _csardlCheckPanelTimeVar(time_var, y_var, xvars, "applyCSARDLFormula");
 
     if rows(unit_idx) == 0;
         errorlog "applyCSARDLFormula: unit variable not found: " $+ unit_var;
+        end;
+    endif;
+
+    if rows(time_idx) == 0;
+        errorlog "applyCSARDLFormula: time variable not found: " $+ time_var;
         end;
     endif;
 
@@ -825,9 +834,42 @@ proc (1) = applyCSARDLFormula(data, formula);
         end;
     endif;
 
+    data = sortmc(data, unit_var $| time_var);
     data = data[., unit_idx | y_idx | x_idx];
 
     retp(data);
+endp;
+
+proc (1) = _csardlDefaultOrSuppliedName(varname, default_name);
+    if strlen(varname) > 0;
+        retp(varname);
+    endif;
+
+    retp(default_name);
+endp;
+
+proc (1) = _csardlResolvePanelIDVar(data, group_var, caller);
+    if strlen(group_var) > 0;
+        retp(group_var);
+    endif;
+
+    retp(_csardlInferPanelIDVar(data, caller));
+endp;
+
+proc (1) = _csardlResolvePanelTimeVar(data, time_var, caller);
+    if strlen(time_var) > 0;
+        retp(time_var);
+    endif;
+
+    retp(_csardlInferPanelTimeVar(data, caller));
+endp;
+
+proc (1) = _csardlResolvePanelTimeVarQuiet(data, time_var, caller);
+    if strlen(time_var) > 0;
+        retp(time_var);
+    endif;
+
+    retp(_csardlInferPanelTimeVarQuiet(data, caller));
 endp;
 
 proc (1) = _csardlInferPanelIDVar(data, caller);
@@ -889,9 +931,9 @@ proc (1) = _csardlInferPanelTimeVarQuiet(data, caller);
     retp(varnames[idx[1]]);
 endp;
 
-proc (0) = _csardlCheckInferredTimeVar(time_var, y_var, xvars, caller);
+proc (0) = _csardlCheckPanelTimeVar(time_var, y_var, xvars, caller);
     if lower(time_var) $== lower(y_var) or not ismiss(indsav(lower(time_var), lower(xvars)));
-        errorlog caller $+ ": inferred panel time variable is also in the model formula; place a date/numeric time column before model variables";
+        errorlog caller $+ ": panel time variable is also in the model formula";
         end;
     endif;
 endp;

@@ -312,7 +312,6 @@ Exports QARDL-ECM matrix results to CSV files.
 - [Historical QARDL 3.0.0 Release Article](archive/QARDL_RELEASE_ARTICLE.md)
 - [Citation Guide](../CITATION.md)
 - [LLM Reference](../llms.txt)
-- [Release Checklist](../RELEASE_CHECKLIST.md)
 
 ## Reference
 

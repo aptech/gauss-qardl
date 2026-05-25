@@ -207,6 +207,8 @@ endfor;
 panel_time = vec(seqa(1, 1, TT)*ones(1, nunits));
 panel_df = asDF(panel[., 1]~panel_time~panel[., 2:4], "unit", "time", "y", "x1", "x2");
 panel_df = dftype(panel_df, META_TYPE_CATEGORY, "unit");
+panel_df_explicit = asDF((panel_time + 1000)~panel[., 1]~panel_time~panel[., 2:4],
+                         "row_order", "panel_id", "period", "y", "x1", "x2");
 
 struct csardlOut csa_matrix;
 struct csardlOut csa_formula;
@@ -224,6 +226,12 @@ call assert_true(rows(csa_formula.qvec) == 2 and csa_formula.nunits == nunits,
                  "CS-ARDL qvec/panel metadata");
 call assert_true(csa_formula.design_rank == csa_formula.design_cols and csa_formula.design_condition >= 1,
                  "CS-ARDL design rank/condition metadata");
+struct csardlOut csa_explicit;
+csa_explicit = csardl(panel_df_explicit, 1, 1, 1, formula, 0, "panel_id", "period");
+call assert_close(csa_explicit.bigbt, csa_matrix.bigbt, 1e-10,
+                  "CS-ARDL explicit group/time estimates differ");
+call assert_string(csa_explicit.unitvar, "panel_id", "CS-ARDL explicit group metadata");
+call assert_string(csa_explicit.timevar, "period", "CS-ARDL explicit time metadata");
 
 struct csardlECMOut cecm;
 cecm = csardlECM(panel_df, 1, 1, 1, formula, 0);
@@ -240,10 +248,11 @@ call assert_true(cecm.design_rank == cecm.design_cols and cecm.design_condition 
                  "CS-ARDL-ECM design rank/condition metadata");
 
 struct csardlDiagOut cdiag;
-cdiag = csardlDiagnostics(panel_df, 1, 1, 1, formula, 0);
+cdiag = csardlDiagnostics(panel_df_explicit, 1, 1, 1, formula, 0, "panel_id", "period");
 call assert_string(cdiag.model_family, "CS-ARDL-Diagnostics", "CS-ARDL diagnostics model_family metadata");
 call assert_string(cdiag.formula, formula, "CS-ARDL diagnostics formula metadata");
-call assert_string(cdiag.unitvar, "unit", "CS-ARDL diagnostics unit metadata");
+call assert_string(cdiag.unitvar, "panel_id", "CS-ARDL diagnostics unit metadata");
+call assert_string(cdiag.timevar, "period", "CS-ARDL diagnostics time metadata");
 call assert_true(cdiag.estimation_start == 2 and cdiag.estimation_end == TT,
                  "CS-ARDL diagnostics estimation range metadata");
 call assert_true(cdiag.cd_pairs == nunits*(nunits-1)/2 and cdiag.cd_pv >= 0 and cdiag.cd_pv <= 1,
@@ -253,11 +262,13 @@ call assert_true(cdiag.slope_hetero_df == (nunits-1)*2 and
                  "CS-ARDL diagnostics slope heterogeneity metadata");
 
 struct csardlFullOut cf;
-cf = csardlFull(panel_df, 1, 1, 1, formula, 0, "bic");
+cf = csardlFull(panel_df_explicit, 1, 1, 1, formula, 0, "bic", "panel_id", "period");
 call assert_string(cf.model_family, "CS-ARDL", "csardlFull model_family metadata");
 call assert_string(cf.formula, formula, "csardlFull formula metadata");
 call assert_string(cf.selection_criterion, "bic", "csardlFull criterion metadata");
 call assert_string(cf.csa.formula, formula, "csardlFull nested CS-ARDL formula metadata");
 call assert_string(cf.ecm.formula, formula, "csardlFull nested ECM formula metadata");
+call assert_string(cf.unitvar, "panel_id", "csardlFull explicit group metadata");
+call assert_string(cf.timevar, "period", "csardlFull explicit time metadata");
 
 print "schema_metadata.e: PASS";

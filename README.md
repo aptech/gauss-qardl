@@ -68,7 +68,8 @@ qfOut = qardlFull(macro, tau = tau,
 - Integrated workflows: `ardlFull`, `qardlFull`, `nardlFull`, `csardlFull`,
   with default maximum lag search bounds of `8` and `8`.
 - Formula dataframe support across ARDL-family workflows, including
-  GAUSS-style panel identifier inference for CS-ARDL dataframe formulas.
+  GAUSS-style panel identifier inference and explicit `group_var`/`time_var`
+  overrides for CS-ARDL dataframe formulas.
 - Lag selection with BIC, AIC, HQ, and HQC: `pqorder`, `pqorderRange`,
   `pqorderGrid`, `pqorderX`, `pqorderXGrid`.
 - ARDL bounds testing for Pesaran-Shin-Smith Cases I-V, with bundled
@@ -196,10 +197,6 @@ package directory:
 powershell -ExecutionPolicy Bypass -File scripts\run_release_verification.ps1 -InstallArtifact
 ```
 
-Release steps are tracked in [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
-The current release-readiness inventory and backlog are in
-[GOLD_STANDARD_TODO.md](GOLD_STANDARD_TODO.md).
-
 ## Citation
 
 If you use this library in academic, policy, consulting, or commercial
@@ -216,12 +213,7 @@ software archives can use to generate citation metadata.
 
 ## License
 
-The final public release license should be confirmed before publishing. The
-current package metadata lists MIT, but MIT permits redistribution and ports.
-If the intended policy is open GAUSS use while preventing direct translation or
-porting into other languages, use a reviewed source-available custom license
-instead of a standard OSI open-source license. See
-[docs/archive/LICENSING_OPTIONS.md](docs/archive/LICENSING_OPTIONS.md).
+The package license is listed in `package.json`.
 
 ## References
 

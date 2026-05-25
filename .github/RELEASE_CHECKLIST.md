@@ -9,7 +9,7 @@ Use this checklist before publishing a GAUSS QARDL release.
   preferred citation.
 - Finalize the public license before publishing. If the intended policy is open
   GAUSS use without direct ports to R, MATLAB, Python, or other languages,
-  review `docs/archive/LICENSING_OPTIONS.md`, add the final root `LICENSE`, and ensure
+  review `.github/LICENSING_OPTIONS.md`, add the final root `LICENSE`, and ensure
   `package.json` uses the same license identifier.
 
 ## Release Steps

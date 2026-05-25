@@ -181,7 +181,7 @@
   per-regressor distributed-lag orders.
 - `qardlFull(..., verbose = 1)` option; pass `0` to compute silently.
 - Metadata fields on `qardlOut`, `qardlECMOut`, and `qardlFullOut`.
-- `GOLD_STANDARD_TODO.md` release-readiness inventory and improvement backlog.
+- Internal release-readiness inventory and improvement backlog.
 
 ### Fixed
 - GAUSS 26 zero-column matrix failures in `ardlbounds`.

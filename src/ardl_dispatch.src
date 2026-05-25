@@ -6,12 +6,15 @@
 **
 **  Format:     fit = predictARDL(modelOut, data);
 **              fit = predictARDL(modelOut, data, formula);
+**              fit = predictARDL(modelOut, data, formula, group_var, time_var);
 **
 **  Input:      modelOut   ardlOut, qardlOut, nardlOut, or csardlOut.
 **              data       estimation data.
 **              formula    optional formula string.
+**              group_var  optional CS-ARDL panel group variable name.
+**              time_var   optional CS-ARDL panel time variable name.
 */
-proc (1) = predictARDL(modelOut, data, formula = "");
+proc (1) = predictARDL(modelOut, data, formula = "", group_var = "", time_var = "");
     if isStructType(modelOut, "ardlOut");
         retp(_predictARDLLevels(modelOut, data, formula));
     elseif isStructType(modelOut, "qardlOut");
@@ -19,7 +22,7 @@ proc (1) = predictARDL(modelOut, data, formula = "");
     elseif isStructType(modelOut, "nardlOut");
         retp(_predictNARDLLevels(modelOut, data, formula));
     elseif isStructType(modelOut, "csardlOut");
-        retp(_predictCSARDLLevels(modelOut, data, formula));
+        retp(_predictCSARDLLevels(modelOut, data, formula, group_var, time_var));
     endif;
 
     errorlog "predictARDL: unsupported model output structure";
@@ -34,6 +37,8 @@ endp;
 **
 **  Format:     fcst = forecastARDL(modelOut, data);
 **              fcst = forecastARDL(modelOut, data, h, formula, future_x);
+**              fcst = forecastARDL(modelOut, data, h, formula, future_x,
+**                                  group_var, time_var);
 **
 **  Input:      modelOut   ardlOut, qardlOut, nardlOut, or csardlOut.
 **              data       estimation data.
@@ -41,8 +46,10 @@ endp;
 **              formula    optional formula string.
 **              future_x   optional h x k future regressor path for ARDL,
 **                         QARDL, and NARDL outputs.
+**              group_var  optional CS-ARDL panel group variable name.
+**              time_var   optional CS-ARDL panel time variable name.
 */
-proc (1) = forecastARDL(modelOut, data, h = 1, formula = "", future_x = error(0));
+proc (1) = forecastARDL(modelOut, data, h = 1, formula = "", future_x = error(0), group_var = "", time_var = "");
     if isStructType(modelOut, "ardlOut");
         retp(_forecastARDLLevels(modelOut, data, h, formula, future_x));
     elseif isStructType(modelOut, "qardlOut");
@@ -50,7 +57,7 @@ proc (1) = forecastARDL(modelOut, data, h = 1, formula = "", future_x = error(0)
     elseif isStructType(modelOut, "nardlOut");
         retp(_forecastNARDLLevels(modelOut, data, h, formula, future_x));
     elseif isStructType(modelOut, "csardlOut");
-        retp(_forecastCSARDLLevels(modelOut, data, h, formula, future_x));
+        retp(_forecastCSARDLLevels(modelOut, data, h, formula, future_x, group_var, time_var));
     endif;
 
     errorlog "forecastARDL: unsupported model output structure";

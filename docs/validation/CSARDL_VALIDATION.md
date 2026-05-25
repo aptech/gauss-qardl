@@ -42,14 +42,15 @@ Dataframe formula input uses:
 "y ~ x1 + x2"
 ```
 
-The CS-ARDL formula workflow follows GAUSS panel-data conventions:
+The CS-ARDL formula workflow follows GAUSS panel-data conventions unless
+explicit `group_var` and `time_var` inputs are supplied:
 
 - the first string or category variable is the unit variable
 - the first date variable is the time variable
 - if no date variable exists, the first numeric variable is used as the time
   variable
 
-Formula input is sorted by the inferred unit/time variables before the
+Formula input is sorted by the resolved unit/time variables before the
 estimator matrix is built. The validation case verifies that coefficient,
 cross-sectional-average, and diagnostic outputs are invariant to input row
 ordering when the same balanced panel is identified by unit/time variables.
@@ -105,8 +106,8 @@ Expected-failure tests under `tests/invalid_input_cases/` verify that
 unbalanced matrix inputs, unstacked matrix inputs, and unbalanced formula
 diagnostic inputs stop with explicit panel-layout errors.
 
-Explicit unit/time arguments are also not part of the public CS-ARDL formula
-API. To choose identifiers, arrange and type the dataframe so the desired unit
+Explicit unit/time arguments are supported through `group_var` and `time_var`.
+If these are left as `""`, arrange and type the dataframe so the desired unit
 column is the first string/category variable and the desired time column is the
 first date variable, or first numeric variable if no date variable is present.
 

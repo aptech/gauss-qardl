@@ -198,7 +198,6 @@ Use these files for detailed help:
 - `docs/release/QARDL_3_1_0_RELEASE_ARTICLE.md`
 - `CITATION.md`
 - `CITATION.cff`
-- `docs/archive/LICENSING_OPTIONS.md`
 - `examples/`
 
 ## Citation

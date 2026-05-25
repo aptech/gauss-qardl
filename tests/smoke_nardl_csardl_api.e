@@ -55,6 +55,12 @@ cs_formula_data = applyCSARDLFormula(cs_formula_df, "y ~ x1");
 call assert_true(cols(cs_formula_data) == 3, "applyCSARDLFormula did not select unit, y, and regressors");
 call assert_close(cs_formula_data[., 2:3], { 1 10, 2 20, 3 30, 4 40 }, 1e-12,
                   "applyCSARDLFormula did not infer and sort panel id/time variables");
+cs_explicit_df = asDF(({ 99, 98, 97, 96 }~{ 2, 2, 1, 1 }~{ 2, 1, 2, 1 }~
+                       { 4, 3, 2, 1 }~{ 40, 30, 20, 10 }),
+                     "row_order", "panel_id", "period", "y", "x1");
+cs_explicit_data = applyCSARDLFormula(cs_explicit_df, "y ~ x1", "panel_id", "period");
+call assert_close(cs_explicit_data[., 2:3], { 1 10, 2 20, 3 30, 4 40 }, 1e-12,
+                  "applyCSARDLFormula explicit group/time variables changed ordering");
 
 /*
 ** NARDL deterministic checks.
@@ -174,11 +180,22 @@ panel_df = dftype(panel_df, META_TYPE_CATEGORY, "unit");
 cs_formula_panel = applyCSARDLFormula(panel_df, "y ~ x1 + x2");
 call assert_close(cs_formula_panel[., 2:4], panel[., 2:4], 1e-12,
                   "applyCSARDLFormula inferred panel formula changed y/x ordering");
+panel_df_explicit = asDF((panel_time + 1000)~panel[., 1]~panel_time~panel[., 2:4],
+                         "row_order", "panel_id", "period", "y", "x1", "x2");
+cs_explicit_panel = applyCSARDLFormula(panel_df_explicit, "y ~ x1 + x2", "panel_id", "period");
+call assert_close(cs_explicit_panel, panel, 1e-12,
+                  "applyCSARDLFormula explicit panel id/time variables changed data");
 
 struct csardlOut csaFormulaOut;
 csaFormulaOut = csardl(panel_df, 1, 1, 1, "y ~ x1 + x2", 0);
 call assert_close(csaFormulaOut.bigbt, csaOut.bigbt, 1e-10,
                   "csardl inferred panel formula output changed");
+struct csardlOut csaExplicitOut;
+csaExplicitOut = csardl(panel_df_explicit, 1, 1, 1, "y ~ x1 + x2", 0, "panel_id", "period");
+call assert_close(csaExplicitOut.bigbt, csaOut.bigbt, 1e-10,
+                  "csardl explicit panel id/time output changed");
+call assert_true(csaExplicitOut.unitvar $== "panel_id" and csaExplicitOut.timevar $== "period",
+                 "csardl explicit panel id/time metadata invalid");
 
 { cY, cX, csavg, unit_ids, unit_nobs } = _csardlBuildDesign(panel, 1, 1, 1);
 expected_cbt = _qardlSafeInv(cX'*cX, "smoke_csardl", "expected CSARDL moment matrix")*cX'*cY;

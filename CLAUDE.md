@@ -47,9 +47,8 @@ tests/
 docs/
   USAGE_GUIDE.md     # API choice, stacking, formula, bootstrap, QIRF, limitations
 package.json         # GAUSS package manifest (name: qardl, version: 3.1.0)
-GOLD_STANDARD_TODO.md # Release-readiness inventory and improvement backlog
 CHANGELOG.md         # Release notes
-RELEASE_CHECKLIST.md # Release validation steps
+.github/RELEASE_CHECKLIST.md # Release validation steps
 ```
 
 ## The QARDL model

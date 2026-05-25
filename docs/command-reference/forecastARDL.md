@@ -10,6 +10,7 @@ Computes recursive forecasts for estimated ARDL-family models.
 fcst = forecastARDL(modelOut, data);
 fcst = forecastARDL(modelOut, data, h, formula);
 fcst = forecastARDL(modelOut, data, h, formula, future_x);
+fcst = forecastARDL(modelOut, data, h, formula, future_x, group_var, time_var);
 ```
 
 ## Parameters
@@ -21,6 +22,10 @@ fcst = forecastARDL(modelOut, data, h, formula, future_x);
 - `formula` (*string*) - Optional formula string for dataframe input.
 - `future_x` (*matrix*) - Optional `h x k` future regressor path for ARDL,
   QARDL, and NARDL outputs.
+- `group_var` (*string*) - Optional CS-ARDL panel group variable name. The
+  default `""` uses GAUSS-style inference.
+- `time_var` (*string*) - Optional CS-ARDL panel time variable name. The
+  default `""` uses GAUSS-style inference.
 
 ## Returns
 
@@ -44,6 +49,8 @@ path.
 CS-ARDL `future_x` panel paths are not yet supported. Forecast intervals are
 not currently implemented for `forecastARDL`; see
 `docs/validation/FORECASTING_VALIDATION.md`.
+
+`group_var` and `time_var` are used only for CS-ARDL dataframe formula input.
 
 ## Examples
 

@@ -52,6 +52,8 @@ panel-data conventions:
 - the first date variable, or numeric fallback, is inferred as the time variable
 
 CS-ARDL sorts by the inferred or explicit panel identifiers before estimation.
+Explicit identifiers can be passed with `group_var` and `time_var`; leaving
+either as `""` keeps the GAUSS-style inference behavior.
 Balanced panels are supported; unbalanced panels are documented as unsupported.
 
 ## Lag Selection Defaults

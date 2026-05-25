@@ -10,6 +10,8 @@ cross-sectional dependence diagnostics for CS-ARDL models.
 ```gauss
 diagOut = csardlDiagnostics(data, ppp, qqq);
 diagOut = csardlDiagnostics(data, ppp, qqq, cs_lags, formula, print_results);
+diagOut = csardlDiagnostics(data, ppp, qqq, cs_lags, formula, print_results,
+                            group_var, time_var);
 ```
 
 ## Parameters
@@ -29,6 +31,12 @@ CS-ARDL infers the panel unit and time variables using GAUSS panel-data
 conventions. Formula strings do not include explicit unit/time terms.
 
 `print_results` controls whether `printCSARDLDiagnostics` is called.
+
+`group_var` is an optional panel group variable name for dataframe input. The
+default is `""`, which uses GAUSS-style inference.
+
+`time_var` is an optional panel time variable name for dataframe input. The
+default is `""`, which uses GAUSS-style inference.
 
 ## Returns
 

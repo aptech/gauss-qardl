@@ -105,7 +105,8 @@ fixed-order step-by-step NARDL script and a formula-based full-workflow script.
 
 The CS-ARDL workflow supports matrix panels and dataframe formula workflows.
 For dataframe inputs, CS-ARDL follows GAUSS panel-data conventions by inferring
-unit and time variables from column metadata. The diagnostic layer reports
+unit and time variables from column metadata, with optional explicit
+`group_var` and `time_var` overrides. The diagnostic layer reports
 pooled and mean-group long-run estimates, poolability Wald statistics,
 slope-heterogeneity tests, Pesaran CD, and average residual correlation.
 

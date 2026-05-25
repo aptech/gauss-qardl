@@ -9,6 +9,7 @@ Returns in-sample fitted values from an estimated ARDL-family model.
 ```gauss
 fit = predictARDL(modelOut, data);
 fit = predictARDL(modelOut, data, formula);
+fit = predictARDL(modelOut, data, formula, group_var, time_var);
 ```
 
 ## Parameters
@@ -17,6 +18,10 @@ fit = predictARDL(modelOut, data, formula);
   `csardl`, or the corresponding full workflow.
 - `data` (*matrix or dataframe*) - Data used to build the prediction design.
 - `formula` (*string*) - Optional formula string for dataframe input.
+- `group_var` (*string*) - Optional CS-ARDL panel group variable name. The
+  default `""` uses GAUSS-style inference.
+- `time_var` (*string*) - Optional CS-ARDL panel time variable name. The
+  default `""` uses GAUSS-style inference.
 
 ## Returns
 
@@ -28,6 +33,8 @@ fit = predictARDL(modelOut, data, formula);
 `predictARDL` infers the model family from the output structure and dispatches
 to the matching model-specific prediction logic. `predictQARDL` is preserved as
 a backward-compatible QARDL alias.
+
+`group_var` and `time_var` are used only for CS-ARDL dataframe formula input.
 
 ## Examples
 

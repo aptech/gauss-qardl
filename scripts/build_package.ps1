@@ -42,7 +42,6 @@ try {
         "CITATION.cff",
         "CITATION.md",
         "LICENSE",
-        "RELEASE_CHECKLIST.md",
         "llms.txt"
     )
 
