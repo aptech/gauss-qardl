@@ -230,14 +230,27 @@ analysis:
 1. This QARDL 3.1.0 software release article or repository citation metadata.
 2. Cho, Kim, and Shin (2015) for QARDL methodology.
 3. Pesaran, Shin, and Smith (2001) when using ARDL bounds testing.
-4. Appropriate NARDL, CS-ARDL, quantile regression, HAC, bootstrap, or panel
-   diagnostic sources when those tools are central to the analysis.
+4. Shin, Yu, and Greenwood-Nimmo (2014) when using NARDL workflows.
+5. Chudik and Pesaran (2015) when using CS-ARDL workflows.
+6. Chudik, Mohaddes, Pesaran, and Raissi (2016) when using CS-ARDL long-run
+   effect workflows.
+7. Appropriate quantile regression, HAC, bootstrap, or panel diagnostic
+   sources when those tools are central to the analysis.
 
 ## References
 
 - Cho, J. S., Kim, T.-H., and Shin, Y. (2015). Quantile cointegration in the
   autoregressive distributed-lag modeling framework. *Journal of Econometrics*,
   188(1), 281-300. https://doi.org/10.1016/j.jeconom.2015.05.003
+- Chudik, A., and Pesaran, M. H. (2015). Common correlated effects estimation
+  of heterogeneous dynamic panel data models with weakly exogenous regressors.
+  *Journal of Econometrics*, 188(2), 393-420.
+  https://doi.org/10.1016/j.jeconom.2015.03.007
+- Chudik, A., Mohaddes, K., Pesaran, M. H., and Raissi, M. (2016). Long-run
+  effects in large heterogeneous panel data models with cross-sectionally
+  correlated errors. In *Essays in Honor of Aman Ullah*, Advances in
+  Econometrics, 36, 85-135. Emerald.
+  https://doi.org/10.1108/S0731-905320160000036013
 - Koenker, R., and Bassett, G. Jr. (1978). Regression quantiles.
   *Econometrica*, 46(1), 33-50. https://www.jstor.org/stable/1913643
 - Kunsch, H. R. (1989). The jackknife and the bootstrap for general stationary
@@ -249,3 +262,8 @@ analysis:
 - Pesaran, M. H., Shin, Y., and Smith, R. J. (2001). Bounds testing approaches
   to the analysis of level relationships. *Journal of Applied Econometrics*,
   16(3), 289-326. https://doi.org/10.1002/jae.616
+- Shin, Y., Yu, B., and Greenwood-Nimmo, M. (2014). Modelling asymmetric
+  cointegration and dynamic multipliers in a nonlinear ARDL framework. In
+  *Festschrift in Honor of Peter Schmidt: Econometric Methods and
+  Applications*, 281-314. Springer.
+  https://doi.org/10.1007/978-1-4899-8008-3_9
