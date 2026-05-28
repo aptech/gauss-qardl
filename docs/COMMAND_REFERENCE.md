@@ -21,6 +21,7 @@ sections.
 
 - [ARDL-family output schema](developer/OUTPUT_SCHEMA.md)
 - [Prediction and forecast validation](validation/FORECASTING_VALIDATION.md)
+- [ARDL/NARDL R-package validation](validation/R_PACKAGE_VALIDATION.md)
 - [Performance and numerical reliability](validation/PERFORMANCE_NUMERICAL_RELIABILITY.md)
 - [Validation tolerances](validation/VALIDATION_TOLERANCES.md)
 

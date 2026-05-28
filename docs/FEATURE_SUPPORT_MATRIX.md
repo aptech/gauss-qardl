@@ -11,6 +11,7 @@ embedded in every estimator call.
 | ECM workflow | No standalone ECM | Yes | Yes | Yes |
 | Formula strings | Yes | Yes | Yes | Yes |
 | Automatic lag selection | Yes | Yes | Yes | Yes |
+| Explicit decomposed-variable / linear-control NARDL specs | Not applicable | Not applicable | Yes | Not applicable |
 | Default max `p`, `q` when omitted | 8, 8 | 8, 8 | 8, 8 | 8, 8 |
 | Unified prediction | Yes | Yes | Yes | Yes |
 | Unified point forecast | Yes | Yes | Yes | Yes |
@@ -22,6 +23,8 @@ embedded in every estimator call.
 | QIRF | No | Yes | No | No |
 | Dynamic multipliers | No | No | Yes | No |
 | Cross-sectional dependence diagnostics | No | No | No | Yes |
+| Pesaran CD / CD(p) | No | No | No | Yes |
+| Pesaran-Yamagata slope homogeneity | No | No | No | Yes |
 | Mean-group and poolability diagnostics | No | No | No | Yes |
 | Plot helpers | Limited | Yes | Yes where supported | Yes where supported |
 | Confidence-band plots | When intervals exist | Yes | Graceful fallback | Graceful fallback |
@@ -34,6 +37,7 @@ Related documentation:
 
 - `docs/guides/INFERENCE_INTERVALS.md`
 - `docs/validation/FORECASTING_VALIDATION.md`
+- `docs/validation/R_PACKAGE_VALIDATION.md`
 - `docs/guides/REPORTING_AND_PLOTTING.md`
 - `docs/validation/PUBLISHED_REPLICATIONS.md`
 - `docs/developer/OUTPUT_SCHEMA.md`

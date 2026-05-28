@@ -84,7 +84,8 @@ Estimates QARDL-ECM with per-regressor distributed-lag orders.
 [nardl](command-reference/nardl.md)
 
 Estimates nonlinear ARDL models with positive and negative partial-sum
-decompositions.
+decompositions, including optional decomposed-variable and linear-control
+specifications.
 
 [csardl](command-reference/csardl.md)
 
@@ -251,8 +252,8 @@ Computes time-series residual diagnostics for ARDL-family outputs.
 
 [csardlDiagnostics](command-reference/csardlDiagnostics.md)
 
-Computes optional CS-ARDL mean-group, poolability, heterogeneity, and
-cross-sectional dependence diagnostics.
+Computes optional CS-ARDL mean-group, poolability, Pesaran-Yamagata slope
+homogeneity, and Pesaran CD/CD(p) cross-sectional dependence diagnostics.
 
 [plotQARDL](command-reference/plotQARDL.md)
 
@@ -305,6 +306,7 @@ Exports QARDL-ECM matrix results to CSV files.
 - [Data Handling And Lag Alignment](guides/DATA_HANDLING.md)
 - [Inference Interval Support](guides/INFERENCE_INTERVALS.md)
 - [Reporting And Plotting Support](guides/REPORTING_AND_PLOTTING.md)
+- [ARDL/NARDL R-Package Validation](validation/R_PACKAGE_VALIDATION.md)
 - [Performance And Numerical Reliability](validation/PERFORMANCE_NUMERICAL_RELIABILITY.md)
 - [Validation Tolerances](validation/VALIDATION_TOLERANCES.md)
 - [Published QARDL Replication Notes](validation/PUBLISHED_REPLICATIONS.md)

@@ -36,7 +36,8 @@ public output structure.
 
 CS-ARDL panel residual diagnostics are not handled here because stacked-panel
 serial-correlation tests require unit-aware diagnostics. Use
-`csardlDiagnostics` for the current CS-ARDL mean-group and poolability layer.
+`csardlDiagnostics` for the current CS-ARDL mean-group, poolability,
+Pesaran-Yamagata, and Pesaran CD panel diagnostic layer.
 
 ## Examples
 

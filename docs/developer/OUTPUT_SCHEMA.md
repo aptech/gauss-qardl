@@ -31,8 +31,10 @@ where applicable:
   design.
 
 Lag metadata is stored in the existing scalar fields `p` and `q`, plus `qvec`
-where a per-regressor distributed-lag vector is available. Full workflows also
-store `pmax` and `qmax` for the search bounds.
+where a per-regressor distributed-lag vector is available. Explicit
+decomposition NARDL outputs also store `q_control` and `control_qvec` for
+linear-control lag blocks. Full workflows also store `pmax` and `qmax` for the
+search bounds.
 
 ## Model Output Map
 
@@ -43,15 +45,33 @@ store `pmax` and `qmax` for the search bounds.
 | `qardlOut` | QARDL | common metadata, `qvec`, `fitted`, `resid` | `fitted` and `resid` are `nobs x rows(tau)`. |
 | `qardlECMOut` | QARDL-ECM | common metadata, `qvec`, `bt`, `fitted`, `resid` | Full covariance is currently exposed through `alpha_cov` and `rho_cov`. |
 | `qardlFullOut` | QARDL | common workflow metadata, `pmax`, `qmax` | Propagates formula/name metadata to `.qa` and `.ecm`. |
-| `nardlOut` | NARDL | common metadata, `qvec`, row-index sample metadata | Includes positive/negative long-run decomposition fields. |
-| `nardlECMOut` | NARDL-ECM | common metadata, `qvec`, row-index sample metadata | Includes inherited asymmetric long-run tests. |
+| `nardlOut` | NARDL | common metadata, `qvec`, row-index sample metadata, `decomp_vars`, `control_vars` | Includes positive/negative long-run decomposition fields and optional linear-control long-run fields. |
+| `nardlECMOut` | NARDL-ECM | common metadata, `qvec`, row-index sample metadata, `decomp_vars`, `control_vars` | Includes inherited asymmetric long-run tests and optional linear-control coefficients. |
 | `nardlFullOut` | NARDL | common workflow metadata, `pmax`, `qmax` | Propagates formula/name metadata to `.na` and `.ecm`. |
 | `nardlDynMultOut` | NARDL-Dynamic-Multipliers | model family, formula, names, horizon | Contains `pos`, `neg`, and `asymmetry` multiplier matrices. |
 | `csardlOut` | CS-ARDL | common metadata, `unitvar`, `timevar`, `qvec` | `estimation_start/end` are within-unit time indices. |
 | `csardlECMOut` | CS-ARDL-ECM | common metadata, `unitvar`, `timevar`, `qvec` | Uses pooled long-run coefficients from CS-ARDL levels estimation. |
-| `csardlDiagOut` | CS-ARDL diagnostics | common metadata, `unitvar`, `timevar`, `qvec`, `cd_stat`, `slope_hetero_wald` | Covers mean-group, poolability, long-run slope heterogeneity, and Pesaran CD residual cross-sectional dependence diagnostics. |
+| `csardlDiagOut` | CS-ARDL diagnostics | common metadata, `unitvar`, `timevar`, `qvec`, `cd_stat`, `py_delta`, `py_lr_delta`, `slope_hetero_wald` | Covers mean-group, poolability, long-run slope heterogeneity, Pesaran-Yamagata slope homogeneity, and Pesaran CD residual cross-sectional dependence diagnostics. |
 | `csardlFullOut` | CS-ARDL | common workflow metadata, `unitvar`, `timevar`, `pmax`, `qmax` | Propagates formula/name metadata to `.csa` and `.ecm`. |
 | `ardlResidualDiagOut` | ARDL-family residual diagnostics | `source_model_family`, `nobs`, `nseries`, `lags`, `stability_available` | Covers Ljung-Box, Breusch-Pagan-style, Jarque-Bera, and residual CUSUM/CUSUMSQ diagnostics for time-series outputs. |
+
+## NARDL Decomposition Metadata
+
+`nardl` remains the compatibility path where every RHS regressor is
+decomposed. In that case `ndecomp == k`, `ncontrol == 0`, and `decomp_vars`
+matches `xvars`.
+
+`nardl`, `nardlECM`, and `nardlFull` support mixed models through optional
+decomposed-variable and control arguments. Their nested NARDL outputs store:
+
+- `decomp_vars`, `decomp_indices`, `ndecomp`: variables split into positive and
+  negative partial sums.
+- `control_vars`, `control_indices`, `ncontrol`: variables kept in linear form.
+- `q`: distributed-lag order for decomposed variables.
+- `q_control`: distributed-lag order for controls.
+- `beta_pos`, `beta_neg`: long-run coefficients for decomposed variables.
+- `beta_control`: long-run coefficients for controls.
+- `bigbt`: stacked as `[beta_pos; beta_neg; beta_control]`.
 
 ## Long-Run Extraction
 
@@ -124,8 +144,15 @@ current implementation.
 - CS-ARDL panel residual diagnostics are not part of `ardlResidualDiagOut`;
   unit-aware panel residual tests remain a panel-diagnostics milestone.
 - `csardlDiagOut.slope_hetero_*` fields store a mean-group-centered
-  Wald-style long-run slope heterogeneity diagnostic. Published finite-sample
-  validation remains pending.
+  Wald-style long-run slope heterogeneity diagnostic.
+- `csardlDiagOut.py_*` fields store Pesaran-Yamagata Delta diagnostics for
+  direct CS-ARDL dynamic slopes, excluding intercept and cross-sectional
+  average controls.
+- `csardlDiagOut.py_lr_*` fields store the corresponding long-run
+  Pesaran-Yamagata Delta diagnostics for CS-ARDL long-run coefficients.
+- `csardlDiagOut.cd_*` fields store Pesaran CD diagnostics and residual-pair
+  metadata. The default all-pairs CD uses `cd_order = -1`; fixed-order
+  `CD(p)` uses a positive `cd_order`.
 - `ardlResidualDiagOut` stability fields are residual-bridge CUSUM/CUSUMSQ
   checks. Full recursive-residual stability tests require design-matrix
   metadata that is not yet standardized across all outputs.

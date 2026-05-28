@@ -19,6 +19,8 @@ cfOut = csardlFull(data, pend, qend, cs_lags, formula, verbose, criterion,
                    group_var, time_var);
 diagOut = csardlDiagnostics(data, ppp, qqq, cs_lags, formula, print_results,
                             group_var, time_var);
+diagOut = csardlDiagnostics(data, ppp, qqq, cs_lags, formula, print_results,
+                            group_var, time_var, cd_order);
 ```
 
 ## Remarks
@@ -68,7 +70,9 @@ default maximum search bounds are `8` and `8`; `cs_lags` defaults to `0`.
 `csardlDiagnostics` estimates the same cross-sectionally augmented equation
 unit-by-unit, reports mean-group long-run coefficients, and computes a
 Wald-style poolability diagnostic against the pooled long-run coefficients
-plus a Pesaran CD residual cross-sectional dependence diagnostic.
+plus Pesaran-Yamagata slope homogeneity and Pesaran CD residual
+cross-sectional dependence diagnostics. The default CD calculation uses all
+unit pairs; pass a positive `cd_order` for fixed-order `CD(p)`.
 
 The current benchmark coverage uses deterministic synthetic datasets,
 including balanced-panel cross-sectional-average, lag-alignment, sorting, and

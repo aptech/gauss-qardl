@@ -1,3 +1,6 @@
+#ifndef QARDL_SDF_INCLUDED
+#define QARDL_SDF_INCLUDED
+
 struct ardlOut {
     // Standardized model metadata
     string model_family;
@@ -243,6 +246,8 @@ struct nardlOut {
     string formula;
     string depvar;
     string array xvars;
+    string array decomp_vars;
+    string array control_vars;
     string deterministic;
     string covariance_type;
     string selection_criterion;
@@ -256,22 +261,28 @@ struct nardlOut {
     // Lag orders used in estimation
     scalar p;
     scalar q;
+    scalar q_control;
 
-    // Per-regressor distributed-lag orders
+    // Per-regressor distributed-lag orders, in xvars order
     matrix qvec;
+    matrix control_qvec;
 
     // Effective estimation sample size after lag alignment
     scalar nobs;
 
-    // Number of original regressors
+    // Number of original regressors, decomposed variables, and controls
     scalar k;
+    scalar ndecomp;
+    scalar ncontrol;
+    matrix decomp_indices;
+    matrix control_indices;
 
     // Numerical diagnostics for the estimation design matrix
     scalar design_rank;
     scalar design_cols;
     scalar design_condition;
 
-    // Long-run positive and negative parameters stacked [beta_pos; beta_neg]
+    // Long-run parameters stacked [beta_pos; beta_neg; beta_control]
     matrix bigbt;
 
     // Delta-method covariance of the long-run parameter
@@ -304,9 +315,13 @@ struct nardlOut {
     // Model-specific long-run negative partial-sum coefficients
     matrix beta_neg;
 
+    // Model-specific long-run coefficients for linear controls
+    matrix beta_control;
+
     // Model-specific level coefficients before long-run normalization
     matrix theta_pos;
     matrix theta_neg;
+    matrix theta_control;
 
     // Long-run nonlinear asymmetry tests, one row per original regressor
     matrix asymmetry_wald;
@@ -332,6 +347,8 @@ struct nardlECMOut {
     string formula;
     string depvar;
     string array xvars;
+    string array decomp_vars;
+    string array control_vars;
     string deterministic;
     string covariance_type;
     string selection_criterion;
@@ -345,15 +362,21 @@ struct nardlECMOut {
     // Lag orders used in estimation
     scalar p;
     scalar q;
+    scalar q_control;
 
-    // Per-regressor distributed-lag orders
+    // Per-regressor distributed-lag orders, in xvars order
     matrix qvec;
+    matrix control_qvec;
 
     // Effective ECM sample size after lag alignment
     scalar nobs;
 
-    // Number of original regressors
+    // Number of original regressors, decomposed variables, and controls
     scalar k;
+    scalar ndecomp;
+    scalar ncontrol;
+    matrix decomp_indices;
+    matrix control_indices;
 
     // Numerical diagnostics for the ECM design matrix
     scalar design_rank;
@@ -363,6 +386,7 @@ struct nardlECMOut {
     // Long-run positive and negative coefficients from the levels estimator
     matrix beta_pos;
     matrix beta_neg;
+    matrix beta_control;
 
     // OLS speed of adjustment from the levels estimator
     matrix rho_ols;
@@ -657,11 +681,32 @@ struct csardlDiagOut {
     scalar slope_hetero_pv;
     scalar slope_hetero_df;
 
+    // Pesaran-Yamagata delta test for direct CS-ARDL slopes, excluding
+    // intercept and cross-sectional-average controls
+    scalar py_swamystat;
+    scalar py_delta;
+    scalar py_delta_pv;
+    scalar py_delta_adj;
+    scalar py_delta_adj_pv;
+    scalar py_k;
+
+    // Pesaran-Yamagata delta test applied to CS-ARDL long-run coefficients
+    scalar py_lr_swamystat;
+    scalar py_lr_delta;
+    scalar py_lr_delta_pv;
+    scalar py_lr_delta_adj;
+    scalar py_lr_delta_adj_pv;
+    scalar py_lr_k;
+
     // Pesaran CD cross-sectional dependence diagnostic for unit residuals
     scalar cd_stat;
     scalar cd_pv;
     scalar cd_pairs;
     scalar cd_avg_corr;
+    scalar cd_avg_abs_corr;
+    scalar cd_order;
+    scalar cd_min_t;
+    scalar cd_max_t;
 };
 
 struct ardlResidualDiagOut {
@@ -889,4 +934,5 @@ struct qirfOut {
     matrix boot_diag;
 };
 
+#endif
 

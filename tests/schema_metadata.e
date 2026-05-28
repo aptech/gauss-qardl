@@ -158,11 +158,21 @@ call assert_true(rows(na_formula.qvec) == 2 and rows(na_formula.fitted) == na_fo
                  "NARDL qvec/fitted metadata");
 call assert_true(na_formula.design_rank == na_formula.design_cols and na_formula.design_condition >= 1,
                  "NARDL design rank/condition metadata");
+struct nardlOut na_spec;
+na_spec = nardl(df, 1, 0, formula, 0, "x1", "x2", 1, 1);
+call assert_string(na_spec.model_family, "NARDL", "nardl optional spec model_family metadata");
+call assert_string(na_spec.formula, formula, "nardl optional spec formula metadata");
+call assert_true(na_spec.ndecomp == 1 and na_spec.ncontrol == 1 and
+                 rows(na_spec.beta_pos) == 1 and rows(na_spec.beta_control) == 1 and
+                 na_spec.decomp_vars[1] $== "x1" and na_spec.control_vars[1] $== "x2",
+                 "nardl optional spec decomp/control metadata");
+call assert_true(rows(na_spec.qvec) == 2 and na_spec.qvec[1] == 1 and na_spec.qvec[2] == 1,
+                 "nardl optional spec qvec metadata");
 struct nardlDynMultOut ndm;
-ndm = nardlDynamicMultipliers(na_formula, 3);
+ndm = nardlDynamicMultipliers(na_spec, 3);
 call assert_string(ndm.model_family, "NARDL-Dynamic-Multipliers", "NARDL multiplier model_family metadata");
 call assert_string(ndm.formula, formula, "NARDL multiplier formula metadata");
-call assert_true(ndm.horizon == 3 and rows(ndm.pos) == 4 and cols(ndm.neg) == 2,
+call assert_true(ndm.horizon == 3 and rows(ndm.pos) == 4 and cols(ndm.neg) == 1,
                  "NARDL multiplier shape metadata");
 
 struct nardlECMOut necm;
@@ -176,6 +186,11 @@ call assert_true(rows(necm.qvec) == 2 and rows(necm.fitted) == necm.nobs,
                  "NARDL-ECM qvec/fitted metadata");
 call assert_true(necm.design_rank == necm.design_cols and necm.design_condition >= 1,
                  "NARDL-ECM design rank/condition metadata");
+struct nardlECMOut necm_spec;
+necm_spec = nardlECM(df, 1, 0, formula, 0, "x1", "x2", 1, 1);
+call assert_true(necm_spec.ndecomp == 1 and necm_spec.ncontrol == 1 and
+                 rows(necm_spec.beta_control) == 1 and rows(necm_spec.qvec) == 2,
+                 "nardlECM optional spec decomp/control metadata");
 
 struct nardlFullOut nf;
 nf = nardlFull(df, 1, 1, formula, 0, "bic");
@@ -186,6 +201,10 @@ call assert_true(nf.pmax == 1 and nf.qmax == 1 and nf.sample_end == n,
                  "nardlFull search/sample metadata");
 call assert_string(nf.na.formula, formula, "nardlFull nested NARDL formula metadata");
 call assert_string(nf.ecm.formula, formula, "nardlFull nested ECM formula metadata");
+nf = nardlFull(df, 1, 1, formula, 0, "bic", "x1", "x2", 1);
+call assert_true(nf.na.ndecomp == 1 and nf.ecm.ncontrol == 1 and
+                 nf.na.decomp_vars[1] $== "x1" and nf.na.control_vars[1] $== "x2",
+                 "nardlFull optional spec metadata");
 
 nunits = 3;
 TT = 40;
@@ -260,6 +279,9 @@ call assert_true(cdiag.cd_pairs == nunits*(nunits-1)/2 and cdiag.cd_pv >= 0 and 
 call assert_true(cdiag.slope_hetero_df == (nunits-1)*2 and
                  cdiag.slope_hetero_pv >= 0 and cdiag.slope_hetero_pv <= 1,
                  "CS-ARDL diagnostics slope heterogeneity metadata");
+call assert_true(cdiag.py_k == 5 and cdiag.py_delta_pv >= 0 and cdiag.py_delta_pv <= 1 and
+                 cdiag.py_lr_k == 2 and cdiag.py_lr_delta_pv >= 0 and cdiag.py_lr_delta_pv <= 1,
+                 "CS-ARDL diagnostics Pesaran-Yamagata metadata");
 
 struct csardlFullOut cf;
 cf = csardlFull(panel_df_explicit, 1, 1, 1, formula, 0, "bic", "panel_id", "period");

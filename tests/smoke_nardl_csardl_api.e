@@ -116,6 +116,50 @@ call assert_true(rows(dmOut.pos) == 5 and cols(dmOut.pos) == naOut.k and
 call assert_close(dmOut.asymmetry, dmOut.pos - dmOut.neg, 1e-12,
                   "nardlDynamicMultipliers asymmetry calculation changed");
 
+/*
+** Explicit NARDL decomposition/control checks.  x1 is decomposed while x2
+** remains a linear control, matching the R-style decomp/control workflow.
+*/
+struct nardlOut nsOut;
+nsOut = nardl(nardl_data, 1, 0, print_results = 0, decomp_vars = "x1",
+              control_vars = "x2", q_decomp = 1, q_control = 1);
+{ nY, nX, npos, nneg } = _nardlBuildSpecDesign(nardl_data, 1, 1, { 1 }, { 2 }, 1);
+expected_bt = _qardlSafeInv(nX'*nX, "smoke_nardl_spec", "expected NARDL spec moment matrix")*nX'*nY;
+expected_resid = nY - nX*expected_bt;
+{ expected_cov, expected_sigma2 } = _nardlOLSCov(nX, expected_resid, "smoke_nardl_spec");
+expected_bigbt_cov = _nardlLongRunSpecCov(expected_bt, expected_cov, 1, 1, 1);
+expected_phi = expected_bt[5];
+expected_beta_pos = expected_bt[2] ./ (1 - expected_phi);
+expected_beta_neg = expected_bt[3] ./ (1 - expected_phi);
+expected_beta_control = expected_bt[4] ./ (1 - expected_phi);
+
+call assert_close(nsOut.bt, expected_bt, 1e-10, "nardl optional spec bt does not match explicit design");
+call assert_close(nsOut.bigbt, expected_beta_pos | expected_beta_neg | expected_beta_control, 1e-10,
+                  "nardl optional spec long-run coefficients changed");
+call assert_close(nsOut.bigbt_cov, expected_bigbt_cov, 1e-10,
+                  "nardl optional spec long-run covariance changed");
+call assert_true(nsOut.ndecomp == 1 and nsOut.ncontrol == 1 and nsOut.k == 2 and
+                 nsOut.decomp_vars[1] $== "x1" and nsOut.control_vars[1] $== "x2",
+                 "nardl optional spec metadata invalid");
+call assert_true(rows(nsOut.asymmetry_wald) == 1 and rows(nsOut.beta_control) == 1,
+                 "nardl optional spec asymmetry/control output shape invalid");
+call assert_close(predictNARDL(nsOut, nardl_data), nX*expected_bt, 1e-10,
+                  "predictNARDL optional spec output changed");
+call assert_true(rows(forecastNARDL(nsOut, nardl_data, 2)) == 2,
+                 "forecastNARDL optional spec output shape invalid");
+
+struct nardlOut nsAutoControl;
+nsAutoControl = nardl(nardl_data, 1, 1, "", 0, "x1", "", -1, 1);
+call assert_close(nsAutoControl.bt, nsOut.bt, 1e-10,
+                  "nardl automatic control complement changed");
+
+struct nardlECMOut nsECMOut;
+nsECMOut = nardlECM(nardl_data, 1, 0, print_results = 0, decomp_vars = "x1",
+                    control_vars = "x2", q_decomp = 1, q_control = 1);
+call assert_true(nsECMOut.ndecomp == 1 and nsECMOut.ncontrol == 1 and
+                 rows(nsECMOut.beta_control) == 1 and nsECMOut.sigma2 > 0,
+                 "nardlECM optional spec metadata invalid");
+
 struct nardlECMOut nECMOut;
 nECMOut = nardlECM(nardl_data, 1, 1, "", 0);
 call assert_true(nECMOut.nobs == n - 2 and nECMOut.k == 2,
@@ -132,6 +176,10 @@ call assert_true(nfOut.pst == nardl_grid[minindc(nardl_grid[., 3]), 1] and
                  nfOut.qst == nardl_grid[minindc(nardl_grid[., 3]), 2] and
                  nfOut.na.nobs == naOut.nobs,
                  "nardlFull metadata invalid");
+nfOut = nardlFull(nardl_data, 1, 1, "", 0, "bic", "x1", "x2", 1);
+call assert_true(nfOut.na.ndecomp == 1 and nfOut.na.ncontrol == 1 and
+                 nfOut.ecm.ndecomp == 1 and nfOut.ecm.ncontrol == 1,
+                 "nardlFull optional spec metadata invalid");
 
 rndseed 260511;
 n_default = 120;
@@ -236,8 +284,18 @@ call assert_true(diagOut.poolability_df == (nunits-1)*2 and
 call assert_true(diagOut.slope_hetero_df == (nunits-1)*2 and
                  diagOut.slope_hetero_pv >= 0 and diagOut.slope_hetero_pv <= 1,
                  "csardlDiagnostics slope heterogeneity statistic invalid");
+call assert_true(diagOut.py_k == 5 and diagOut.py_delta_pv >= 0 and
+                 diagOut.py_delta_pv <= 1 and diagOut.py_delta_adj_pv >= 0 and
+                 diagOut.py_delta_adj_pv <= 1,
+                 "csardlDiagnostics Pesaran-Yamagata statistic invalid");
+call assert_true(diagOut.py_lr_k == 2 and diagOut.py_lr_delta_pv >= 0 and
+                 diagOut.py_lr_delta_pv <= 1 and diagOut.py_lr_delta_adj_pv >= 0 and
+                 diagOut.py_lr_delta_adj_pv <= 1,
+                 "csardlDiagnostics long-run Pesaran-Yamagata statistic invalid");
 call assert_true(diagOut.cd_pairs == nunits*(nunits-1)/2 and
-                 diagOut.cd_pv >= 0 and diagOut.cd_pv <= 1,
+                 diagOut.cd_pv >= 0 and diagOut.cd_pv <= 1 and
+                 diagOut.cd_order == -1 and diagOut.cd_min_t == diagOut.unit_nobs and
+                 diagOut.cd_max_t == diagOut.unit_nobs,
                  "csardlDiagnostics CD statistic invalid");
 
 cs_fit = predictCSARDL(csaOut, panel);

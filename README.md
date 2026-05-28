@@ -60,7 +60,9 @@ qfOut = qardlFull(macro, tau = tau,
 - Two-step QARDL-ECM estimation: `qardlECM`, `qardlECMRobust`,
   `qardlECMHAC`, `qardlECMX`.
 - NARDL and CS-ARDL model families with levels, ECM, full-workflow,
-  print, prediction, and forecast hooks.
+  print, prediction, and forecast hooks. NARDL also supports explicit
+  decomposed-variable and linear-control specifications through optional
+  arguments on `nardl`, `nardlECM`, and `nardlFull`.
 - Unified `predictARDL` and `forecastARDL` dispatch for ARDL, QARDL, NARDL,
   and CS-ARDL outputs; `predictQARDL` and `forecastQARDL` remain available.
 - Direct estimator calls print GAUSS-style result tables by default, with a
@@ -74,6 +76,8 @@ qfOut = qardlFull(macro, tau = tau,
   `pqorderGrid`, `pqorderX`, `pqorderXGrid`.
 - ARDL bounds testing for Pesaran-Shin-Smith Cases I-V, with bundled
   asymptotic critical values and simulation critical-value APIs.
+- CS-ARDL panel diagnostics, including Pesaran CD/CD(p) and
+  Pesaran-Yamagata slope homogeneity tests.
 - Robust and Newey-West/Bartlett HAC covariance paths.
 - Cross-quantile Wald tests, p-value helpers, QIRF with bootstrap confidence
   bands, rolling estimation, block bootstrap confidence intervals,
@@ -117,6 +121,8 @@ style:
   cases, critical-value sources, model-family integration, and validation.
 - [Prediction and forecast validation](docs/validation/FORECASTING_VALIDATION.md):
   unified dispatch, future-regressor-path assumptions, and interval gaps.
+- [ARDL/NARDL R-package validation](docs/validation/R_PACKAGE_VALIDATION.md):
+  optional cross-implementation checks against the CRAN `ardl.nardl` package.
 - [Inference interval support](docs/guides/INFERENCE_INTERVALS.md): covariance,
   bootstrap interval, forecast interval, and simultaneous-band support.
 - [Reporting and plotting support](docs/guides/REPORTING_AND_PLOTTING.md): table
@@ -223,6 +229,11 @@ The package license is listed in `package.json`.
 - Pesaran, M. H., Shin, Y., and Smith, R. J. (2001). Bounds testing approaches
   to the analysis of level relationships. *Journal of Applied Econometrics*,
   16(3), 289-326. https://doi.org/10.1002/jae.616
+- Pesaran, M. H. (2004). General diagnostic tests for cross section dependence
+  in panels. *SSRN Electronic Journal*. https://doi.org/10.2139/ssrn.572504
+- Pesaran, M. H., and Yamagata, T. (2008). Testing slope homogeneity in large
+  panels. *Journal of Econometrics*, 142(1), 50-93.
+  https://doi.org/10.1016/j.jeconom.2007.05.010
 - Koenker, R., and Bassett, G. Jr. (1978). Regression quantiles.
   *Econometrica*, 46(1), 33-50. https://www.jstor.org/stable/1913643
 - Newey, W. K., and West, K. D. (1987). A simple, positive semi-definite,

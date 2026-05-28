@@ -56,13 +56,14 @@ print csaOut.bigbt;
 // Step 5: Print the standard formatted CS-ARDL coefficient table.
 printCSARDL(csaOut);
 
-// Step 6: Run the optional mean-group and poolability diagnostic layer.
+// Step 6: Run the optional mean-group and panel diagnostic layer.
 //         This reports unit-specific long-run coefficients, mean-group
 //         estimates, Wald-style checks, and Pesaran CD.
 struct csardlDiagOut diagOut;
 diagOut = csardlDiagnostics(panel, 1, 1, 1, "", 0);
 printCSARDLDiagnostics(diagOut);
 print "Slope heterogeneity p-value: " diagOut.slope_hetero_pv;
+print "Pesaran CD p-value: " diagOut.cd_pv;
 
 /*
 ** TODO: Add published-result CS-ARDL validation once exact DGP grids,

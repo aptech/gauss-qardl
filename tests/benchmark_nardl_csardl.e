@@ -103,6 +103,8 @@ call assert_true(csaOut.nunits == 12 and csaOut.nobs > 900,
 call assert_true(rows(diagOut.mean_group_bigbt) == 2 and
                  diagOut.poolability_pv >= 0 and diagOut.poolability_pv <= 1 and
                  diagOut.slope_hetero_pv >= 0 and diagOut.slope_hetero_pv <= 1 and
+                 diagOut.py_delta_pv >= 0 and diagOut.py_delta_pv <= 1 and
+                 diagOut.py_lr_delta_pv >= 0 and diagOut.py_lr_delta_pv <= 1 and
                  diagOut.cd_pv >= 0 and diagOut.cd_pv <= 1,
                  "CS-ARDL diagnostics benchmark output shape changed");
 
@@ -118,7 +120,11 @@ print "CS-ARDL poolability Wald, df, p-value:";
 print diagOut.poolability_wald~diagOut.poolability_df~diagOut.poolability_pv;
 print "CS-ARDL slope heterogeneity Wald, df, p-value:";
 print diagOut.slope_hetero_wald~diagOut.slope_hetero_df~diagOut.slope_hetero_pv;
-print "CS-ARDL Pesaran CD, p-value, average residual correlation:";
-print diagOut.cd_stat~diagOut.cd_pv~diagOut.cd_avg_corr;
+print "CS-ARDL Pesaran-Yamagata Delta, p-value, adjusted Delta, adjusted p-value:";
+print diagOut.py_delta~diagOut.py_delta_pv~diagOut.py_delta_adj~diagOut.py_delta_adj_pv;
+print "CS-ARDL long-run Pesaran-Yamagata Delta, p-value, adjusted Delta, adjusted p-value:";
+print diagOut.py_lr_delta~diagOut.py_lr_delta_pv~diagOut.py_lr_delta_adj~diagOut.py_lr_delta_adj_pv;
+print "CS-ARDL Pesaran CD, p-value, average and absolute residual correlations:";
+print diagOut.cd_stat~diagOut.cd_pv~diagOut.cd_avg_corr~diagOut.cd_avg_abs_corr;
 
 print "benchmark_nardl_csardl.e: PASS";

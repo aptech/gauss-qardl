@@ -1,4 +1,6 @@
+#ifndef QARDL_SDF_INCLUDED
 #include qardl.sdf
+#endif
 
 /*
 **> predictARDL
@@ -370,6 +372,7 @@ endp;
 proc (0) = _saveARDLTableNARDL(struct nardlOut naOut, fpath, table_format, precision, stars, ci_level);
     local fid, fmt, include_stars, include_ci, zcrit, ii;
     local se_beta, se_phi, z_beta, z_phi, pv_beta, pv_phi;
+    local ndecomp, ncontrol;
 
     { fid, fmt, include_stars, include_ci, zcrit } = _ardlTableOpen(fpath, table_format, precision, stars, ci_level, "saveARDLTable");
 
@@ -381,23 +384,36 @@ proc (0) = _saveARDLTableNARDL(struct nardlOut naOut, fpath, table_format, preci
     z_phi = naOut.phi ./ se_phi;
     pv_beta = 2*cdfnc(abs(z_beta));
     pv_phi = 2*cdfnc(abs(z_phi));
+    ndecomp = rows(naOut.beta_pos);
+    ncontrol = naOut.ncontrol;
 
     ii = 1;
-    do until ii > naOut.k;
-        call _ardlTableWriteRow(fid, fmt, naOut.model_family, "", "beta_pos_" $+ naOut.xvars[ii],
+    do until ii > ndecomp;
+        call _ardlTableWriteRow(fid, fmt, naOut.model_family, "", "beta_pos_" $+ naOut.decomp_vars[ii],
                                 naOut.beta_pos[ii], se_beta[ii], z_beta[ii], pv_beta[ii],
                                 include_stars, include_ci, zcrit, precision);
         ii = ii + 1;
     endo;
 
     ii = 1;
-    do until ii > naOut.k;
-        call _ardlTableWriteRow(fid, fmt, naOut.model_family, "", "beta_neg_" $+ naOut.xvars[ii],
-                                naOut.beta_neg[ii], se_beta[naOut.k+ii],
-                                z_beta[naOut.k+ii], pv_beta[naOut.k+ii],
+    do until ii > ndecomp;
+        call _ardlTableWriteRow(fid, fmt, naOut.model_family, "", "beta_neg_" $+ naOut.decomp_vars[ii],
+                                naOut.beta_neg[ii], se_beta[ndecomp+ii],
+                                z_beta[ndecomp+ii], pv_beta[ndecomp+ii],
                                 include_stars, include_ci, zcrit, precision);
         ii = ii + 1;
     endo;
+
+    if ncontrol > 0;
+        ii = 1;
+        do until ii > ncontrol;
+            call _ardlTableWriteRow(fid, fmt, naOut.model_family, "", "beta_control_" $+ naOut.control_vars[ii],
+                                    naOut.beta_control[ii], se_beta[2*ndecomp+ii],
+                                    z_beta[2*ndecomp+ii], pv_beta[2*ndecomp+ii],
+                                    include_stars, include_ci, zcrit, precision);
+            ii = ii + 1;
+        endo;
+    endif;
 
     ii = 1;
     do until ii > rows(naOut.phi);
@@ -420,21 +436,34 @@ endp;
 proc (0) = _saveARDLTableNARDLECM(struct nardlECMOut nECMOut, fpath, table_format, precision, stars, ci_level);
     local fid, fmt, include_stars, include_ci, zcrit, ii;
     local se_alpha, se_rho, z_alpha, z_rho, pv_alpha, pv_rho;
+    local ndecomp, ncontrol;
 
     { fid, fmt, include_stars, include_ci, zcrit } = _ardlTableOpen(fpath, table_format, precision, stars, ci_level, "saveARDLTable");
 
     call _ardlTableBegin(fid, fmt, include_stars, include_ci);
 
+    ndecomp = rows(nECMOut.beta_pos);
+    ncontrol = nECMOut.ncontrol;
     ii = 1;
-    do until ii > nECMOut.k;
-        call _ardlTableWriteRow(fid, fmt, nECMOut.model_family, "", "beta_pos_" $+ nECMOut.xvars[ii],
+    do until ii > ndecomp;
+        call _ardlTableWriteRow(fid, fmt, nECMOut.model_family, "", "beta_pos_" $+ nECMOut.decomp_vars[ii],
                                 nECMOut.beta_pos[ii], error(0), error(0), error(0),
                                 include_stars, include_ci, zcrit, precision);
-        call _ardlTableWriteRow(fid, fmt, nECMOut.model_family, "", "beta_neg_" $+ nECMOut.xvars[ii],
+        call _ardlTableWriteRow(fid, fmt, nECMOut.model_family, "", "beta_neg_" $+ nECMOut.decomp_vars[ii],
                                 nECMOut.beta_neg[ii], error(0), error(0), error(0),
                                 include_stars, include_ci, zcrit, precision);
         ii = ii + 1;
     endo;
+
+    if ncontrol > 0;
+        ii = 1;
+        do until ii > ncontrol;
+            call _ardlTableWriteRow(fid, fmt, nECMOut.model_family, "", "beta_control_" $+ nECMOut.control_vars[ii],
+                                    nECMOut.beta_control[ii], error(0), error(0), error(0),
+                                    include_stars, include_ci, zcrit, precision);
+            ii = ii + 1;
+        endo;
+    endif;
 
     se_alpha = sqrt(nECMOut.alpha_cov[1, 1]);
     se_rho = sqrt(nECMOut.rho_cov[1, 1]);

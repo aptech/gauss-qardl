@@ -64,6 +64,10 @@ for both is `""`, which uses the conventions above.
 The supplied path must have at least `h` rows and one column per regressor, and
 it cannot contain missing values.
 
+For NARDL outputs with explicit `decomp_vars` and `control_vars`, `future_x`
+is still supplied in the original RHS `xvars` order. Decomposed-variable and
+control blocks are rebuilt internally from that path.
+
 When `future_x` is omitted, supported forecast paths hold future regressor
 levels fixed at their last observed values.
 

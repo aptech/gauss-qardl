@@ -1,4 +1,6 @@
+#ifndef QARDL_SDF_INCLUDED
 #include qardl.sdf
+#endif
 
 /*
 **> wtestsym

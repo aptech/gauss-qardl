@@ -201,6 +201,25 @@ structures; `predictNARDL` and `forecastNARDL` remain available.
 `nardlDynamicMultipliers` computes the positive and negative adjustment paths
 implied by the estimated levels equation.
 
+Use optional `decomp_vars`, `control_vars`, and `q_control` arguments when
+only selected RHS variables should be decomposed and the remaining variables
+should enter as linear controls. Fixed-order `nardl` and `nardlECM` also
+accept `q_decomp` as a named alias for the decomposed-variable lag order:
+
+```gauss
+// x1 is decomposed into positive and negative partial sums; x2 is a control.
+naSpec = nardl(df, 2, 2, formula = "y ~ x1 + x2", print_results = 0,
+               decomp_vars = "x1", control_vars = "x2", q_control = 1);
+nECMSpec = nardlECM(df, 2, 2, formula = "y ~ x1 + x2", print_results = 0,
+                    decomp_vars = "x1", control_vars = "x2", q_control = 1);
+nfSpec = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
+                   "x1", "x2", 1);
+```
+
+If `control_vars` is `""`, all RHS variables not named in `decomp_vars` are
+treated as controls. The legacy `nardl(data, p, q)` shortcut still decomposes
+every RHS regressor.
+
 Use `csardlFull` for pooled cross-sectionally augmented ARDL panels:
 
 ```gauss
@@ -224,13 +243,22 @@ Unbalanced panels and missing panel cells are not currently supported; align or
 balance the panel before estimation. Formula strings do not include explicit
 unit/time terms. You can choose identifiers explicitly with `group_var` and
 `time_var`; leaving either as `""` uses the GAUSS panel-data convention.
-Use `csardlDiagnostics` for the optional mean-group, poolability, and
-cross-sectional dependence diagnostic layer:
+Use `csardlDiagnostics` for the optional mean-group, poolability,
+Pesaran-Yamagata slope homogeneity, and Pesaran CD cross-sectional dependence
+diagnostic layer:
 
 ```gauss
 diagOut = csardlDiagnostics(df_panel, cfOut.pst, cfOut.qst, cfOut.cs_lags,
                             "y ~ x1 + x2", 0, "country", "year");
 printCSARDLDiagnostics(diagOut);
+```
+
+The default `cd_order = -1` uses all residual pairs for Pesaran CD. Pass a
+positive final argument for fixed-order `CD(p)`:
+
+```gauss
+diagCD1 = csardlDiagnostics(df_panel, cfOut.pst, cfOut.qst, cfOut.cs_lags,
+                            "y ~ x1 + x2", 0, "country", "year", 1);
 ```
 
 ## Metadata
@@ -371,8 +399,9 @@ values, residuals, and residual variance fields.
 
 The standard CS-ARDL workflow currently includes pooled coefficient
 diagnostics, cross-sectional-average controls, fitted values, residuals,
-residual variance fields, and optional mean-group, poolability, and Pesaran CD
-residual cross-sectional dependence diagnostics.
+residual variance fields, and optional mean-group, poolability,
+Pesaran-Yamagata, and Pesaran CD residual cross-sectional dependence
+diagnostics.
 
 Bounds testing support is summarized in
 [BOUNDS_TESTING_SUPPORT.md](guides/BOUNDS_TESTING_SUPPORT.md). The legacy
@@ -454,4 +483,4 @@ applied inference.
 
 See the README references section for the full bibliography covering QARDL,
 ARDL bounds testing, quantile regression, HAC covariance, lag-selection
-criteria, and block/stationary bootstrap methods.
+criteria, block/stationary bootstrap methods, and panel diagnostics.

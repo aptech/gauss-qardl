@@ -209,7 +209,16 @@ call assert_close(diagOut.poolability_wald~diagOut.poolability_df~diagOut.poolab
 call assert_close(diagOut.slope_hetero_wald~diagOut.slope_hetero_df~diagOut.slope_hetero_pv,
                   read_expected("synthetic/diagnostics/csardl_slope_heterogeneity.csv"),
                   tol, "CS-ARDL slope heterogeneity diagnostic fixture changed");
-call assert_close(diagOut.cd_stat~diagOut.cd_pv~diagOut.cd_pairs~diagOut.cd_avg_corr,
+call assert_close(diagOut.py_swamystat~diagOut.py_delta~diagOut.py_delta_pv~
+                  diagOut.py_delta_adj~diagOut.py_delta_adj_pv~diagOut.py_k,
+                  read_expected("synthetic/diagnostics/csardl_pesaran_yamagata.csv"),
+                  tol, "CS-ARDL Pesaran-Yamagata diagnostic fixture changed");
+call assert_close(diagOut.py_lr_swamystat~diagOut.py_lr_delta~diagOut.py_lr_delta_pv~
+                  diagOut.py_lr_delta_adj~diagOut.py_lr_delta_adj_pv~diagOut.py_lr_k,
+                  read_expected("synthetic/diagnostics/csardl_pesaran_yamagata_longrun.csv"),
+                  tol, "CS-ARDL long-run Pesaran-Yamagata diagnostic fixture changed");
+call assert_close(diagOut.cd_stat~diagOut.cd_pv~diagOut.cd_pairs~diagOut.cd_avg_corr~
+                  diagOut.cd_avg_abs_corr~diagOut.cd_order~diagOut.cd_min_t~diagOut.cd_max_t,
                   read_expected("synthetic/diagnostics/csardl_cd.csv"),
                   tol, "CS-ARDL cross-sectional dependence diagnostic fixture changed");
 

@@ -249,6 +249,15 @@ dmOut = nardlDynamicMultipliers(naOut, 3);
 call assert_true(rows(dmOut.pos) == 4 and cols(dmOut.pos) == naOut.k and
                  rows(dmOut.neg) == 4 and cols(dmOut.asymmetry) == naOut.k,
                  "nardlDynamicMultipliers output changed");
+struct nardlOut nsOut;
+nsOut = nardl(nardl_df, 1, 0, "y ~ x1 + x2", 0, "x1", "x2", 1, 1);
+call assert_true(nsOut.ndecomp == 1 and nsOut.ncontrol == 1 and
+                 rows(nsOut.beta_control) == 1 and rows(predictARDL(nsOut, nardl_df)) == nsOut.nobs,
+                 "nardl optional spec public API output changed");
+struct nardlECMOut nsECMOut;
+nsECMOut = nardlECM(nardl_df, 1, 0, "y ~ x1 + x2", 0, "x1", "x2", 1, 1);
+call assert_true(nsECMOut.ndecomp == 1 and nsECMOut.ncontrol == 1 and nsECMOut.sigma2 > 0,
+                 "nardlECM optional spec public API output changed");
 
 struct nardlFullOut nfOut;
 nfOut = nardlFull(nardl_df, 1, 1, "y ~ x1 + x2", 0);
@@ -257,6 +266,9 @@ call assert_true(nfOut.pst == 1 and nfOut.qst >= 0 and rows(nfOut.na.beta_neg) =
 call assert_true(nfOut.model_family $== "NARDL" and nfOut.formula $== "y ~ x1 + x2" and
                  nfOut.na.formula $== "y ~ x1 + x2",
                  "nardlFull schema metadata changed");
+nfOut = nardlFull(nardl_df, 1, 1, "y ~ x1 + x2", 0, "bic", "x1", "x2", 1);
+call assert_true(nfOut.na.ndecomp == 1 and nfOut.ecm.ncontrol == 1,
+                 "nardlFull optional spec public API output changed");
 
 rndseed 260511;
 n_default = 120;
@@ -313,7 +325,9 @@ struct csardlDiagOut diagOut;
 diagOut = csardlDiagnostics(panel_df_explicit, 1, 1, 1, "y ~ x1 + x2", 0, "panel_id", "period");
 call assert_true(diagOut.poolability_df == 6 and diagOut.poolability_pv >= 0 and diagOut.poolability_pv <= 1 and
                  diagOut.cd_pairs == 6 and diagOut.cd_pv >= 0 and diagOut.cd_pv <= 1 and
-                 diagOut.slope_hetero_df == 6 and diagOut.slope_hetero_pv >= 0 and diagOut.slope_hetero_pv <= 1,
+                 diagOut.slope_hetero_df == 6 and diagOut.slope_hetero_pv >= 0 and diagOut.slope_hetero_pv <= 1 and
+                 diagOut.py_k == 5 and diagOut.py_delta_pv >= 0 and diagOut.py_delta_pv <= 1 and
+                 diagOut.py_lr_k == 2 and diagOut.py_lr_delta_pv >= 0 and diagOut.py_lr_delta_pv <= 1,
                  "csardlDiagnostics output changed");
 call assert_true(rows(forecastCSARDL(cfOut.csa, panel_df_explicit, 2, "y ~ x1 + x2",
                                      group_var = "panel_id", time_var = "period")) == 2,

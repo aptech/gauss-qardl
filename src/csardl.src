@@ -1,4 +1,6 @@
+#ifndef QARDL_SDF_INCLUDED
 #include qardl.sdf
+#endif
 
 /*
 **> csardl
@@ -336,19 +338,25 @@ endp;
 **              unit-by-unit, reports mean-group long-run coefficients, and
 **              computes a Wald-style poolability diagnostic for equality of
 **              unit long-run coefficients to the pooled CS-ARDL estimate,
-**              plus a mean-group-centered slope heterogeneity diagnostic.
+**              Pesaran-Yamagata delta tests for direct dynamic slopes and
+**              long-run coefficients, plus a mean-group-centered slope
+**              heterogeneity diagnostic.
 **
 **  Format:     diagOut = csardlDiagnostics(data, ppp, qqq);
 **              diagOut = csardlDiagnostics(data, ppp, qqq, cs_lags, formula,
-**                                         print_results, group_var, time_var);
+**                                         print_results, group_var, time_var,
+**                                         cd_order);
 */
-proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, formula = "", print_results = 1, group_var = "", time_var = "");
+proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, formula = "", print_results = 1, group_var = "", time_var = "", cd_order = -1);
     local unit_ids, T, nunits, k0, max_lag, n_param, unit_nobs;
     local ii, jj, Y_i, X_i, bt_i, resid_i, cov_i, sigma2_i, beta_i, beta_cov_i;
     local unit_bigbt, unit_phi, unit_bt, unit_sigma2, unit_resid, mean_group_bigbt, mean_group_se;
     local pooled_bigbt, poolability_wald, poolability_df, poolability_pv, diff, V_i;
     local slope_hetero_wald, slope_hetero_df, slope_hetero_pv;
-    local cd_stat, cd_pv, cd_pairs, cd_avg_corr;
+    local py_swamystat, py_delta, py_delta_pv, py_delta_adj, py_delta_adj_pv, py_k;
+    local py_lr_swamystat, py_lr_delta, py_lr_delta_pv, py_lr_delta_adj, py_lr_delta_adj_pv, py_lr_k;
+    local py_idx_start, py_idx_end, pooled_levels, levels_cov_i;
+    local cd_stat, cd_pv, cd_pairs, cd_avg_corr, cd_avg_abs_corr, cd_min_t, cd_max_t;
     local depvar, xvars, unitvar, timevar;
 
     { depvar, xvars, unitvar, timevar } = _csardlMetadataNames(data, formula, group_var, time_var);
@@ -361,6 +369,10 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
     max_lag = maxc(ppp|qqq|cs_lags);
     unit_nobs = T - max_lag;
     n_param = 1 + k0 + ppp + qqq*k0 + (cs_lags+1)*(k0+1);
+    py_k = k0 + ppp + qqq*k0;
+    py_lr_k = k0;
+    py_idx_start = 2;
+    py_idx_end = 1 + py_k;
 
     if nunits < 2;
         errorlog "csardlDiagnostics: at least two units are required for mean-group diagnostics";
@@ -371,10 +383,12 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
         errorlog "csardlDiagnostics: each unit must have more usable observations than regressors";
         end;
     endif;
+    call _csardlValidateCDOrder(cd_order, nunits, "csardlDiagnostics");
 
     struct csardlOut csaOut;
     csaOut = csardl(data, ppp, qqq, cs_lags, "", 0);
     pooled_bigbt = csaOut.bigbt;
+    pooled_levels = csaOut.bt[py_idx_start:py_idx_end];
 
     unit_bigbt = zeros(nunits, k0);
     unit_phi = zeros(nunits, ppp);
@@ -382,6 +396,7 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
     unit_sigma2 = zeros(nunits, 1);
     unit_resid = zeros(unit_nobs, nunits);
     poolability_wald = 0;
+    py_swamystat = 0;
 
     ii = 1;
     do until ii > nunits;
@@ -399,6 +414,11 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
         unit_bt[ii, .] = bt_i';
         unit_sigma2[ii] = sigma2_i;
         unit_resid[., ii] = resid_i;
+
+        diff = bt_i[py_idx_start:py_idx_end] - pooled_levels;
+        levels_cov_i = cov_i[py_idx_start:py_idx_end, py_idx_start:py_idx_end];
+        V_i = _qardlSafeInv(levels_cov_i, "csardlDiagnostics", "unit dynamic-slope covariance");
+        py_swamystat = py_swamystat + diff'*V_i*diff;
 
         diff = beta_i - pooled_bigbt;
         V_i = _qardlSafeInv(beta_cov_i, "csardlDiagnostics", "unit long-run covariance");
@@ -418,6 +438,13 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
 
     poolability_df = (nunits - 1)*k0;
     poolability_pv = cdfchic(poolability_wald, poolability_df);
+    py_lr_swamystat = poolability_wald;
+    { py_delta, py_delta_pv, py_delta_adj, py_delta_adj_pv } =
+        _csardlPesaranYamagataDelta(py_swamystat, nunits, unit_nobs, py_k,
+                                    "csardlDiagnostics", "dynamic slopes");
+    { py_lr_delta, py_lr_delta_pv, py_lr_delta_adj, py_lr_delta_adj_pv } =
+        _csardlPesaranYamagataDelta(py_lr_swamystat, nunits, unit_nobs, py_lr_k,
+                                    "csardlDiagnostics", "long-run slopes");
 
     slope_hetero_wald = 0;
     ii = 1;
@@ -436,7 +463,8 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
 
     slope_hetero_df = (nunits - 1)*k0;
     slope_hetero_pv = cdfchic(slope_hetero_wald, slope_hetero_df);
-    { cd_stat, cd_pv, cd_pairs, cd_avg_corr } = _csardlPesaranCD(unit_resid, "csardlDiagnostics");
+    { cd_stat, cd_pv, cd_pairs, cd_avg_corr, cd_avg_abs_corr, cd_min_t, cd_max_t } =
+        _csardlPesaranCDEx(unit_resid, cd_order, "csardlDiagnostics");
 
     struct csardlDiagOut diagOut;
     diagOut.model_family = "CS-ARDL-Diagnostics";
@@ -474,10 +502,26 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
     diagOut.slope_hetero_wald = slope_hetero_wald;
     diagOut.slope_hetero_pv = slope_hetero_pv;
     diagOut.slope_hetero_df = slope_hetero_df;
+    diagOut.py_swamystat = py_swamystat;
+    diagOut.py_delta = py_delta;
+    diagOut.py_delta_pv = py_delta_pv;
+    diagOut.py_delta_adj = py_delta_adj;
+    diagOut.py_delta_adj_pv = py_delta_adj_pv;
+    diagOut.py_k = py_k;
+    diagOut.py_lr_swamystat = py_lr_swamystat;
+    diagOut.py_lr_delta = py_lr_delta;
+    diagOut.py_lr_delta_pv = py_lr_delta_pv;
+    diagOut.py_lr_delta_adj = py_lr_delta_adj;
+    diagOut.py_lr_delta_adj_pv = py_lr_delta_adj_pv;
+    diagOut.py_lr_k = py_lr_k;
     diagOut.cd_stat = cd_stat;
     diagOut.cd_pv = cd_pv;
     diagOut.cd_pairs = cd_pairs;
     diagOut.cd_avg_corr = cd_avg_corr;
+    diagOut.cd_avg_abs_corr = cd_avg_abs_corr;
+    diagOut.cd_order = cd_order;
+    diagOut.cd_min_t = cd_min_t;
+    diagOut.cd_max_t = cd_max_t;
 
     if print_results;
         call printCSARDLDiagnostics(diagOut);
@@ -486,9 +530,63 @@ proc (struct csardlDiagOut) = csardlDiagnostics(data, ppp, qqq, cs_lags = 0, for
     retp(diagOut);
 endp;
 
+proc (0) = _csardlValidateCDOrder(cd_order, nunits, caller);
+    if rows(cd_order)*cols(cd_order) /= 1 or round(cd_order) /= cd_order or
+       (cd_order /= -1 and cd_order < 1);
+        errorlog caller $+ ": cd_order must be -1 for all pairs or a positive integer";
+        end;
+    endif;
+
+    if cd_order > 0 and cd_order >= nunits;
+        errorlog caller $+ ": cd_order must be less than the number of units";
+        end;
+    endif;
+endp;
+
+proc (4) = _csardlPesaranYamagataDelta(swamystat, nunits, unit_nobs, k0, caller, label);
+    local delta, delta_pv, delta_adj, delta_adj_pv, adj_var;
+
+    if rows(swamystat)*cols(swamystat) /= 1 or swamystat < 0 or scalmiss(swamystat);
+        errorlog caller $+ ": Pesaran-Yamagata " $+ label $+ " statistic must be nonnegative";
+        end;
+    endif;
+
+    if rows(k0)*cols(k0) /= 1 or k0 < 1 or round(k0) /= k0;
+        errorlog caller $+ ": Pesaran-Yamagata " $+ label $+ " k must be positive";
+        end;
+    endif;
+
+    if unit_nobs <= k0 + 1;
+        errorlog caller $+ ": Pesaran-Yamagata " $+ label $+ " requires unit observations greater than k + 1";
+        end;
+    endif;
+
+    delta = sqrt(nunits) * ((swamystat / nunits) - k0) / sqrt(2*k0);
+    delta_pv = 2*cdfnc(abs(delta));
+    adj_var = 2*k0*(unit_nobs - k0 - 1)/(unit_nobs + 1);
+    if adj_var <= 0;
+        errorlog caller $+ ": Pesaran-Yamagata " $+ label $+ " adjusted variance is not positive";
+        end;
+    endif;
+    delta_adj = sqrt(nunits) * ((swamystat / nunits) - k0) / sqrt(adj_var);
+    delta_adj_pv = 2*cdfnc(abs(delta_adj));
+
+    retp(delta, delta_pv, delta_adj, delta_adj_pv);
+endp;
+
 proc (4) = _csardlPesaranCD(unit_resid, caller);
-    local TT, nunits, ii, jj, ui, uj, denom, rho_ij, rho_sum, npairs;
-    local cd_stat, cd_pv, cd_avg_corr;
+    local cd_stat, cd_pv, cd_pairs, cd_avg_corr, cd_avg_abs_corr, cd_min_t, cd_max_t;
+
+    { cd_stat, cd_pv, cd_pairs, cd_avg_corr, cd_avg_abs_corr, cd_min_t, cd_max_t } =
+        _csardlPesaranCDEx(unit_resid, -1, caller);
+
+    retp(cd_stat, cd_pv, cd_pairs, cd_avg_corr);
+endp;
+
+proc (7) = _csardlPesaranCDEx(unit_resid, cd_order, caller);
+    local TT, nunits, ii, jj, ui, uj, pair, denom, rho_ij, rho_sum, weighted_rho_sum;
+    local abs_rho_sum, npairs, pair_t, cd_stat, cd_pv, cd_avg_corr, cd_avg_abs_corr;
+    local cd_min_t, cd_max_t;
 
     TT = rows(unit_resid);
     nunits = cols(unit_resid);
@@ -496,41 +594,65 @@ proc (4) = _csardlPesaranCD(unit_resid, caller);
         errorlog caller $+ ": at least two units are required for Pesaran CD diagnostics";
         end;
     endif;
+    call _csardlValidateCDOrder(cd_order, nunits, caller);
 
     rho_sum = 0;
+    weighted_rho_sum = 0;
+    abs_rho_sum = 0;
     npairs = 0;
+    cd_min_t = TT;
+    cd_max_t = 0;
     ii = 1;
     do until ii >= nunits;
-        ui = unit_resid[., ii] - meanc(unit_resid[., ii]);
         jj = ii + 1;
         do until jj > nunits;
-            uj = unit_resid[., jj] - meanc(unit_resid[., jj]);
-            denom = sqrt((ui'*ui) * (uj'*uj));
-            if denom <= 1e-14;
-                errorlog caller $+ ": unit residual variance is too small for Pesaran CD diagnostics";
-                end;
-            endif;
+            if cd_order == -1 or abs(jj - ii) <= cd_order;
+                pair = packr(unit_resid[., ii]~unit_resid[., jj]);
+                pair_t = rows(pair);
+                if pair_t < 2;
+                    errorlog caller $+ ": at least two common observations are required for each Pesaran CD residual pair";
+                    end;
+                endif;
 
-            rho_ij = (ui'*uj) / denom;
-            rho_sum = rho_sum + rho_ij;
-            npairs = npairs + 1;
+                ui = pair[., 1] - meanc(pair[., 1]);
+                uj = pair[., 2] - meanc(pair[., 2]);
+                denom = sqrt((ui'*ui) * (uj'*uj));
+                if denom <= 1e-14;
+                    errorlog caller $+ ": unit residual variance is too small for Pesaran CD diagnostics";
+                    end;
+                endif;
+
+                rho_ij = (ui'*uj) / denom;
+                rho_sum = rho_sum + rho_ij;
+                weighted_rho_sum = weighted_rho_sum + sqrt(pair_t)*rho_ij;
+                abs_rho_sum = abs_rho_sum + abs(rho_ij);
+                npairs = npairs + 1;
+                cd_min_t = minc(cd_min_t|pair_t);
+                cd_max_t = maxc(cd_max_t|pair_t);
+            endif;
             jj = jj + 1;
         endo;
         ii = ii + 1;
     endo;
 
+    if npairs < 1;
+        errorlog caller $+ ": no unit pairs are available for Pesaran CD diagnostics";
+        end;
+    endif;
+
     cd_avg_corr = rho_sum / npairs;
-    cd_stat = sqrt((2 * TT) / (nunits * (nunits - 1))) * rho_sum;
+    cd_avg_abs_corr = abs_rho_sum / npairs;
+    cd_stat = weighted_rho_sum / sqrt(npairs);
     cd_pv = 2 * cdfnc(abs(cd_stat));
 
-    retp(cd_stat, cd_pv, npairs, cd_avg_corr);
+    retp(cd_stat, cd_pv, npairs, cd_avg_corr, cd_avg_abs_corr, cd_min_t, cd_max_t);
 endp;
 
 /*
 **> printCSARDLDiagnostics
 **
-**  Purpose:    Print CS-ARDL mean-group, poolability, slope heterogeneity,
-**              and CD diagnostics.
+**  Purpose:    Print CS-ARDL mean-group, poolability, Pesaran-Yamagata
+**              slope homogeneity, and Pesaran CD diagnostics.
 */
 proc (0) = printCSARDLDiagnostics(struct csardlDiagOut diagOut);
     local ii;
@@ -575,12 +697,36 @@ proc (0) = printCSARDLDiagnostics(struct csardlDiagOut diagOut);
             diagOut.slope_hetero_pv,
             _qardlSignifStars(diagOut.slope_hetero_pv));
     sprintf("%-25s%13.6f    %-8s%8.0f %12.6f    %-3s",
+            "PY Delta:",
+            diagOut.py_delta, "k:", diagOut.py_k,
+            diagOut.py_delta_pv,
+            _qardlSignifStars(diagOut.py_delta_pv));
+    sprintf("%-25s%13.6f    %-8s%8.0f %12.6f    %-3s",
+            "PY Delta adj.:",
+            diagOut.py_delta_adj, "k:", diagOut.py_k,
+            diagOut.py_delta_adj_pv,
+            _qardlSignifStars(diagOut.py_delta_adj_pv));
+    sprintf("%-25s%13.6f    %-8s%8.0f %12.6f    %-3s",
+            "PY LR Delta:",
+            diagOut.py_lr_delta, "k:", diagOut.py_lr_k,
+            diagOut.py_lr_delta_pv,
+            _qardlSignifStars(diagOut.py_lr_delta_pv));
+    sprintf("%-25s%13.6f    %-8s%8.0f %12.6f    %-3s",
+            "PY LR Delta adj.:",
+            diagOut.py_lr_delta_adj, "k:", diagOut.py_lr_k,
+            diagOut.py_lr_delta_adj_pv,
+            _qardlSignifStars(diagOut.py_lr_delta_adj_pv));
+    sprintf("%-25s%13.6f    %-8s%8.0f %12.6f    %-3s",
             "Pesaran CD:",
             diagOut.cd_stat, "pairs:", diagOut.cd_pairs,
             diagOut.cd_pv,
             _qardlSignifStars(diagOut.cd_pv));
     print "Average residual";
     sprintf("%-25s%13.6f", "correlation:", diagOut.cd_avg_corr);
+    sprintf("%-25s%13.6f", "abs correlation:", diagOut.cd_avg_abs_corr);
+    sprintf("%-25s%13.0f    %-8s%8.0f", "CD order:", diagOut.cd_order,
+            "min T:", diagOut.cd_min_t);
+    sprintf("%-25s%13.0f", "max T:", diagOut.cd_max_t);
     print eq_line;
     print note;
 endp;

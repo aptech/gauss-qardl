@@ -15,13 +15,16 @@ coverage, and release-verification tooling.
 - Added NARDL and CS-ARDL model families, including levels and ECM estimators,
   lag selection, print helpers, formula workflows, prediction/forecast hooks,
   diagnostics, output structures, and source smoke tests.
+- Added explicit NARDL decomposed-variable and linear-control specifications
+  through optional arguments on `nardl`, `nardlECM`, and `nardlFull` while
+  preserving the legacy all-RHS-decomposed `nardl` shortcut.
 - Added unified `predictARDL` and `forecastARDL` dispatch across ARDL, QARDL,
   NARDL, and CS-ARDL outputs.
 - Preserved backward-compatible `predictQARDL` and `forecastQARDL` wrappers.
 - Added ARDL-family residual diagnostics for serial correlation,
   heteroskedasticity, normality, CUSUM, and CUSUMSQ where supported.
-- Added CS-ARDL Pesaran CD, mean-group, poolability Wald, and long-run slope
-  heterogeneity diagnostics.
+- Added CS-ARDL Pesaran CD/CD(p), Pesaran-Yamagata slope homogeneity,
+  mean-group, poolability Wald, and long-run slope heterogeneity diagnostics.
 - Added `ardlLongRun` for extracting stored long-run coefficients and
   covariance matrices across supported model families.
 - Added generic coefficient-table export helpers: `saveARDLTable`,
@@ -63,8 +66,8 @@ coverage, and release-verification tooling.
 - Added ARDL bounds-test support and validation for Pesaran-Shin-Smith Cases
   I-V, including fixed-seed simulation critical-value fixtures.
 - Added CS-ARDL validation for balanced panels, cross-sectional averages, lag
-  alignment, formula row-order invariance, and mean-group/poolability
-  diagnostics.
+  alignment, formula row-order invariance, mean-group/poolability diagnostics,
+  Pesaran-Yamagata diagnostics, and Pesaran CD/CD(p) diagnostics.
 - Added numerical-reliability, invalid-input, rank-deficiency, missing-data,
   malformed-forecast, unbalanced-panel, and performance smoke coverage.
 - Added release artifact tooling:

@@ -1,4 +1,6 @@
+#ifndef QARDL_SDF_INCLUDED
 #include qardl.sdf
+#endif
 
 /*
 **> nardl
@@ -8,83 +10,166 @@
 **
 **  Format:     naOut = nardl(data, ppp, qqq);
 **              naOut = nardl(data, ppp, qqq, formula, print_results);
+**              naOut = nardl(data, ppp, qqq, formula, print_results,
+**                            decomp_vars, control_vars, q_decomp, q_control);
 **
 **  Input:      data      matrix or dataframe. Matrix order is [y, x1, x2, ...].
 **              ppp       scalar, AR lag order.
 **              qqq       scalar, distributed-lag order for partial-sum changes.
 **              formula   optional Wilkinson formula, e.g. "y ~ x1 + x2".
+**              decomp_vars optional string array of RHS variables to decompose.
+**              control_vars optional string array of RHS variables to keep
+**                           linear. Empty means complement of decomp_vars.
+**              q_decomp optional alias for the decomposed-variable lag order.
+**                       If omitted, qqq is used.
+**              q_control optional distributed-lag order for controls.
 **
 **  Output:     naOut     struct nardlOut.
 */
-proc (struct nardlOut) = nardl(data, ppp, qqq, formula = "", print_results = 1);
-    local Y, ONEX, x_pos, x_neg, bt, denom, k0, phi_start;
-    local theta_pos, theta_neg, phi, beta_pos, beta_neg;
+proc (struct nardlOut) = nardl(data, ppp, qqq, formula = "", print_results = 1,
+                              decomp_vars = "", control_vars = "",
+                              q_decomp = -1, q_control = 0);
+    local q_eff;
+    struct nardlOut naOut;
+
+    q_eff = qqq;
+    if q_decomp >= 0;
+        q_eff = q_decomp;
+    endif;
+
+    naOut = _nardlEstimateLevels(data, ppp, q_eff, formula, print_results,
+                                 decomp_vars, control_vars, q_control,
+                                 "nardl", "none");
+    retp(naOut);
+endp;
+
+/*
+** Internal NARDL levels estimator shared by nardl() and nardlFull().
+*/
+proc (struct nardlOut) = _nardlEstimateLevels(data, ppp, q_decomp, formula,
+                                             print_results, decomp_vars,
+                                             control_vars, q_control, caller,
+                                             selection_criterion);
+    local Y, ONEX, x_pos, x_neg, bt, denom, k0, ndecomp, ncontrol;
+    local decomp_idx, control_idx, decomp_names, control_names;
+    local theta_pos, theta_neg, theta_control, phi, beta_pos, beta_neg, beta_control;
+    local theta_neg_start, theta_control_start, phi_start;
     local fitted, resid, coef_cov, sigma2, bigbt_cov, phi_cov, gamma_cov;
     local asym_wald, asym_pv, sr_wald, sr_pv, bounds_fstat;
-    local depvar, xvars;
+    local depvar, xvars, qvec;
 
     { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
     data = applyNARDLFormula(data, formula);
-    call _nardlValidateEstimatorInputs(data, ppp, qqq, "nardl");
+    k0 = cols(data) - 1;
 
-    { Y, ONEX, x_pos, x_neg } = _nardlBuildDesign(data, ppp, qqq);
-    call _qardlCheckFullColumnRank(ONEX, "nardl", "levels design matrix");
+    { decomp_idx, control_idx, decomp_names, control_names } =
+        _nardlResolveSpecSelectors(xvars, decomp_vars, control_vars, caller);
+    ndecomp = rows(decomp_idx);
+    ncontrol = _nardlIndexCount(control_idx);
+    if ncontrol == 0;
+        q_control = 0;
+    endif;
 
-    bt = _qardlSafeInv(ONEX'*ONEX, "nardl", "levels moment matrix")*ONEX'*Y;
+    call _nardlValidateSpecInputs(data, ppp, q_decomp, q_control,
+                                  decomp_idx, control_idx, caller);
+
+    { Y, ONEX, x_pos, x_neg } =
+        _nardlBuildSpecDesign(data, ppp, q_decomp, decomp_idx, control_idx, q_control);
+    call _qardlCheckFullColumnRank(ONEX, caller, "levels design matrix");
+
+    bt = _qardlSafeInv(ONEX'*ONEX, caller, "levels moment matrix")*ONEX'*Y;
     fitted = ONEX*bt;
     resid = Y - fitted;
-    { coef_cov, sigma2 } = _nardlOLSCov(ONEX, resid, "nardl");
+    { coef_cov, sigma2 } = _nardlOLSCov(ONEX, resid, caller);
 
-    k0 = cols(data) - 1;
-    theta_pos = bt[2:1+k0];
-    theta_neg = bt[2+k0:1+2*k0];
-    phi_start = 2 + 2*k0;
+    theta_neg_start = 2 + ndecomp;
+    theta_control_start = 2 + 2*ndecomp;
+    phi_start = theta_control_start + ncontrol;
+
+    theta_pos = bt[2:1+ndecomp];
+    theta_neg = bt[theta_neg_start:theta_neg_start+ndecomp-1];
+    if ncontrol > 0;
+        theta_control = bt[theta_control_start:theta_control_start+ncontrol-1];
+    else;
+        theta_control = error(0);
+    endif;
     phi = bt[phi_start:phi_start+ppp-1];
     denom = 1 - sumc(phi);
 
     beta_pos = theta_pos ./ denom;
     beta_neg = theta_neg ./ denom;
+    if ncontrol > 0;
+        beta_control = theta_control ./ denom;
+    else;
+        beta_control = error(0);
+    endif;
 
-    bigbt_cov = _nardlLongRunCov(bt, coef_cov, ppp, qqq, k0);
+    bigbt_cov = _nardlLongRunSpecCov(bt, coef_cov, ppp, ndecomp, ncontrol);
     phi_cov = coef_cov[phi_start:phi_start+ppp-1, phi_start:phi_start+ppp-1];
-    gamma_cov = coef_cov[2:1+2*k0, 2:1+2*k0];
+    gamma_cov = coef_cov[2:phi_start-1, 2:phi_start-1];
     { asym_wald, asym_pv } = _nardlLongRunAsymmetry(beta_pos, beta_neg, bigbt_cov);
-    { sr_wald, sr_pv } = _nardlShortRunAsymmetry(bt, coef_cov, ppp, qqq, k0);
-    bounds_fstat = _nardlBoundsFstat(data, ppp, qqq);
+    { sr_wald, sr_pv } = _nardlShortRunAsymmetrySpec(bt, coef_cov, ppp,
+                                                     q_decomp, ndecomp, ncontrol);
+    bounds_fstat = _nardlBoundsFstatForSelectors(data, ppp, q_decomp,
+                                                 decomp_idx, control_idx,
+                                                 q_control, caller);
+    qvec = _nardlQVecForSelectors(k0, decomp_idx, control_idx, q_decomp,
+                                  q_control);
 
     struct nardlOut naOut;
     naOut.model_family = "NARDL";
     naOut.formula = formula;
     naOut.depvar = depvar;
     naOut.xvars = xvars;
+    naOut.decomp_vars = decomp_names;
+    naOut.control_vars = control_names;
     naOut.deterministic = "constant";
     naOut.covariance_type = "ols";
-    naOut.selection_criterion = "none";
+    naOut.selection_criterion = selection_criterion;
     naOut.sample_start = 1;
     naOut.sample_end = rows(data);
     naOut.estimation_start = rows(data) - rows(Y) + 1;
     naOut.estimation_end = rows(data);
     naOut.p = ppp;
-    naOut.q = qqq;
-    naOut.qvec = qqq*ones(k0, 1);
+    naOut.q = q_decomp;
+    naOut.q_control = q_control;
+    naOut.qvec = qvec;
+    if ncontrol > 0;
+        naOut.control_qvec = q_control*ones(ncontrol, 1);
+    else;
+        naOut.control_qvec = error(0);
+    endif;
     naOut.nobs = rows(Y);
     naOut.k = k0;
+    naOut.ndecomp = ndecomp;
+    naOut.ncontrol = ncontrol;
+    naOut.decomp_indices = decomp_idx;
+    naOut.control_indices = control_idx;
     naOut.design_rank = rank(ONEX);
     naOut.design_cols = cols(ONEX);
     naOut.design_condition = sqrt(_qardlConditionNumber(ONEX'ONEX));
-    naOut.bigbt = beta_pos | beta_neg;
+    if ncontrol > 0;
+        naOut.bigbt = beta_pos | beta_neg | beta_control;
+    else;
+        naOut.bigbt = beta_pos | beta_neg;
+    endif;
     naOut.bigbt_cov = bigbt_cov;
     naOut.phi = phi;
     naOut.phi_cov = phi_cov;
     naOut.gamma = theta_pos | theta_neg;
+    if ncontrol > 0;
+        naOut.gamma = naOut.gamma | theta_control;
+    endif;
     naOut.gamma_cov = gamma_cov;
     naOut.alpha = bt[1];
     naOut.rho = -(1 - sumc(phi));
     naOut.bt = bt;
     naOut.beta_pos = beta_pos;
     naOut.beta_neg = beta_neg;
+    naOut.beta_control = beta_control;
     naOut.theta_pos = theta_pos;
     naOut.theta_neg = theta_neg;
+    naOut.theta_control = theta_control;
     naOut.asymmetry_wald = asym_wald;
     naOut.asymmetry_pv = asym_pv;
     naOut.short_run_wald = sr_wald;
@@ -110,47 +195,93 @@ endp;
 **              lagged error-correction term, lagged Dy terms, and positive
 **              and negative partial-sum change terms.
 */
-proc (struct nardlECMOut) = nardlECM(data, ppp, qqq, formula = "", print_results = 1);
-    local Y_ecm, ONEX_ecm, bt_ecm, fitted, resid, coef_cov, sigma2;
-    local depvar, xvars;
+proc (struct nardlECMOut) = nardlECM(data, ppp, qqq, formula = "",
+                                    print_results = 1, decomp_vars = "",
+                                    control_vars = "", q_decomp = -1,
+                                    q_control = 0);
+    local q_eff;
+    struct nardlECMOut nECMOut;
 
+    q_eff = qqq;
+    if q_decomp >= 0;
+        q_eff = q_decomp;
+    endif;
+
+    nECMOut = _nardlEstimateECM(data, ppp, q_eff, formula, print_results,
+                                decomp_vars, control_vars, q_control,
+                                "nardlECM", "none");
+    retp(nECMOut);
+endp;
+
+/*
+** Internal NARDL-ECM estimator shared by nardlECM() and nardlFull().
+*/
+proc (struct nardlECMOut) = _nardlEstimateECM(data, ppp, q_decomp, formula,
+                                             print_results, decomp_vars,
+                                             control_vars, q_control, caller,
+                                             selection_criterion);
+    local Y_ecm, ONEX_ecm, bt_ecm, fitted, resid, coef_cov, sigma2;
+    local depvar, xvars, decomp_idx, control_idx, decomp_names, control_names;
+    local raw_data;
+
+    raw_data = data;
     { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
     data = applyNARDLFormula(data, formula);
-    call _nardlValidateEstimatorInputs(data, ppp, qqq, "nardlECM");
+    { decomp_idx, control_idx, decomp_names, control_names } =
+        _nardlResolveSpecSelectors(xvars, decomp_vars, control_vars, caller);
+    if _nardlIndexCount(control_idx) == 0;
+        q_control = 0;
+    endif;
+    call _nardlValidateSpecInputs(data, ppp, q_decomp, q_control,
+                                  decomp_idx, control_idx, caller);
 
     struct nardlOut naOut;
-    naOut = nardl(data, ppp, qqq, "", 0);
+    naOut = _nardlEstimateLevels(raw_data, ppp, q_decomp, formula, 0,
+                                 decomp_vars, control_vars, q_control,
+                                 caller, selection_criterion);
 
-    { Y_ecm, ONEX_ecm } = _nardlBuildECMDesign(data, ppp, qqq, naOut.beta_pos, naOut.beta_neg);
-    call _qardlCheckFullColumnRank(ONEX_ecm, "nardlECM", "ECM design matrix");
+    { Y_ecm, ONEX_ecm } =
+        _nardlBuildSpecECMDesign(data, ppp, q_decomp, decomp_idx, control_idx,
+                                 q_control, naOut.beta_pos, naOut.beta_neg,
+                                 naOut.beta_control);
+    call _qardlCheckFullColumnRank(ONEX_ecm, caller, "ECM design matrix");
 
-    bt_ecm = _qardlSafeInv(ONEX_ecm'*ONEX_ecm, "nardlECM", "ECM moment matrix")*ONEX_ecm'*Y_ecm;
+    bt_ecm = _qardlSafeInv(ONEX_ecm'*ONEX_ecm, caller, "ECM moment matrix")*ONEX_ecm'*Y_ecm;
     fitted = ONEX_ecm*bt_ecm;
     resid = Y_ecm - fitted;
-    { coef_cov, sigma2 } = _nardlOLSCov(ONEX_ecm, resid, "nardlECM");
+    { coef_cov, sigma2 } = _nardlOLSCov(ONEX_ecm, resid, caller);
 
     struct nardlECMOut nECMOut;
     nECMOut.model_family = "NARDL-ECM";
     nECMOut.formula = formula;
     nECMOut.depvar = depvar;
     nECMOut.xvars = xvars;
+    nECMOut.decomp_vars = decomp_names;
+    nECMOut.control_vars = control_names;
     nECMOut.deterministic = "constant";
     nECMOut.covariance_type = "ols";
-    nECMOut.selection_criterion = "none";
+    nECMOut.selection_criterion = selection_criterion;
     nECMOut.sample_start = 1;
     nECMOut.sample_end = rows(data);
     nECMOut.estimation_start = rows(data) - rows(Y_ecm) + 1;
     nECMOut.estimation_end = rows(data);
     nECMOut.p = ppp;
-    nECMOut.q = qqq;
-    nECMOut.qvec = qqq*ones(cols(data) - 1, 1);
+    nECMOut.q = q_decomp;
+    nECMOut.q_control = q_control;
+    nECMOut.qvec = naOut.qvec;
+    nECMOut.control_qvec = naOut.control_qvec;
     nECMOut.nobs = rows(Y_ecm);
-    nECMOut.k = cols(data) - 1;
+    nECMOut.k = naOut.k;
+    nECMOut.ndecomp = naOut.ndecomp;
+    nECMOut.ncontrol = naOut.ncontrol;
+    nECMOut.decomp_indices = naOut.decomp_indices;
+    nECMOut.control_indices = naOut.control_indices;
     nECMOut.design_rank = rank(ONEX_ecm);
     nECMOut.design_cols = cols(ONEX_ecm);
     nECMOut.design_condition = sqrt(_qardlConditionNumber(ONEX_ecm'ONEX_ecm));
     nECMOut.beta_pos = naOut.beta_pos;
     nECMOut.beta_neg = naOut.beta_neg;
+    nECMOut.beta_control = naOut.beta_control;
     nECMOut.rho_ols = naOut.rho;
     nECMOut.alpha = bt_ecm[1];
     nECMOut.rho = bt_ecm[2];
@@ -178,19 +309,36 @@ endp;
 **              selection followed by levels and ECM estimation.
 **
 **  Format:     nfOut = nardlFull(data);
-**              nfOut = nardlFull(data, pend, qend, formula, verbose, criterion);
+**              nfOut = nardlFull(data, pend, qend, formula, verbose, criterion,
+**                                decomp_vars, control_vars, q_control);
 **
 **  Note:       If omitted, pend and qend default to 8.
 */
-proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "", verbose = 1, criterion = "bic");
-    local pst, qst, depvar, xvars;
+proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "",
+                                      verbose = 1, criterion = "bic",
+                                      decomp_vars = "", control_vars = "",
+                                      q_control = 0);
+    local pst, qst, depvar, xvars, raw_data, grid, idx;
+    local decomp_idx, control_idx, decomp_names, control_names;
 
     call _qardlValidateLagScalar(pend, "nardlFull: pend");
     call _qardlValidateLagScalarZero(qend, "nardlFull: qend");
+    call _qardlValidateLagScalarZero(q_control, "nardlFull: q_control");
+    call _qardlValidateICCriterion(criterion, "nardlFull");
 
+    raw_data = data;
     { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
     data = applyNARDLFormula(data, formula);
-    { pst, qst } = nardlOrder(data, pend, qend, criterion);
+    { decomp_idx, control_idx, decomp_names, control_names } =
+        _nardlResolveSpecSelectors(xvars, decomp_vars, control_vars, "nardlFull");
+    if _nardlIndexCount(control_idx) == 0;
+        q_control = 0;
+    endif;
+    grid = _nardlOrderGridSpec(data, pend, qend, criterion, decomp_idx,
+                               control_idx, q_control, "nardlFull");
+    idx = minindc(grid[., 3]);
+    pst = grid[idx, 1];
+    qst = grid[idx, 2];
 
     if verbose;
         sprintf("nardlFull: %s-selected p = %d, q = %d", upper(criterion), pst, qst);
@@ -211,16 +359,12 @@ proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "", v
     nfOut.pst = pst;
     nfOut.qst = qst;
     nfOut.nobs = rows(data);
-    nfOut.na = nardl(data, pst, qst, "", 0);
-    nfOut.ecm = nardlECM(data, pst, qst, "", 0);
-    nfOut.na.formula = formula;
-    nfOut.na.depvar = depvar;
-    nfOut.na.xvars = xvars;
-    nfOut.na.selection_criterion = criterion;
-    nfOut.ecm.formula = formula;
-    nfOut.ecm.depvar = depvar;
-    nfOut.ecm.xvars = xvars;
-    nfOut.ecm.selection_criterion = criterion;
+    nfOut.na = _nardlEstimateLevels(raw_data, pst, qst, formula, 0,
+                                    decomp_vars, control_vars, q_control,
+                                    "nardlFull", criterion);
+    nfOut.ecm = _nardlEstimateECM(raw_data, pst, qst, formula, 0,
+                                  decomp_vars, control_vars, q_control,
+                                  "nardlFull", criterion);
 
     if verbose;
         call printNARDL(nfOut.na);
@@ -274,6 +418,35 @@ proc (1) = nardlOrderGrid(data, pend = 8, qend = 8, criterion = "bic");
     retp(grid);
 endp;
 
+proc (1) = _nardlOrderGridSpec(data, pend, qend, criterion, decomp_idx,
+                               control_idx, q_control, caller);
+    local p, q, grid, row, ic;
+
+    call _qardlValidateLagScalar(pend, caller $+ ": pend");
+    call _qardlValidateLagScalarZero(qend, caller $+ ": qend");
+    call _qardlValidateLagScalarZero(q_control, caller $+ ": q_control");
+    criterion = lower(criterion);
+    call _qardlValidateICCriterion(criterion, caller);
+
+    grid = zeros(pend*(qend+1), 3);
+    row = 1;
+    p = 1;
+    do until p > pend;
+        q = 0;
+        do until q > qend;
+            ic = _nardlICMeanSpecUnchecked(data, p, q, q_control,
+                                           decomp_idx, control_idx,
+                                           criterion, caller);
+            grid[row, .] = p~q~ic;
+            row = row + 1;
+            q = q + 1;
+        endo;
+        p = p + 1;
+    endo;
+
+    retp(grid);
+endp;
+
 /*
 **> nardlICMean
 **
@@ -310,6 +483,36 @@ proc (1) = _nardlICMeanUnchecked(data, ppp, qqq, criterion, caller);
     retp(ic);
 endp;
 
+proc (1) = _nardlICMeanSpecUnchecked(data, ppp, q_decomp, q_control,
+                                     decomp_idx, control_idx, criterion,
+                                     caller);
+    local Y, ONEX, x_pos, x_neg, bt, resid, N, K, s2, ic;
+
+    call _nardlValidateSpecInputs(data, ppp, q_decomp, q_control,
+                                  decomp_idx, control_idx, caller);
+
+    { Y, ONEX, x_pos, x_neg } =
+        _nardlBuildSpecDesign(data, ppp, q_decomp, decomp_idx, control_idx,
+                              q_control);
+    call _qardlCheckFullColumnRank(ONEX, caller, "levels design matrix");
+
+    bt = _qardlSafeInv(ONEX'*ONEX, caller, "levels moment matrix")*ONEX'*Y;
+    resid = Y - ONEX*bt;
+    N = rows(Y);
+    K = cols(ONEX);
+    s2 = (resid'*resid) / N;
+
+    if criterion $== "aic";
+        ic = ln(s2) + 2*K/N;
+    elseif criterion $== "hq" or criterion $== "hqc";
+        ic = ln(s2) + 2*K*ln(ln(N))/N;
+    else;
+        ic = ln(s2) + K*ln(N)/N;
+    endif;
+
+    retp(ic);
+endp;
+
 /*
 **> printNARDL
 **
@@ -318,6 +521,7 @@ endp;
 proc (0) = printNARDL(struct nardlOut naOut);
     local ii, se_beta, se_phi, z_beta, z_phi, pv_beta, pv_phi;
     local header, asym_header, note, table_width, eq_line, dash_line, name;
+    local ndecomp, ncontrol;
 
     se_beta = sqrt(diag(naOut.bigbt_cov));
     se_phi = sqrt(diag(naOut.phi_cov));
@@ -325,6 +529,8 @@ proc (0) = printNARDL(struct nardlOut naOut);
     z_phi = naOut.phi ./ se_phi;
     pv_beta = 2*cdfnc(abs(z_beta));
     pv_phi = 2*cdfnc(abs(z_phi));
+    ndecomp = rows(naOut.beta_pos);
+    ncontrol = naOut.ncontrol;
 
     header = "Name                          Coeff.     Std. Err.       z-value        P>|z|  Sig.";
     asym_header = "Name                       statistic       p-value  Sig.";
@@ -338,8 +544,13 @@ proc (0) = printNARDL(struct nardlOut naOut);
     print eq_line;
     sprintf("%-26s%12.0f        %-26s%12.0f", "No. of obs:", naOut.nobs,
             "No. regressors:", naOut.k);
+    sprintf("%-26s%12.0f        %-26s%12.0f", "Decomposed vars:", ndecomp,
+            "Controls:", ncontrol);
     sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", naOut.p,
             "DL lags (q):", naOut.q);
+    if ncontrol > 0;
+        sprintf("%-26s%12.0f", "Control DL lags:", naOut.q_control);
+    endif;
     sprintf("%-26s%12.4f", "Bounds F-stat:", naOut.bounds_fstat);
     print "Covariance: " $+ naOut.covariance_type;
     print dash_line;
@@ -347,8 +558,8 @@ proc (0) = printNARDL(struct nardlOut naOut);
     print dash_line;
 
     ii = 1;
-    do until ii > naOut.k;
-        name = "  beta_pos_x" $+ ntos(ii);
+    do until ii > ndecomp;
+        name = "  beta_pos_" $+ naOut.decomp_vars[ii];
         sprintf("%-22s%14.6f%14.6f%14.6f%13.6f%6s",
                 name, naOut.beta_pos[ii], se_beta[ii], z_beta[ii], pv_beta[ii],
                 _qardlSignifStars(pv_beta[ii]));
@@ -356,14 +567,26 @@ proc (0) = printNARDL(struct nardlOut naOut);
     endo;
 
     ii = 1;
-    do until ii > naOut.k;
-        name = "  beta_neg_x" $+ ntos(ii);
+    do until ii > ndecomp;
+        name = "  beta_neg_" $+ naOut.decomp_vars[ii];
         sprintf("%-22s%14.6f%14.6f%14.6f%13.6f%6s",
-                name, naOut.beta_neg[ii], se_beta[naOut.k+ii],
-                z_beta[naOut.k+ii], pv_beta[naOut.k+ii],
-                _qardlSignifStars(pv_beta[naOut.k+ii]));
+                name, naOut.beta_neg[ii], se_beta[ndecomp+ii],
+                z_beta[ndecomp+ii], pv_beta[ndecomp+ii],
+                _qardlSignifStars(pv_beta[ndecomp+ii]));
         ii = ii + 1;
     endo;
+
+    if ncontrol > 0;
+        ii = 1;
+        do until ii > ncontrol;
+            name = "  beta_control_" $+ naOut.control_vars[ii];
+            sprintf("%-22s%14.6f%14.6f%14.6f%13.6f%6s",
+                    name, naOut.beta_control[ii], se_beta[2*ndecomp+ii],
+                    z_beta[2*ndecomp+ii], pv_beta[2*ndecomp+ii],
+                    _qardlSignifStars(pv_beta[2*ndecomp+ii]));
+            ii = ii + 1;
+        endo;
+    endif;
 
     ii = 1;
     do until ii > rows(naOut.phi);
@@ -380,7 +603,7 @@ proc (0) = printNARDL(struct nardlOut naOut);
     print asym_header;
     ii = 1;
     do until ii > rows(naOut.asymmetry_wald);
-        name = "  x" $+ ntos(ii);
+        name = "  " $+ naOut.decomp_vars[ii];
         sprintf("%-22s%14.6f%14.6f%6s",
                 name, naOut.asymmetry_wald[ii], naOut.asymmetry_pv[ii],
                 _qardlSignifStars(naOut.asymmetry_pv[ii]));
@@ -445,8 +668,19 @@ endp;
 proc (1) = _predictNARDLLevels(struct nardlOut naOut, data, formula = "");
     local Y, ONEX, x_pos, x_neg;
 
+    if strlen(formula) == 0 and strlen(naOut.formula) > 0;
+        formula = naOut.formula;
+    endif;
+
     data = applyNARDLFormula(data, formula);
-    { Y, ONEX, x_pos, x_neg } = _nardlBuildDesign(data, naOut.p, naOut.q);
+    if naOut.ncontrol > 0 or naOut.ndecomp /= naOut.k;
+        { Y, ONEX, x_pos, x_neg } =
+            _nardlBuildSpecDesign(data, naOut.p, naOut.q,
+                                  naOut.decomp_indices, naOut.control_indices,
+                                  naOut.q_control);
+    else;
+        { Y, ONEX, x_pos, x_neg } = _nardlBuildDesign(data, naOut.p, naOut.q);
+    endif;
     retp(ONEX*naOut.bt);
 endp;
 
@@ -463,17 +697,32 @@ endp;
 proc (1) = _forecastNARDLLevels(struct nardlOut naOut, data, h = 1, formula = "", future_x = error(0));
     local yy, xx, xfuture, xall, yall, x_pos, x_neg, dx_pos, dx_neg;
     local out, ii, jj, kk, yhat, row_idx, xrow, y_lags;
-    local dx_pos_lags, dx_neg_lags, col_idx, y_placeholder;
+    local dx_pos_lags, dx_neg_lags, dx_ctrl_lags, col_idx, y_placeholder;
+    local x_ctrl, dx_ctrl, ndecomp, ncontrol;
 
     call _qardlValidateLagScalar(h, "forecastNARDL: h");
+    if strlen(formula) == 0 and strlen(naOut.formula) > 0;
+        formula = naOut.formula;
+    endif;
     data = applyNARDLFormula(data, formula);
     yy = data[., 1];
     xx = data[., 2:cols(data)];
     xfuture = _ardlFutureXOrHoldLast(xx, h, naOut.k, future_x, "forecastNARDL");
     xall = xx|xfuture;
     y_placeholder = zeros(rows(xall), 1);
-    { x_pos, x_neg, dx_pos, dx_neg } = _nardlPartialSumsWithDiffs(y_placeholder~xall);
+    if naOut.ncontrol > 0 or naOut.ndecomp /= naOut.k;
+        { x_pos, x_neg, dx_pos, dx_neg } =
+            _nardlPartialSumsWithDiffs(y_placeholder~xall[., naOut.decomp_indices]);
+        if naOut.ncontrol > 0;
+            x_ctrl = xall[., naOut.control_indices];
+            dx_ctrl = _nardlDiffMatrix(x_ctrl);
+        endif;
+    else;
+        { x_pos, x_neg, dx_pos, dx_neg } = _nardlPartialSumsWithDiffs(y_placeholder~xall);
+    endif;
     yall = yy|zeros(h, 1);
+    ndecomp = rows(naOut.beta_pos);
+    ncontrol = naOut.ncontrol;
 
     out = zeros(h, 1);
     ii = 1;
@@ -486,13 +735,17 @@ proc (1) = _forecastNARDLLevels(struct nardlOut naOut, data, h = 1, formula = ""
             jj = jj + 1;
         endo;
 
-        xrow = ones(1, 1)~x_pos[row_idx, .]~x_neg[row_idx, .]~y_lags;
+        xrow = ones(1, 1)~x_pos[row_idx, .]~x_neg[row_idx, .];
+        if ncontrol > 0;
+            xrow = xrow~x_ctrl[row_idx, .];
+        endif;
+        xrow = xrow~y_lags;
 
         if naOut.q > 0;
-            dx_pos_lags = zeros(1, naOut.q*naOut.k);
-            dx_neg_lags = zeros(1, naOut.q*naOut.k);
+            dx_pos_lags = zeros(1, naOut.q*ndecomp);
+            dx_neg_lags = zeros(1, naOut.q*ndecomp);
             kk = 1;
-            do until kk > naOut.k;
+            do until kk > ndecomp;
                 jj = 0;
                 do until jj > naOut.q-1;
                     col_idx = (kk-1)*naOut.q + jj + 1;
@@ -503,6 +756,21 @@ proc (1) = _forecastNARDLLevels(struct nardlOut naOut, data, h = 1, formula = ""
                 kk = kk + 1;
             endo;
             xrow = xrow~dx_pos_lags~dx_neg_lags;
+        endif;
+
+        if ncontrol > 0 and naOut.q_control > 0;
+            dx_ctrl_lags = zeros(1, naOut.q_control*ncontrol);
+            kk = 1;
+            do until kk > ncontrol;
+                jj = 0;
+                do until jj > naOut.q_control-1;
+                    col_idx = (kk-1)*naOut.q_control + jj + 1;
+                    dx_ctrl_lags[1, col_idx] = dx_ctrl[row_idx-jj, kk];
+                    jj = jj + 1;
+                endo;
+                kk = kk + 1;
+            endo;
+            xrow = xrow~dx_ctrl_lags;
         endif;
 
         yhat = xrow*naOut.bt;
@@ -529,14 +797,14 @@ proc (struct nardlDynMultOut) = nardlDynamicMultipliers(struct nardlOut naOut, h
 
     call _qardlValidateLagScalarZero(horizon, "nardlDynamicMultipliers: horizon");
 
-    k0 = naOut.k;
+    k0 = rows(naOut.beta_pos);
     ppp = naOut.p;
     qqq = naOut.q;
     pos = zeros(horizon+1, k0);
     neg = zeros(horizon+1, k0);
     hvec = seqa(0, 1, horizon+1);
 
-    pos_start = 2 + 2*k0 + ppp;
+    pos_start = 2 + 2*k0 + naOut.ncontrol + ppp;
     neg_start = pos_start + qqq*k0;
 
     kk = 1;
@@ -586,7 +854,7 @@ proc (struct nardlDynMultOut) = nardlDynamicMultipliers(struct nardlOut naOut, h
     dmOut.model_family = "NARDL-Dynamic-Multipliers";
     dmOut.formula = naOut.formula;
     dmOut.depvar = naOut.depvar;
-    dmOut.xvars = naOut.xvars;
+    dmOut.xvars = naOut.decomp_vars;
     dmOut.horizon = horizon;
     dmOut.k = k0;
     dmOut.h = hvec;
@@ -605,6 +873,229 @@ endp;
 */
 proc (1) = applyNARDLFormula(data, formula);
     retp(_applyFormula(data, formula));
+endp;
+
+proc (1) = _nardlStringSelectorEmpty(vars);
+    if rows(vars) == 1 and cols(vars) == 1;
+        retp(strlen(vars) == 0);
+    endif;
+    retp(0);
+endp;
+
+proc (1) = _nardlIndexCount(idx);
+    if rows(idx) == 1 and cols(idx) == 1 and scalmiss(idx);
+        retp(0);
+    endif;
+    retp(rows(idx));
+endp;
+
+proc (1) = _nardlIndexIn(value, idx);
+    local ii;
+
+    if _nardlIndexCount(idx) == 0;
+        retp(0);
+    endif;
+
+    ii = 1;
+    do until ii > rows(idx);
+        if idx[ii] == value;
+            retp(1);
+        endif;
+        ii = ii + 1;
+    endo;
+
+    retp(0);
+endp;
+
+proc (0) = _nardlValidateUniqueIndices(idx, caller, label);
+    local ii, jj;
+
+    if _nardlIndexCount(idx) <= 1;
+        retp;
+    endif;
+
+    ii = 1;
+    do until ii > rows(idx)-1;
+        jj = ii + 1;
+        do until jj > rows(idx);
+            if idx[ii] == idx[jj];
+                errorlog caller $+ ": duplicate " $+ label $+ " selector";
+                end;
+            endif;
+            jj = jj + 1;
+        endo;
+        ii = ii + 1;
+    endo;
+endp;
+
+proc (4) = _nardlResolveSpecSelectors(xvars, decomp_vars, control_vars, caller);
+    local decomp_idx, control_idx, control_names;
+    local lower_xvars, ii, cc, decomp_names;
+
+    lower_xvars = lower(xvars);
+
+    if _nardlStringSelectorEmpty(decomp_vars) and _nardlStringSelectorEmpty(control_vars);
+        decomp_idx = seqa(1, 1, rows(xvars));
+        decomp_names = xvars;
+        control_idx = error(0);
+        control_names = "";
+    elseif _nardlStringSelectorEmpty(decomp_vars);
+        control_idx = indsav(lower(control_vars), lower_xvars);
+        if rows(control_idx) /= rows(control_vars);
+            errorlog caller $+ ": one or more control_vars were not found in the RHS variable list";
+            end;
+        endif;
+        call _nardlValidateUniqueIndices(control_idx, caller, "control_vars");
+        control_names = control_vars;
+
+        decomp_idx = zeros(rows(xvars), 1);
+        decomp_names = "";
+        cc = 0;
+        ii = 1;
+        do until ii > rows(xvars);
+            if not _nardlIndexIn(ii, control_idx);
+                cc = cc + 1;
+                decomp_idx[cc] = ii;
+                if cc == 1;
+                    decomp_names = xvars[ii];
+                else;
+                    decomp_names = decomp_names $| xvars[ii];
+                endif;
+            endif;
+            ii = ii + 1;
+        endo;
+
+        if cc > 0;
+            decomp_idx = decomp_idx[1:cc];
+        else;
+            errorlog caller $+ ": at least one decomposed variable is required";
+            end;
+        endif;
+    else;
+        decomp_idx = indsav(lower(decomp_vars), lower_xvars);
+        if rows(decomp_idx) /= rows(decomp_vars);
+            errorlog caller $+ ": one or more decomp_vars were not found in the RHS variable list";
+            end;
+        endif;
+        call _nardlValidateUniqueIndices(decomp_idx, caller, "decomp_vars");
+        decomp_names = decomp_vars;
+
+        if _nardlStringSelectorEmpty(control_vars);
+            control_idx = zeros(rows(xvars), 1);
+            control_names = "";
+            cc = 0;
+            ii = 1;
+            do until ii > rows(xvars);
+                if not _nardlIndexIn(ii, decomp_idx);
+                    cc = cc + 1;
+                    control_idx[cc] = ii;
+                    if cc == 1;
+                        control_names = xvars[ii];
+                    else;
+                        control_names = control_names $| xvars[ii];
+                    endif;
+                endif;
+                ii = ii + 1;
+            endo;
+
+            if cc > 0;
+                control_idx = control_idx[1:cc];
+            else;
+                control_idx = error(0);
+            endif;
+        else;
+            control_idx = indsav(lower(control_vars), lower_xvars);
+            if rows(control_idx) /= rows(control_vars);
+                errorlog caller $+ ": one or more control_vars were not found in the RHS variable list";
+                end;
+            endif;
+            call _nardlValidateUniqueIndices(control_idx, caller, "control_vars");
+            control_names = control_vars;
+        endif;
+    endif;
+
+    ii = 1;
+    do until ii > rows(decomp_idx);
+        if _nardlIndexIn(decomp_idx[ii], control_idx);
+            errorlog caller $+ ": decomp_vars and control_vars must not overlap";
+            end;
+        endif;
+        ii = ii + 1;
+    endo;
+
+    retp(decomp_idx, control_idx, decomp_names, control_names);
+endp;
+
+proc (1) = _nardlQVecForSelectors(k0, decomp_idx, control_idx, q_decomp,
+                                  q_control);
+    local qvec, ii;
+
+    qvec = zeros(k0, 1);
+    ii = 1;
+    do until ii > rows(decomp_idx);
+        qvec[decomp_idx[ii]] = q_decomp;
+        ii = ii + 1;
+    endo;
+
+    if _nardlIndexCount(control_idx) > 0;
+        ii = 1;
+        do until ii > rows(control_idx);
+            qvec[control_idx[ii]] = q_control;
+            ii = ii + 1;
+        endo;
+    endif;
+
+    retp(qvec);
+endp;
+
+proc (0) = _nardlValidateSpecInputs(data, ppp, q_decomp, q_control,
+                                    decomp_idx, control_idx, caller);
+    local max_lag, n_eff, n_param, k0, ndecomp, ncontrol;
+
+    if rows(data) < 1 or cols(data) < 2;
+        errorlog caller $+ ": data must have at least one dependent variable and one regressor column";
+        end;
+    endif;
+
+    if ismiss(data);
+        errorlog caller $+ ": data contains missing values; clean or align the sample before estimation";
+        end;
+    endif;
+
+    call _qardlValidateLagScalar(ppp, caller $+ ": p");
+    call _qardlValidateLagScalarZero(q_decomp, caller $+ ": q_decomp");
+    call _qardlValidateLagScalarZero(q_control, caller $+ ": q_control");
+
+    k0 = cols(data) - 1;
+    ndecomp = rows(decomp_idx);
+    ncontrol = _nardlIndexCount(control_idx);
+
+    if ndecomp < 1;
+        errorlog caller $+ ": at least one decomposed variable is required";
+        end;
+    endif;
+
+    if maxc(decomp_idx) > k0 or minc(decomp_idx) < 1;
+        errorlog caller $+ ": decomp_vars resolved outside the RHS variable range";
+        end;
+    endif;
+
+    if ncontrol > 0;
+        if maxc(control_idx) > k0 or minc(control_idx) < 1;
+            errorlog caller $+ ": control_vars resolved outside the RHS variable range";
+            end;
+        endif;
+    endif;
+
+    max_lag = maxc(ppp|q_decomp|q_control);
+    n_eff = rows(data) - max_lag;
+    n_param = 1 + 2*ndecomp + ncontrol + ppp +
+              2*q_decomp*ndecomp + q_control*ncontrol;
+
+    if n_eff <= n_param;
+        errorlog caller $+ ": not enough observations for the requested lag orders";
+        end;
+    endif;
 endp;
 
 proc (0) = _nardlValidateEstimatorInputs(data, ppp, qqq, caller);
@@ -688,6 +1179,97 @@ proc (4) = _nardlBuildDesign(data, ppp, qqq);
     retp(Y, ONEX, x_pos, x_neg);
 endp;
 
+proc (4) = _nardlBuildSpecDesign(data, ppp, q_decomp, decomp_idx, control_idx, q_control);
+    local nn, ndecomp, ncontrol, max_lag, N, yy, Y, ONEX;
+    local x_pos, x_neg, dx_pos, dx_neg, x_ctrl, dx_ctrl;
+    local pos_level, neg_level, ctrl_level, y_lags;
+    local dx_pos_lags, dx_neg_lags, dx_ctrl_lags;
+    local ii, jj, src, col;
+
+    nn = rows(data);
+    ndecomp = rows(decomp_idx);
+    ncontrol = _nardlIndexCount(control_idx);
+    max_lag = maxc(ppp|q_decomp|q_control);
+    N = nn - max_lag;
+    yy = data[., 1];
+
+    { x_pos, x_neg, dx_pos, dx_neg } =
+        _nardlPartialSumsWithDiffs(data[., 1]~data[., 1 + decomp_idx]);
+
+    if ncontrol > 0;
+        x_ctrl = data[., 1 + control_idx];
+        dx_ctrl = _nardlDiffMatrix(x_ctrl);
+    else;
+        x_ctrl = error(0);
+        dx_ctrl = error(0);
+    endif;
+
+    Y = yy[max_lag+1:nn];
+    pos_level = zeros(N, ndecomp);
+    neg_level = zeros(N, ndecomp);
+    y_lags = zeros(N, ppp);
+
+    if ncontrol > 0;
+        ctrl_level = zeros(N, ncontrol);
+    endif;
+
+    ii = 1;
+    do until ii > N;
+        src = max_lag + ii;
+        pos_level[ii, .] = x_pos[src, .];
+        neg_level[ii, .] = x_neg[src, .];
+        if ncontrol > 0;
+            ctrl_level[ii, .] = x_ctrl[src, .];
+        endif;
+        jj = 1;
+        do until jj > ppp;
+            y_lags[ii, jj] = yy[src-jj];
+            jj = jj + 1;
+        endo;
+        ii = ii + 1;
+    endo;
+
+    ONEX = ones(N, 1)~pos_level~neg_level;
+    if ncontrol > 0;
+        ONEX = ONEX~ctrl_level;
+    endif;
+    ONEX = ONEX~y_lags;
+
+    if q_decomp > 0;
+        dx_pos_lags = zeros(N, q_decomp*ndecomp);
+        dx_neg_lags = zeros(N, q_decomp*ndecomp);
+        ii = 1;
+        do until ii > ndecomp;
+            jj = 0;
+            do until jj > q_decomp-1;
+                col = (ii-1)*q_decomp + jj + 1;
+                dx_pos_lags[., col] = dx_pos[max_lag+1-jj:nn-jj, ii];
+                dx_neg_lags[., col] = dx_neg[max_lag+1-jj:nn-jj, ii];
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+        ONEX = ONEX~dx_pos_lags~dx_neg_lags;
+    endif;
+
+    if ncontrol > 0 and q_control > 0;
+        dx_ctrl_lags = zeros(N, q_control*ncontrol);
+        ii = 1;
+        do until ii > ncontrol;
+            jj = 0;
+            do until jj > q_control-1;
+                col = (ii-1)*q_control + jj + 1;
+                dx_ctrl_lags[., col] = dx_ctrl[max_lag+1-jj:nn-jj, ii];
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+        ONEX = ONEX~dx_ctrl_lags;
+    endif;
+
+    retp(Y, ONEX, x_pos, x_neg);
+endp;
+
 proc (2) = _nardlBuildECMDesign(data, ppp, qqq, beta_pos, beta_neg);
     local nn, k0, max_lag, N, yy, x_pos, x_neg, dx_pos, dx_neg;
     local Y, ec_lag, ONEX, dy_lags, dx_pos_lags, dx_neg_lags;
@@ -743,6 +1325,96 @@ proc (2) = _nardlBuildECMDesign(data, ppp, qqq, beta_pos, beta_neg);
             ii = ii + 1;
         endo;
         ONEX = ONEX~dx_pos_lags~dx_neg_lags;
+    endif;
+
+    retp(Y, ONEX);
+endp;
+
+proc (2) = _nardlBuildSpecECMDesign(data, ppp, q_decomp, decomp_idx, control_idx,
+                                    q_control, beta_pos, beta_neg, beta_control);
+    local nn, ndecomp, ncontrol, max_lag, N, yy, x_pos, x_neg, dx_pos, dx_neg;
+    local x_ctrl, dx_ctrl, Y, ec_lag, ONEX, dy_lags;
+    local dx_pos_lags, dx_neg_lags, dx_ctrl_lags;
+    local ii, jj, src, col;
+
+    nn = rows(data);
+    ndecomp = rows(decomp_idx);
+    ncontrol = _nardlIndexCount(control_idx);
+    max_lag = maxc(ppp|q_decomp|q_control);
+    N = nn - max_lag - 1;
+    yy = data[., 1];
+    { x_pos, x_neg, dx_pos, dx_neg } =
+        _nardlPartialSumsWithDiffs(data[., 1]~data[., 1 + decomp_idx]);
+
+    if ncontrol > 0;
+        x_ctrl = data[., 1 + control_idx];
+        dx_ctrl = _nardlDiffMatrix(x_ctrl);
+    else;
+        x_ctrl = error(0);
+        dx_ctrl = error(0);
+    endif;
+
+    Y = zeros(N, 1);
+    ec_lag = zeros(N, 1);
+
+    ii = 1;
+    do until ii > N;
+        src = max_lag + 1 + ii;
+        Y[ii] = yy[src] - yy[src-1];
+        ec_lag[ii] = yy[src-1] - x_pos[src-1, .]*beta_pos - x_neg[src-1, .]*beta_neg;
+        if ncontrol > 0;
+            ec_lag[ii] = ec_lag[ii] - x_ctrl[src-1, .]*beta_control;
+        endif;
+        ii = ii + 1;
+    endo;
+
+    ONEX = ones(N, 1)~ec_lag;
+
+    if ppp > 1;
+        dy_lags = zeros(N, ppp-1);
+        ii = 1;
+        do until ii > N;
+            src = max_lag + 1 + ii;
+            jj = 1;
+            do until jj > ppp-1;
+                dy_lags[ii, jj] = yy[src-jj] - yy[src-jj-1];
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+        ONEX = ONEX~dy_lags;
+    endif;
+
+    if q_decomp > 0;
+        dx_pos_lags = zeros(N, q_decomp*ndecomp);
+        dx_neg_lags = zeros(N, q_decomp*ndecomp);
+        ii = 1;
+        do until ii > ndecomp;
+            jj = 0;
+            do until jj > q_decomp-1;
+                col = (ii-1)*q_decomp + jj + 1;
+                dx_pos_lags[., col] = dx_pos[max_lag+2-jj:nn-jj, ii];
+                dx_neg_lags[., col] = dx_neg[max_lag+2-jj:nn-jj, ii];
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+        ONEX = ONEX~dx_pos_lags~dx_neg_lags;
+    endif;
+
+    if ncontrol > 0 and q_control > 0;
+        dx_ctrl_lags = zeros(N, q_control*ncontrol);
+        ii = 1;
+        do until ii > ncontrol;
+            jj = 0;
+            do until jj > q_control-1;
+                col = (ii-1)*q_control + jj + 1;
+                dx_ctrl_lags[., col] = dx_ctrl[max_lag+2-jj:nn-jj, ii];
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+        ONEX = ONEX~dx_ctrl_lags;
     endif;
 
     retp(Y, ONEX);
@@ -841,10 +1513,154 @@ proc (2) = _nardlBuildUECMDesign(data, ppp, qqq);
     retp(Y, ONEX);
 endp;
 
+proc (1) = _nardlBoundsFstatForSelectors(data, ppp, q_decomp, decomp_idx,
+                                         control_idx, q_control, caller);
+    local Y, XU, XR, bt_u, bt_r, resid_u, resid_r, rss_u, rss_r;
+    local ndecomp, ncontrol, q_restrict, N, K_total, rest_start;
+
+    { Y, XU } = _nardlBuildSpecUECMDesign(data, ppp, q_decomp,
+                                          decomp_idx, control_idx, q_control);
+    call _qardlCheckFullColumnRank(XU, caller, "UECM bounds design matrix");
+
+    ndecomp = rows(decomp_idx);
+    ncontrol = _nardlIndexCount(control_idx);
+    q_restrict = 1 + 2*ndecomp + ncontrol;
+    rest_start = 3 + 2*ndecomp + ncontrol;
+    if cols(XU) >= rest_start;
+        XR = XU[., 1]~XU[., rest_start:cols(XU)];
+    else;
+        XR = XU[., 1];
+    endif;
+    call _qardlCheckFullColumnRank(XR, caller, "restricted UECM bounds design matrix");
+
+    bt_u = _qardlSafeInv(XU'*XU, caller, "UECM bounds moment matrix")*XU'*Y;
+    bt_r = _qardlSafeInv(XR'*XR, caller, "restricted UECM bounds moment matrix")*XR'*Y;
+    resid_u = Y - XU*bt_u;
+    resid_r = Y - XR*bt_r;
+    rss_u = resid_u'*resid_u;
+    rss_r = resid_r'*resid_r;
+    N = rows(Y);
+    K_total = cols(XU);
+
+    retp(((rss_r - rss_u) / q_restrict) / (rss_u / (N - K_total)));
+endp;
+
+proc (2) = _nardlBuildSpecUECMDesign(data, ppp, q_decomp, decomp_idx, control_idx, q_control);
+    local nn, ndecomp, ncontrol, max_lag, N, yy, x_pos, x_neg, dx_pos, dx_neg;
+    local x_ctrl, dx_ctrl, Y, y_lag, pos_lag, neg_lag, ctrl_lag;
+    local ONEX, dy_lags, dx_pos_lags, dx_neg_lags, dx_ctrl_lags;
+    local ii, jj, src, col;
+
+    nn = rows(data);
+    ndecomp = rows(decomp_idx);
+    ncontrol = _nardlIndexCount(control_idx);
+    max_lag = maxc(ppp|q_decomp|q_control);
+    N = nn - max_lag - 1;
+    yy = data[., 1];
+    { x_pos, x_neg, dx_pos, dx_neg } =
+        _nardlPartialSumsWithDiffs(data[., 1]~data[., 1 + decomp_idx]);
+
+    if ncontrol > 0;
+        x_ctrl = data[., 1 + control_idx];
+        dx_ctrl = _nardlDiffMatrix(x_ctrl);
+    else;
+        x_ctrl = error(0);
+        dx_ctrl = error(0);
+    endif;
+
+    Y = zeros(N, 1);
+    y_lag = zeros(N, 1);
+    pos_lag = zeros(N, ndecomp);
+    neg_lag = zeros(N, ndecomp);
+    if ncontrol > 0;
+        ctrl_lag = zeros(N, ncontrol);
+    endif;
+
+    ii = 1;
+    do until ii > N;
+        src = max_lag + 1 + ii;
+        Y[ii] = yy[src] - yy[src-1];
+        y_lag[ii] = yy[src-1];
+        pos_lag[ii, .] = x_pos[src-1, .];
+        neg_lag[ii, .] = x_neg[src-1, .];
+        if ncontrol > 0;
+            ctrl_lag[ii, .] = x_ctrl[src-1, .];
+        endif;
+        ii = ii + 1;
+    endo;
+
+    ONEX = ones(N, 1)~y_lag~pos_lag~neg_lag;
+    if ncontrol > 0;
+        ONEX = ONEX~ctrl_lag;
+    endif;
+
+    if ppp > 1;
+        dy_lags = zeros(N, ppp-1);
+        ii = 1;
+        do until ii > N;
+            src = max_lag + 1 + ii;
+            jj = 1;
+            do until jj > ppp-1;
+                dy_lags[ii, jj] = yy[src-jj] - yy[src-jj-1];
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+        ONEX = ONEX~dy_lags;
+    endif;
+
+    if q_decomp > 0;
+        dx_pos_lags = zeros(N, q_decomp*ndecomp);
+        dx_neg_lags = zeros(N, q_decomp*ndecomp);
+        ii = 1;
+        do until ii > ndecomp;
+            jj = 0;
+            do until jj > q_decomp-1;
+                col = (ii-1)*q_decomp + jj + 1;
+                dx_pos_lags[., col] = dx_pos[max_lag+2-jj:nn-jj, ii];
+                dx_neg_lags[., col] = dx_neg[max_lag+2-jj:nn-jj, ii];
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+        ONEX = ONEX~dx_pos_lags~dx_neg_lags;
+    endif;
+
+    if ncontrol > 0 and q_control > 0;
+        dx_ctrl_lags = zeros(N, q_control*ncontrol);
+        ii = 1;
+        do until ii > ncontrol;
+            jj = 0;
+            do until jj > q_control-1;
+                col = (ii-1)*q_control + jj + 1;
+                dx_ctrl_lags[., col] = dx_ctrl[max_lag+2-jj:nn-jj, ii];
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+        ONEX = ONEX~dx_ctrl_lags;
+    endif;
+
+    retp(Y, ONEX);
+endp;
+
 proc (2) = _nardlPartialSums(data);
     local x_pos, x_neg, dx_pos, dx_neg;
     { x_pos, x_neg, dx_pos, dx_neg } = _nardlPartialSumsWithDiffs(data);
     retp(x_pos, x_neg);
+endp;
+
+proc (1) = _nardlDiffMatrix(xx);
+    local dx, ii;
+
+    dx = zeros(rows(xx), cols(xx));
+    ii = 2;
+    do until ii > rows(xx);
+        dx[ii, .] = xx[ii, .] - xx[ii-1, .];
+        ii = ii + 1;
+    endo;
+
+    retp(dx);
 endp;
 
 proc (4) = _nardlPartialSumsWithDiffs(data);
@@ -922,19 +1738,69 @@ proc (1) = _nardlLongRunCov(bt, coef_cov, ppp, qqq, k0);
     retp(G*coef_cov*G');
 endp;
 
+proc (1) = _nardlLongRunSpecCov(bt, coef_cov, ppp, ndecomp, ncontrol);
+    local G, denom, row, ii, jj;
+    local theta_pos_start, theta_neg_start, theta_control_start, phi_start;
+
+    theta_pos_start = 2;
+    theta_neg_start = 2 + ndecomp;
+    theta_control_start = 2 + 2*ndecomp;
+    phi_start = theta_control_start + ncontrol;
+    denom = 1 - sumc(bt[phi_start:phi_start+ppp-1]);
+    G = zeros(2*ndecomp+ncontrol, rows(bt));
+
+    ii = 1;
+    do until ii > ndecomp;
+        row = ii;
+        G[row, theta_pos_start+ii-1] = 1 / denom;
+        jj = 1;
+        do until jj > ppp;
+            G[row, phi_start+jj-1] = bt[theta_pos_start+ii-1] / (denom^2);
+            jj = jj + 1;
+        endo;
+
+        row = ndecomp + ii;
+        G[row, theta_neg_start+ii-1] = 1 / denom;
+        jj = 1;
+        do until jj > ppp;
+            G[row, phi_start+jj-1] = bt[theta_neg_start+ii-1] / (denom^2);
+            jj = jj + 1;
+        endo;
+        ii = ii + 1;
+    endo;
+
+    ii = 1;
+    do until ii > ncontrol;
+        row = 2*ndecomp + ii;
+        G[row, theta_control_start+ii-1] = 1 / denom;
+        jj = 1;
+        do until jj > ppp;
+            G[row, phi_start+jj-1] = bt[theta_control_start+ii-1] / (denom^2);
+            jj = jj + 1;
+        endo;
+        ii = ii + 1;
+    endo;
+
+    retp(G*coef_cov*G');
+endp;
+
 proc (2) = _nardlLongRunAsymmetry(beta_pos, beta_neg, bigbt_cov);
-    local k0, wald, pv, ii, R, diff, V;
+    local k0, wald, pv, ii, R, diff, V, param;
 
     k0 = rows(beta_pos);
     wald = zeros(k0, 1);
     pv = zeros(k0, 1);
+    param = beta_pos | beta_neg;
+    if rows(bigbt_cov) > rows(param);
+        param = param | zeros(rows(bigbt_cov)-rows(param), 1);
+    endif;
 
     ii = 1;
     do until ii > k0;
-        R = zeros(1, 2*k0);
+        R = zeros(1, rows(bigbt_cov));
         R[1, ii] = 1;
         R[1, k0+ii] = -1;
-        diff = R*(beta_pos|beta_neg);
+        diff = R*param;
         V = R*bigbt_cov*R';
         wald[ii] = (diff^2) / V;
         pv[ii] = cdfchic(wald[ii], 1);
@@ -945,19 +1811,23 @@ proc (2) = _nardlLongRunAsymmetry(beta_pos, beta_neg, bigbt_cov);
 endp;
 
 proc (2) = _nardlShortRunAsymmetry(bt, coef_cov, ppp, qqq, k0);
+    retp(_nardlShortRunAsymmetrySpec(bt, coef_cov, ppp, qqq, k0, 0));
+endp;
+
+proc (2) = _nardlShortRunAsymmetrySpec(bt, coef_cov, ppp, qqq, ndecomp, ncontrol);
     local wald, pv, ii, jj, R, diff, V, pos_start, neg_start;
 
     if qqq == 0;
         retp(error(0), error(0));
     endif;
 
-    wald = zeros(k0, 1);
-    pv = zeros(k0, 1);
-    pos_start = 2 + 2*k0 + ppp;
-    neg_start = pos_start + qqq*k0;
+    wald = zeros(ndecomp, 1);
+    pv = zeros(ndecomp, 1);
+    pos_start = 2 + 2*ndecomp + ncontrol + ppp;
+    neg_start = pos_start + qqq*ndecomp;
 
     ii = 1;
-    do until ii > k0;
+    do until ii > ndecomp;
         R = zeros(1, rows(bt));
         jj = 1;
         do until jj > qqq;

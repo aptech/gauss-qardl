@@ -14,7 +14,7 @@ model families.
 | `published-qardl-ckgns2023` | Cho, Kim, Greenwood-Nimmo, and Shin (2023), asymmetric dividend response to earnings news | QARDL / asymmetric QARDL candidate | Candidate pending data confirmation | Pending earnings-news construction and asymmetric specification details | Coefficient tables, asymmetry tests, QIRF or dynamic response outputs if applicable | Pending | Not started |
 | `published-qadl-gmp2013` | Galvao, Montes-Rojas, and Park (2013), QADL house-price returns | Adjacent quantile ARDL | Candidate pending redistributable data | Pending stationary-return construction and estimator-definition comparison | QADL coefficient tables and cross-implementation comparison notes | Pending | Not started; adjacent methodology |
 | `published-nardl-syg2014` | Shin, Yu, and Greenwood-Nimmo (2014), NARDL asymmetric cointegration and dynamic multipliers | NARDL | Exact datasets pending | Pending positive/negative partial sums, sample windows, deterministic terms, lag orders, and dynamic multiplier settings | Long-run asymmetry, dynamic multipliers, bounds tests | `tests/fixtures/expected/published/` | Exact published data pending; deterministic decomposition, asymmetry, bounds, and multiplier fixtures pass |
-| `published-csardl-cp2015` | Chudik and Pesaran (2015), dynamic CCE / CS-ARDL panel Monte Carlo designs | CS-ARDL | Exact Monte Carlo grid pending | Pending DGP grid, cross-sectional-average lag choices, estimator variants, and bias-correction policy | Pooled and mean-group coefficients, poolability or heterogeneity diagnostics, Monte Carlo summary tables | `tests/fixtures/expected/published/` | Exact DGP grid pending; deterministic balanced-panel sorting, cross-average, lag-alignment, coefficient, forecast, mean-group, and poolability fixtures pass |
+| `published-csardl-cp2015` | Chudik and Pesaran (2015), dynamic CCE / CS-ARDL panel Monte Carlo designs | CS-ARDL | Exact Monte Carlo grid pending | Pending DGP grid, cross-sectional-average lag choices, estimator variants, and bias-correction policy | Pooled and mean-group coefficients, poolability or heterogeneity diagnostics, Monte Carlo summary tables | `tests/fixtures/expected/published/` | Exact DGP grid pending; deterministic balanced-panel sorting, cross-average, lag-alignment, coefficient, forecast, mean-group, poolability, Pesaran CD/CD(p), and Pesaran-Yamagata fixtures pass |
 | `cross-qardlr-simulated` | R `qardlr` simulated QARDL dataset | QARDL cross-implementation | Benchmark candidate, not an empirical paper replication | Pending DGP alignment and estimator-default comparison | Coefficients, selected lags, long-run estimates | Pending | Not started |
 
 ## Current Scaffold
@@ -126,3 +126,8 @@ pointwise, simultaneous, or shape-only.
   of heterogeneous dynamic panel data models with weakly exogenous regressors.
   Journal of Econometrics, 188(2), 393-420.
   https://doi.org/10.1016/j.jeconom.2015.03.007
+- Pesaran, M. H. (2004). General diagnostic tests for cross section dependence
+  in panels. SSRN Electronic Journal. https://doi.org/10.2139/ssrn.572504
+- Pesaran, M. H., and Yamagata, T. (2008). Testing slope homogeneity in large
+  panels. Journal of Econometrics, 142(1), 50-93.
+  https://doi.org/10.1016/j.jeconom.2007.05.010

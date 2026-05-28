@@ -2,7 +2,7 @@
 
 This note records the current CS-ARDL validation status and panel-data
 contract. The active checks are deterministic source-tree validation fixtures,
-not exact published Chudik-Pesaran replications.
+not exact published Chudik-Pesaran Monte Carlo replications.
 
 ## Active Validation Cases
 
@@ -83,18 +83,28 @@ The validation case checks the optional diagnostic layer by:
   covariance matrices
 - recomputing the mean-group-centered long-run slope heterogeneity Wald
   statistic from unit-specific long-run covariance matrices
-- recomputing the Pesaran CD statistic from the balanced matrix of
+- recomputing the Pesaran-Yamagata Delta and bias-adjusted Delta statistics
+  for direct CS-ARDL dynamic slopes
+- recomputing the long-run Pesaran-Yamagata Delta and bias-adjusted Delta
+  statistics for CS-ARDL long-run coefficients
+- recomputing the all-pairs Pesaran CD statistic from the balanced matrix of
   unit-specific residuals
+- recomputing a fixed-order `CD(1)` statistic from the same residual matrix
 - confirming formula/dataframe diagnostics match matrix diagnostics after
   sorting
 
 The current poolability statistic is a Wald-style diagnostic convenience
-measure. The Pesaran CD statistic adds residual cross-sectional dependence
-coverage. The long-run slope heterogeneity statistic is also a Wald-style
-diagnostic convenience measure centered on the mean-group long-run slopes; it
-is not yet validated as a Pesaran-Yamagata style published replication.
-Finite-sample behavior and exact published-reference behavior remain deferred for
-these diagnostic families.
+measure. The long-run slope heterogeneity statistic is also a Wald-style
+diagnostic convenience measure centered on the mean-group long-run slopes.
+The Pesaran-Yamagata fields implement the standardized Swamy-style Delta and
+bias-adjusted Delta diagnostics for direct dynamic slopes and for transformed
+long-run coefficients. The Pesaran CD fields include the all-pairs CD statistic
+and metadata for pair count, average residual correlation, average absolute
+residual correlation, and pairwise residual counts.
+
+Finite-sample behavior against exact published dynamic CCE/CS-ARDL designs
+remains a separate validation target, but the panel diagnostic formulas are
+covered by deterministic manual-reproduction fixtures.
 
 ## Unsupported Cases
 
@@ -113,8 +123,16 @@ first date variable, or first numeric variable if no date variable is present.
 
 ## Pending Published Validation
 
-Exact Chudik-Pesaran style validation remains pending until a specific
+Exact Chudik-Pesaran style Monte Carlo validation remains pending until a specific
 redistributable Monte Carlo grid or empirical replication target is selected.
 The pending work is to document the DGP, cross-sectional-average lag choices,
 estimator variant, bias-correction policy, and target coefficient/diagnostic
 tables before adding published expected-output fixtures.
+
+## Diagnostic Method References
+
+- Pesaran, M. H. (2004). General diagnostic tests for cross section dependence
+  in panels. SSRN Electronic Journal. https://doi.org/10.2139/ssrn.572504
+- Pesaran, M. H., and Yamagata, T. (2008). Testing slope homogeneity in large
+  panels. Journal of Econometrics, 142(1), 50-93.
+  https://doi.org/10.1016/j.jeconom.2007.05.010

@@ -29,10 +29,11 @@ design-matrix metadata for all supported families.
 
 ## CS-ARDL Panel Diagnostics
 
-Use `csardlDiagnostics` with CS-ARDL outputs:
+Use `csardlDiagnostics` with CS-ARDL data and the same lag orders used for
+estimation:
 
 ```gauss
-diagOut = csardlDiagnostics(csOut);
+diagOut = csardlDiagnostics(data, p, q, cs_lags);
 call printCSARDLDiagnostics(diagOut);
 ```
 
@@ -42,11 +43,21 @@ Current checks include:
 | --- | --- | --- |
 | Mean-group summary | compares pooled and unit-level long-run coefficients | Implemented |
 | Poolability Wald | tests pooled versus unit-level long-run restrictions | Implemented |
-| Slope heterogeneity | summarizes unit-level long-run coefficient dispersion | Implemented |
-| Pesaran CD | residual cross-sectional dependence | Implemented |
+| Long-run slope heterogeneity Wald | summarizes unit-level long-run coefficient dispersion | Implemented |
+| Pesaran-Yamagata Delta | slope homogeneity for direct CS-ARDL dynamic slopes | Implemented |
+| Pesaran-Yamagata Delta, long-run | slope homogeneity for CS-ARDL long-run effects | Implemented |
+| Pesaran CD | all-pairs residual cross-sectional dependence | Implemented |
+| Pesaran CD(p) | fixed-order residual cross-sectional dependence | Implemented |
 
 CS-ARDL diagnostics currently require balanced panels. Unbalanced panel inputs
 are documented as unsupported and covered by expected-failure tests.
+The default `cd_order = -1` uses all residual pairs; pass a positive integer
+as the final argument to compute fixed-order `CD(p)`.
+
+Interpret Pesaran-Yamagata slope homogeneity diagnostics together with the
+Pesaran CD result. Material remaining residual cross-sectional dependence can
+affect slope-homogeneity inference even after cross-sectional-average
+augmentation.
 
 ## Bounds Testing
 

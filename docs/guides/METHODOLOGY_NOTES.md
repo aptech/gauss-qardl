@@ -34,10 +34,16 @@ The original QARDL public APIs remain supported. Unified `predictARDL` and
 
 ## NARDL
 
-NARDL decomposes each selected regressor into positive and negative partial
-sums, then estimates asymmetric long-run and short-run responses. The package
-stores positive and negative long-run effects and exposes long-run asymmetry
-tests where the output structure contains the required statistics.
+NARDL decomposes selected regressors into positive and negative partial sums,
+then estimates asymmetric long-run and short-run responses. The compatibility
+`nardl` workflow decomposes every RHS regressor. Optional `decomp_vars`,
+`control_vars`, and `q_control` arguments on `nardl`, `nardlECM`, and
+`nardlFull` let users name decomposed variables and keep other RHS variables as
+linear controls.
+
+The package stores positive and negative long-run effects, optional
+linear-control long-run effects, and long-run asymmetry tests where the output
+structure contains the required statistics.
 
 Dynamic multiplier paths are available through `nardlDynamicMultipliers`.
 NARDL bounds output is a bounds-style UECM statistic; exact finite-sample
@@ -53,8 +59,12 @@ first date variable, or numeric fallback, is the time variable.
 The current implementation sorts by unit and time before estimation and treats
 unbalanced panels as unsupported. Diagnostics exposed through
 `csardlDiagnostics` include mean-group summaries, poolability Wald statistics,
-slope heterogeneity summaries, and Pesaran CD residual cross-sectional
-dependence checks.
+long-run slope heterogeneity summaries, Pesaran-Yamagata Delta and
+bias-adjusted Delta slope homogeneity tests, and Pesaran CD residual
+cross-sectional dependence checks. Pesaran-Yamagata diagnostics are reported
+for direct dynamic CS-ARDL slopes and for transformed long-run coefficients.
+Pesaran CD uses all residual pairs by default and supports fixed-order `CD(p)`
+through `cd_order`.
 
 ## Prediction And Forecasting
 

@@ -46,6 +46,6 @@ docs/archive/QARDL_RELEASE_ARTICLE.pdf
 }
 ```
 
-When using ARDL bounds testing, robust/HAC covariance, bootstrap intervals, or
-quantile regression theory directly, also cite the relevant methodological
-sources listed in the README and usage guide.
+When using ARDL bounds testing, CS-ARDL panel diagnostics, robust/HAC
+covariance, bootstrap intervals, or quantile regression theory directly, also
+cite the relevant methodological sources listed in the README and usage guide.

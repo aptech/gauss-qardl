@@ -35,6 +35,11 @@ Stored outputs:
 - `tests/fixtures/expected/synthetic/multipliers/nardl_dynamic_neg_h6.csv`
 - `tests/fixtures/expected/synthetic/multipliers/nardl_dynamic_asym_h6.csv`
 
+Source smoke tests also validate mixed decomposition/control models through
+the optional arguments on `nardl`, `nardlECM`, and `nardlFull` by manually
+reproducing the explicit design matrix, long-run coefficients, long-run
+covariance, metadata, prediction, and ECM output shapes.
+
 Run:
 
 ```powershell
@@ -59,10 +64,13 @@ Before marking the published NARDL replication complete, add:
 
 ## Interpretation Notes
 
-NARDL decomposes each regressor into cumulative positive and negative changes.
-The positive and negative long-run coefficients are reported separately as
-`beta_pos` and `beta_neg`; long-run asymmetry tests compare these paths for each
-original regressor.
+The compatibility `nardl` workflow decomposes each RHS regressor into
+cumulative positive and negative changes. Optional `decomp_vars` and
+`control_vars` allow users to decompose selected variables while keeping other
+variables as linear controls. The positive and negative long-run coefficients
+are reported separately as `beta_pos` and `beta_neg`; linear-control long-run
+coefficients are reported as `beta_control`. Long-run asymmetry tests compare
+positive and negative paths for decomposed variables only.
 
 `nardlDynamicMultipliers` reports the horizon-by-horizon adjustment implied by
 the estimated levels equation. `pos` and `neg` are responses to one-unit changes

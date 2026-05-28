@@ -153,6 +153,7 @@ call assert_true(csa_formula.unitvar $== "unit" and csa_formula.timevar $== "tim
 
 struct csardlDiagOut diag_matrix;
 struct csardlDiagOut diag_formula;
+struct csardlDiagOut diag_order1;
 diag_matrix = csardlDiagnostics(panel, 2, 1, 1, "", 0);
 diag_formula = csardlDiagnostics(panel_df_shuffled, 2, 1, 1, formula, 0);
 
@@ -162,16 +163,37 @@ call assert_close(diag_matrix.mean_group_bigbt,
 call assert_close(diag_matrix.poolability_wald~diag_matrix.poolability_df~diag_matrix.poolability_pv,
                   read_expected("synthetic/diagnostics/csardl_poolability.csv"),
                   1e-8, "CS-ARDL seeded poolability fixture changed");
-call assert_close(diag_matrix.cd_stat~diag_matrix.cd_pv~diag_matrix.cd_pairs~diag_matrix.cd_avg_corr,
+call assert_close(diag_matrix.py_swamystat~diag_matrix.py_delta~diag_matrix.py_delta_pv~
+                  diag_matrix.py_delta_adj~diag_matrix.py_delta_adj_pv~diag_matrix.py_k,
+                  read_expected("synthetic/diagnostics/csardl_pesaran_yamagata.csv"),
+                  1e-8, "CS-ARDL seeded Pesaran-Yamagata fixture changed");
+call assert_close(diag_matrix.py_lr_swamystat~diag_matrix.py_lr_delta~diag_matrix.py_lr_delta_pv~
+                  diag_matrix.py_lr_delta_adj~diag_matrix.py_lr_delta_adj_pv~diag_matrix.py_lr_k,
+                  read_expected("synthetic/diagnostics/csardl_pesaran_yamagata_longrun.csv"),
+                  1e-8, "CS-ARDL seeded long-run Pesaran-Yamagata fixture changed");
+call assert_close(diag_matrix.cd_stat~diag_matrix.cd_pv~diag_matrix.cd_pairs~diag_matrix.cd_avg_corr~
+                  diag_matrix.cd_avg_abs_corr~diag_matrix.cd_order~diag_matrix.cd_min_t~diag_matrix.cd_max_t,
                   read_expected("synthetic/diagnostics/csardl_cd.csv"),
                   1e-8, "CS-ARDL seeded CD fixture changed");
+diag_order1 = csardlDiagnostics(panel, 2, 1, 1, "", 0, "", "", 1);
+call assert_close(diag_order1.cd_stat~diag_order1.cd_pv~diag_order1.cd_pairs~diag_order1.cd_avg_corr~
+                  diag_order1.cd_avg_abs_corr~diag_order1.cd_order~diag_order1.cd_min_t~diag_order1.cd_max_t,
+                  read_expected("synthetic/diagnostics/csardl_cd_order1.csv"),
+                  1e-8, "CS-ARDL seeded CD(1) fixture changed");
 call assert_close(diag_formula.mean_group_bigbt, diag_matrix.mean_group_bigbt, tol,
                   "CS-ARDL formula diagnostics changed after panel sorting");
 call assert_close(diag_formula.poolability_wald~diag_formula.poolability_df~diag_formula.poolability_pv,
                   diag_matrix.poolability_wald~diag_matrix.poolability_df~diag_matrix.poolability_pv,
                   1e-8, "CS-ARDL formula poolability changed after panel sorting");
-call assert_close(diag_formula.cd_stat~diag_formula.cd_pv~diag_formula.cd_pairs~diag_formula.cd_avg_corr,
-                  diag_matrix.cd_stat~diag_matrix.cd_pv~diag_matrix.cd_pairs~diag_matrix.cd_avg_corr,
+call assert_close(diag_formula.py_delta~diag_formula.py_delta_pv~
+                  diag_formula.py_delta_adj~diag_formula.py_delta_adj_pv,
+                  diag_matrix.py_delta~diag_matrix.py_delta_pv~
+                  diag_matrix.py_delta_adj~diag_matrix.py_delta_adj_pv,
+                  1e-8, "CS-ARDL formula Pesaran-Yamagata changed after panel sorting");
+call assert_close(diag_formula.cd_stat~diag_formula.cd_pv~diag_formula.cd_pairs~diag_formula.cd_avg_corr~
+                  diag_formula.cd_avg_abs_corr~diag_formula.cd_order~diag_formula.cd_min_t~diag_formula.cd_max_t,
+                  diag_matrix.cd_stat~diag_matrix.cd_pv~diag_matrix.cd_pairs~diag_matrix.cd_avg_corr~
+                  diag_matrix.cd_avg_abs_corr~diag_matrix.cd_order~diag_matrix.cd_min_t~diag_matrix.cd_max_t,
                   1e-8, "CS-ARDL formula CD diagnostic changed after panel sorting");
 
 manual_mg = zeros(diag_matrix.k, 1);
@@ -202,10 +224,23 @@ for ii(1, diag_matrix.nunits, 1);
 endfor;
 call assert_close(diag_matrix.poolability_wald, manual_poolability, 1e-10,
                   "manual CS-ARDL poolability reproduction changed");
-{ manual_cd_stat, manual_cd_pv, manual_cd_pairs, manual_cd_avg_corr } =
-    _csardlPesaranCD(manual_unit_resid, "csardl_panel_validation");
-call assert_close(diag_matrix.cd_stat~diag_matrix.cd_pv~diag_matrix.cd_pairs~diag_matrix.cd_avg_corr,
-                  manual_cd_stat~manual_cd_pv~manual_cd_pairs~manual_cd_avg_corr,
+{ manual_cd_stat, manual_cd_pv, manual_cd_pairs, manual_cd_avg_corr,
+  manual_cd_avg_abs_corr, manual_cd_min_t, manual_cd_max_t } =
+    _csardlPesaranCDEx(manual_unit_resid, -1, "csardl_panel_validation");
+call assert_close(diag_matrix.cd_stat~diag_matrix.cd_pv~diag_matrix.cd_pairs~diag_matrix.cd_avg_corr~
+                  diag_matrix.cd_avg_abs_corr~diag_matrix.cd_min_t~diag_matrix.cd_max_t,
+                  manual_cd_stat~manual_cd_pv~manual_cd_pairs~manual_cd_avg_corr~
+                  manual_cd_avg_abs_corr~manual_cd_min_t~manual_cd_max_t,
                   1e-10, "manual CS-ARDL CD reproduction changed");
+
+{ manual_py_delta, manual_py_delta_pv, manual_py_delta_adj, manual_py_delta_adj_pv } =
+    _csardlPesaranYamagataDelta(diag_matrix.py_swamystat, diag_matrix.nunits,
+                                diag_matrix.unit_nobs, diag_matrix.py_k,
+                                "csardl_panel_validation", "dynamic slopes");
+call assert_close(diag_matrix.py_delta~diag_matrix.py_delta_pv~
+                  diag_matrix.py_delta_adj~diag_matrix.py_delta_adj_pv,
+                  manual_py_delta~manual_py_delta_pv~
+                  manual_py_delta_adj~manual_py_delta_adj_pv,
+                  1e-12, "manual CS-ARDL Pesaran-Yamagata reproduction changed");
 
 print "synthetic/csardl_panel_validation.e: PASS";

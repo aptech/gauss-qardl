@@ -68,8 +68,8 @@ The release also adds:
 - backward-compatible `predictQARDL` and `forecastQARDL` wrappers;
 - residual serial-correlation, heteroskedasticity, normality, and stability
   diagnostics where supported;
-- CS-ARDL Pesaran CD, mean-group, poolability Wald, and slope-heterogeneity
-  diagnostics;
+- CS-ARDL Pesaran CD/CD(p), Pesaran-Yamagata, mean-group, poolability Wald,
+  and slope-heterogeneity diagnostics;
 - formatted significance codes across printed model and diagnostic tables;
 - generic Markdown, LaTeX `tabular`, and CSV coefficient-table export;
 - QIRF bootstrap confidence-band plotting and clearer QIRF band messaging;
@@ -98,7 +98,10 @@ levels-form QARDL estimation, and QARDL-ECM estimation.
 
 The NARDL workflow supports positive and negative partial-sum decomposition,
 long-run asymmetry testing, short-run asymmetry output, ECM estimation, dynamic
-multipliers, and formula-based full workflows. The examples include both a
+multipliers, and formula-based full workflows. Optional arguments on `nardl`,
+`nardlECM`, and `nardlFull` extend the workflow to explicit
+decomposed-variable and linear-control specifications, while `nardl` keeps the
+all-RHS-decomposed compatibility behavior. The examples include both a
 fixed-order step-by-step NARDL script and a formula-based full-workflow script.
 
 ### CS-ARDL
@@ -108,7 +111,8 @@ For dataframe inputs, CS-ARDL follows GAUSS panel-data conventions by inferring
 unit and time variables from column metadata, with optional explicit
 `group_var` and `time_var` overrides. The diagnostic layer reports
 pooled and mean-group long-run estimates, poolability Wald statistics,
-slope-heterogeneity tests, Pesaran CD, and average residual correlation.
+long-run slope-heterogeneity tests, Pesaran-Yamagata Delta diagnostics,
+Pesaran CD/CD(p), and average residual correlation.
 
 ## Consistent Workflow Style
 
@@ -167,8 +171,9 @@ Version 3.1.0 makes diagnostic testing more visible and consistent:
 
 - ARDL-family residual diagnostics include Ljung-Box, Breusch-Pagan,
   Jarque-Bera, CUSUM, and CUSUMSQ where applicable.
-- CS-ARDL diagnostics include mean-group and poolability diagnostics, slope
-  heterogeneity, Pesaran CD, and average residual correlation.
+- CS-ARDL diagnostics include mean-group and poolability diagnostics, long-run
+  slope heterogeneity, Pesaran-Yamagata Delta diagnostics, Pesaran CD/CD(p),
+  and average residual correlation.
 - Wald covariance handling uses rank-aware pseudoinverses where appropriate.
 - Output structures record covariance type, model family, formula metadata,
   selected lags, and available diagnostic metadata.
@@ -234,7 +239,11 @@ analysis:
 5. Chudik and Pesaran (2015) when using CS-ARDL workflows.
 6. Chudik, Mohaddes, Pesaran, and Raissi (2016) when using CS-ARDL long-run
    effect workflows.
-7. Appropriate quantile regression, HAC, bootstrap, or panel diagnostic
+7. Pesaran (2004) when using Pesaran CD residual cross-sectional dependence
+   diagnostics.
+8. Pesaran and Yamagata (2008) when using CS-ARDL slope homogeneity
+   diagnostics.
+9. Appropriate quantile regression, HAC, bootstrap, or other panel diagnostic
    sources when those tools are central to the analysis.
 
 ## References
@@ -262,6 +271,11 @@ analysis:
 - Pesaran, M. H., Shin, Y., and Smith, R. J. (2001). Bounds testing approaches
   to the analysis of level relationships. *Journal of Applied Econometrics*,
   16(3), 289-326. https://doi.org/10.1002/jae.616
+- Pesaran, M. H. (2004). General diagnostic tests for cross section dependence
+  in panels. *SSRN Electronic Journal*. https://doi.org/10.2139/ssrn.572504
+- Pesaran, M. H., and Yamagata, T. (2008). Testing slope homogeneity in large
+  panels. *Journal of Econometrics*, 142(1), 50-93.
+  https://doi.org/10.1016/j.jeconom.2007.05.010
 - Shin, Y., Yu, B., and Greenwood-Nimmo, M. (2014). Modelling asymmetric
   cointegration and dynamic multipliers in a nonlinear ARDL framework. In
   *Festschrift in Honor of Peter Schmidt: Econometric Methods and

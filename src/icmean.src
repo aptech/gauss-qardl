@@ -1,4 +1,6 @@
+#ifndef QARDL_SDF_INCLUDED
 #include qardl.sdf
+#endif
 
 proc icmean(data, ppp, qqq, criterion = "bic");
     call _qardlValidateEstimatorInputs(data, ppp, qqq, { 0.5 }, "icmean");

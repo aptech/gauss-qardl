@@ -21,11 +21,24 @@
 - NARDL and CS-ARDL model families with output structures, levels and ECM
   estimators, information-criterion lag selection, print helpers, formula
   hooks, prediction/forecast hooks, and deterministic source smoke tests.
+- `nardl`, `nardlECM`, and `nardlFull` now support R-style NARDL
+  specifications with explicit decomposed variables and linear controls through
+  optional `decomp_vars`, `control_vars`, and `q_control` arguments; fixed-order
+  `nardl` and `nardlECM` also accept `q_decomp` as a named lag-order alias.
+  This includes decomposition metadata, control long-run coefficients,
+  prediction/forecast dispatch, dynamic multiplier support for decomposed
+  variables, and source smoke coverage.
 - Optional CS-ARDL mean-group and poolability diagnostics, plus deterministic
   synthetic NARDL/CS-ARDL benchmark entry points and published-validation
   tracking notes.
 - Pesaran CD residual cross-sectional dependence diagnostics in
   `csardlDiagnostics`, with deterministic balanced-panel validation fixtures.
+- Fixed-order Pesaran `CD(p)` support in `csardlDiagnostics` via the optional
+  `cd_order` argument, plus residual-pair metadata for pair counts, average
+  absolute correlations, and common residual observation counts.
+- Pesaran-Yamagata slope homogeneity diagnostics in `csardlDiagnostics` for
+  direct CS-ARDL dynamic slopes and transformed long-run coefficients, with
+  deterministic manual-reproduction fixtures.
 - Mean-group-centered CS-ARDL long-run slope heterogeneity diagnostics in
   `csardlDiagnostics`, with deterministic balanced-panel validation fixtures.
 - `ardlLongRun` for unified extraction of stored long-run coefficients and
@@ -42,6 +55,9 @@
 - Milestone 12 documentation guides: migration from QARDL-only versions,
   methodology notes, feature support matrix, diagnostics guide, and forecasting
   guide.
+- Optional ARDL/NARDL cross-implementation validation against the CRAN
+  `ardl.nardl` package through `tests/run_r_package_validation.ps1`, with
+  generated comparison artifacts kept out of source control.
 - `docs/validation/PERFORMANCE_NUMERICAL_RELIABILITY.md`, numerical-reliability source
   tests, ARDL rank/tiny-sample negative tests, and a timing smoke-test runner.
 - `docs/guides/DATA_HANDLING.md`, design rank/conditioning metadata on main estimator
@@ -92,8 +108,9 @@
   `y ~ x1 + x2` infers the first string/category column as the unit variable
   and the first date column, or first numeric fallback, as the time variable.
 - CS-ARDL validation fixtures for balanced-panel cross-sectional averages,
-  lag alignment, formula row-order invariance, and mean-group/poolability
-  diagnostic reproduction, plus `docs/validation/CSARDL_VALIDATION.md`.
+  lag alignment, formula row-order invariance, mean-group/poolability,
+  Pesaran-Yamagata, and Pesaran CD/CD(p) diagnostic reproduction, plus
+  `docs/validation/CSARDL_VALIDATION.md`.
 - Source-tree NARDL and CS-ARDL examples covering fixed-order estimation,
   formula workflows, lag/model selection, print helpers, output fields,
   prediction/forecast hooks, and supported diagnostics.

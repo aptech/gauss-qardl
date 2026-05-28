@@ -16,10 +16,10 @@ The benchmark script runs `tests/benchmark_nardl_csardl.e`, which:
 
 - Generates seeded synthetic NARDL and CS-ARDL datasets.
 - Estimates levels and ECM NARDL models.
-- Estimates pooled CS-ARDL and optional mean-group, poolability, and Pesaran
-  CD diagnostics.
-- Prints long-run coefficient summaries plus CS-ARDL poolability and CD
-  statistics.
+- Estimates pooled CS-ARDL and optional mean-group, poolability,
+  Pesaran-Yamagata, and Pesaran CD diagnostics.
+- Prints long-run coefficient summaries plus CS-ARDL poolability,
+  Pesaran-Yamagata, and CD statistics.
 
 These are deterministic implementation benchmarks, not published-result
 replications.
@@ -51,7 +51,8 @@ maximum absolute differences, and tolerances on failure.
 
 CS-ARDL panel validation additionally checks known cross-sectional averages,
 levels-design lag alignment, formula row-order invariance, and manual
-mean-group, poolability, and Pesaran CD diagnostic reproduction. See
+mean-group, poolability, Pesaran-Yamagata, all-pairs Pesaran CD, and fixed
+order `CD(1)` diagnostic reproduction. See
 `docs/validation/CSARDL_VALIDATION.md`.
 
 Invalid-input source tests run through `tests/run_invalid_input_tests.ps1`.
@@ -65,6 +66,19 @@ selected published table values, and fixed-seed simulation critical values. See
 Prediction and forecast validation checks unified dispatch, backward-compatible
 QARDL wrappers, hold-last forecasts, and explicit future-regressor paths for
 ARDL, QARDL, and NARDL. See `docs/validation/FORECASTING_VALIDATION.md`.
+
+## Optional R Package Validation
+
+Run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tests/run_r_package_validation.ps1
+```
+
+This opt-in suite compares deterministic GAUSS ARDL and NARDL outputs against
+the CRAN `ardl.nardl` package when `Rscript` and the package are installed. It
+checks long-run coefficients, fitted values, residuals, usable observations,
+and coarse runtime budgets. See `docs/validation/R_PACKAGE_VALIDATION.md`.
 
 ## Published-Result Benchmarks
 
