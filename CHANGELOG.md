@@ -98,6 +98,9 @@
   `gets_pval` in scalar ARDL/QARDL, NARDL, and CS-ARDL order selectors and
   full workflows, while preserving existing AIC/BIC/HQ/HQC selection and IC
   grid helpers.
+- Pesaran-Shin-Smith deterministic Case I-V controls for ARDL and NARDL
+  unrestricted ECM paths via `case_id`, plus `ardlFull(..., case_id)` bounds
+  testing.
 - Confidence-band display controls for `plotQARDL`, `plotQARDLbands`,
   `plotRollingQARDL`, `plotRollingQARDLECM`, and graceful QIRF handling when
   interval data are not available.

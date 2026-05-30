@@ -14,7 +14,9 @@ testing where supported, and final levels-form estimation.
 `ecm_type = "two-step"` estimates the GAUSS restricted ECM by first estimating
 the levels long-run relation and then using one lagged error-correction term.
 `ecm_type = "uecm"` estimates the unrestricted ECM with lagged dependent and
-level regressors entered directly.
+level regressors entered directly. UECM designs accept `case_id = 1` through
+`5` to choose the Pesaran-Shin-Smith deterministic case; the default Case III
+preserves the prior constant-only UECM behavior.
 
 Automatic lag selection uses information criteria over candidate maximum lag
 bounds, or `criterion = "gets"` for general-to-specific backward reduction of
@@ -57,8 +59,9 @@ linear-control long-run effects, and long-run asymmetry tests where the output
 structure contains the required statistics.
 
 `nardlECM` defaults to the same restricted two-step ECM pattern and can run a
-direct unrestricted ECM with `ecm_type = "uecm"`. Dynamic multiplier paths are
-available through `nardlDynamicMultipliers`. NARDL bounds output is a
+direct unrestricted ECM with `ecm_type = "uecm"`. NARDL UECM designs accept
+the same `case_id = 1` through `5` deterministic-case option. Dynamic
+multiplier paths are available through `nardlDynamicMultipliers`. NARDL bounds output is a
 bounds-style UECM statistic; exact finite-sample critical-value integration
 remains documented separately.
 

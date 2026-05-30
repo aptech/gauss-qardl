@@ -12,6 +12,8 @@ afOut = ardlFull(data);
 afOut = ardlFull(data, pend, qend);
 afOut = ardlFull(data, pend, qend, formula, verbose, criterion);
 afOut = ardlFull(data, pend, qend, formula, verbose, "gets", gets_pval);
+afOut = ardlFull(data, pend, qend, formula, verbose, criterion, gets_pval,
+                 case_id);
 ```
 
 ## Parameters
@@ -27,6 +29,8 @@ afOut = ardlFull(data, pend, qend, formula, verbose, "gets", gets_pval);
   `"hq"`, `"hqc"`, or `"gets"`. Default is `"bic"`.
 - `gets_pval` (*scalar*) - Wald p-value threshold used when
   `criterion = "gets"`. Default is `0.1`.
+- `case_id` (*scalar*) - Pesaran-Shin-Smith deterministic case used for the
+  bounds test. Default is `3`.
 
 ## Returns
 
@@ -45,6 +49,8 @@ not change QARDL behavior. Omitting `pend` and `qend` searches the default
 When `criterion = "gets"`, `ardlFull` starts from the requested maximum lags
 and reduces the highest-order lag blocks by Wald p-value while preserving a
 contiguous lag structure.
+`case_id` is passed to `ardlboundsCase` for the bounds-test step. Levels-form
+`ardl` estimation remains the package's standard constant-only levels model.
 
 Use `ardlECM` with selected `pst` and `qst` when you want the matching ARDL
 error-correction model after running the full lag-selection and bounds-test
@@ -62,6 +68,8 @@ afOut = ardlFull(df, formula = "real_dividend ~ real_earnings",
                  verbose = 0, criterion = "bic");
 afGets = ardlFull(df, formula = "real_dividend ~ real_earnings",
                   verbose = 0, criterion = "gets", gets_pval = 0.1);
+afCaseIV = ardlFull(df, 4, 4, "real_dividend ~ real_earnings", 0,
+                    "bic", 0.1, 4);
 printARDL(afOut.ar);
 ```
 

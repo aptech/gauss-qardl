@@ -162,6 +162,14 @@ call assert_true(arECMOut.ecm_type $== "uecm" and arECMOut.nobs == arOut.nobs - 
                  "ardlECM UECM option metadata invalid");
 call assert_true(rows(arECMOut.bt) == 7 and rows(arECMOut.beta_lr) == 2,
                  "ardlECM UECM option output shape invalid");
+arECMOut = ardlECM(data, 2, 1, "", 0, "uecm", 1);
+call assert_true(arECMOut.deterministic $== "case I: no intercept, no trend" and
+                 rows(arECMOut.bt) == 6 and arECMOut.alpha == 0,
+                 "ardlECM Case I UECM output invalid");
+arECMOut = ardlECM(data, 2, 1, "", 0, "uecm", 5);
+call assert_true(arECMOut.deterministic $== "case V: unrestricted intercept, unrestricted trend" and
+                 rows(arECMOut.bt) == 8 and rows(arECMOut.beta_lr) == 2,
+                 "ardlECM Case V UECM output invalid");
 
 struct ardlFullOut afOut;
 afOut = ardlFull(data, 2, 2, "", 0, "bic");
@@ -174,6 +182,10 @@ afOut = ardlFull(data, 2, 2, "", 0, "gets", 0.1);
 call assert_true(afOut.selection_criterion $== "gets" and afOut.pst >= 1 and
                  afOut.pst <= 2 and afOut.qst >= 0 and afOut.qst <= 2,
                  "ardlFull GETS output invalid");
+afOut = ardlFull(data, 2, 2, "", 0, "bic", 0.1, 4);
+call assert_true(afOut.deterministic $== "case IV: unrestricted intercept, restricted trend" and
+                 rows(afOut.ardl_cv) == 3,
+                 "ardlFull Case IV bounds output invalid");
 
 struct qardlOut qaQ0Out;
 qaQ0Out = qardl(data, 2, 0, tau, "iid", 0, 0);

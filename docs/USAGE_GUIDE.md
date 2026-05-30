@@ -32,12 +32,14 @@ Use `ardl` when you want the standard OLS ARDL companion estimator with the
 same data ordering, formula workflow, print style, and output conventions.
 Use `ardlECM` when you want the corresponding ARDL error-correction estimator.
 The default is the package's two-step ECM; pass `ecm_type = "uecm"` for the
-unrestricted ECM:
+unrestricted ECM. Unrestricted ARDL ECMs also accept `case_id = 1` through
+`5` for Pesaran-Shin-Smith deterministic cases:
 
 ```gauss
 arOut = ardl(data, 2, 1, "", 0);
 arECMOut = ardlECM(data, 2, 1, "", 0);
 arUECMOut = ardlECM(data, 2, 1, "", 0, "uecm");
+arCaseV = ardlECM(data, 2, 1, "", 0, "uecm", 5);
 printARDL(arOut);
 afOut = ardlFull(data, verbose = 0, criterion = "bic");
 ```
@@ -211,7 +213,8 @@ print dmOut.neg;
 
 `nardl` and `nardlECM` are available when lag orders are fixed. `nardlECM`
 uses the GAUSS two-step ECM by default and accepts `ecm_type = "uecm"` for an
-unrestricted ECM. The output
+unrestricted ECM. With `ecm_type = "uecm"`, `case_id = 1` through `5` controls
+the deterministic terms. The output
 includes long-run positive and negative coefficients, long-run and short-run
 asymmetry Wald tests, a UECM bounds F-statistic, fitted values, residuals, and
 OLS covariance fields. `predictARDL` and `forecastARDL` infer NARDL output
@@ -233,6 +236,9 @@ nECMSpec = nardlECM(df, 2, 2, formula = "y ~ x1 + x2", print_results = 0,
 nUECMSpec = nardlECM(df, 2, 2, formula = "y ~ x1 + x2", print_results = 0,
                      decomp_vars = "x1", control_vars = "x2",
                      q_control = 1, ecm_type = "uecm");
+nCaseISpec = nardlECM(df, 2, 2, formula = "y ~ x1 + x2", print_results = 0,
+                      decomp_vars = "x1", control_vars = "x2",
+                      q_control = 1, ecm_type = "uecm", case_id = 1);
 nfSpec = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
                    "x1", "x2", 1);
 ```

@@ -152,11 +152,12 @@ endp;
 **  Format:     arECMOut = ardlECM(data, ppp, qqq);
 **              arECMOut = ardlECM(data, ppp, qqq, formula, print_results);
 **              arECMOut = ardlECM(data, ppp, qqq, formula, print_results,
-**                                 ecm_type);
+**                                 ecm_type, case_id);
 */
 proc (struct ardlECMOut) = ardlECM(data, ppp, qqq, formula = "",
-                                   print_results = 1, ecm_type = "two-step");
-    local depvar, xvars, qvec, k0;
+                                   print_results = 1, ecm_type = "two-step",
+                                   case_id = 3);
+    local depvar, xvars, qvec, k0, det_cols, rho_pos, x_lag_start;
     local Y_ecm, ONEX_ecm, bt_ecm, fitted, resid, coef_cov, sigma2;
     local beta_lr_ecm;
 
@@ -164,14 +165,20 @@ proc (struct ardlECMOut) = ardlECM(data, ppp, qqq, formula = "",
     data = applyQARDLFormula(data, formula);
     call _qardlValidateEstimatorInputs(data, ppp, qqq, { 0.5 }, "ardlECM");
     ecm_type = _ardlNormalizeECMType(ecm_type, "ardlECM", 0);
+    call _ardlValidateCaseID(case_id, "ardlECM");
+    call _ardlValidateECMCase(ecm_type, case_id, "ardlECM");
 
     k0 = cols(data) - 1;
     qvec = qqq*ones(k0, 1);
+    det_cols = _ardlDeterministicColumnCount(case_id);
+    rho_pos = det_cols + 1;
+    x_lag_start = rho_pos + 1;
 
     struct ardlOut arOut;
     arOut = ardl(data, ppp, qqq, "", 0);
 
-    { Y_ecm, ONEX_ecm } = _ardlBuildECMDesignX(data, ppp, qvec, arOut.bigbt, ecm_type);
+    { Y_ecm, ONEX_ecm } =
+        _ardlBuildECMDesignX(data, ppp, qvec, arOut.bigbt, ecm_type, case_id);
     call _qardlCheckFullColumnRank(ONEX_ecm, "ardlECM", "ECM design matrix");
 
     bt_ecm = _qardlSafeInv(ONEX_ecm'*ONEX_ecm, "ardlECM", "ECM moment matrix")*ONEX_ecm'*Y_ecm;
@@ -180,7 +187,7 @@ proc (struct ardlECMOut) = ardlECM(data, ppp, qqq, formula = "",
     { coef_cov, sigma2 } = _ardlOLSCov(ONEX_ecm, resid, "ardlECM");
 
     if ecm_type $== "uecm";
-        beta_lr_ecm = _ardlLongRunFromUECM(bt_ecm, 2, 3, k0);
+        beta_lr_ecm = _ardlLongRunFromUECM(bt_ecm, rho_pos, x_lag_start, k0);
     else;
         beta_lr_ecm = arOut.bigbt;
     endif;
@@ -190,7 +197,7 @@ proc (struct ardlECMOut) = ardlECM(data, ppp, qqq, formula = "",
     arECMOut.formula = formula;
     arECMOut.depvar = depvar;
     arECMOut.xvars = xvars;
-    arECMOut.deterministic = "constant";
+    arECMOut.deterministic = _ardlDeterministicLabel(case_id);
     arECMOut.covariance_type = "ols";
     arECMOut.selection_criterion = "none";
     arECMOut.ecm_type = ecm_type;
@@ -208,10 +215,15 @@ proc (struct ardlECMOut) = ardlECM(data, ppp, qqq, formula = "",
     arECMOut.design_condition = sqrt(_qardlConditionNumber(ONEX_ecm'ONEX_ecm));
     arECMOut.beta_lr = beta_lr_ecm;
     arECMOut.rho_ols = arOut.rho;
-    arECMOut.alpha = bt_ecm[1];
-    arECMOut.rho = bt_ecm[2];
-    arECMOut.alpha_cov = coef_cov[1, 1];
-    arECMOut.rho_cov = coef_cov[2, 2];
+    if det_cols >= 1;
+        arECMOut.alpha = bt_ecm[1];
+        arECMOut.alpha_cov = coef_cov[1, 1];
+    else;
+        arECMOut.alpha = 0;
+        arECMOut.alpha_cov = 0;
+    endif;
+    arECMOut.rho = bt_ecm[rho_pos];
+    arECMOut.rho_cov = coef_cov[rho_pos, rho_pos];
     arECMOut.bt = bt_ecm;
     arECMOut.fitted = fitted;
     arECMOut.resid = resid;
@@ -234,14 +246,14 @@ endp;
 **  Format:     afOut = ardlFull(data);
 **              afOut = ardlFull(data, pend, qend);
 **              afOut = ardlFull(data, pend, qend, formula, verbose, criterion,
-**                               gets_pval);
+**                               gets_pval, case_id);
 **
 **  Note:       If omitted, pend and qend default to 8.
 */
 proc (struct ardlFullOut) = ardlFull(data, pend = 8, qend = 8, formula = "",
                                      verbose = 1, criterion = "bic",
-                                     gets_pval = 0.1);
-    local pst, qst, fstat, cv, depvar, xvars;
+                                     gets_pval = 0.1, case_id = 3);
+    local pst, qst, fstat, cv, depvar, xvars, tstat, used_case, q_restrict;
 
     if verbose /= 0 and verbose /= 1;
         errorlog "ardlFull: verbose must be 0 or 1";
@@ -254,6 +266,7 @@ proc (struct ardlFullOut) = ardlFull(data, pend = 8, qend = 8, formula = "",
     criterion = lower(criterion);
     call _qardlValidateSelectionCriterion(criterion, "ardlFull");
     call _qardlValidateGETSPValue(gets_pval, "ardlFull");
+    call _ardlValidateCaseID(case_id, "ardlFull");
 
     { pst, qst } = pqorder(data, pend, qend, criterion, gets_pval);
     if verbose;
@@ -261,9 +274,10 @@ proc (struct ardlFullOut) = ardlFull(data, pend = 8, qend = 8, formula = "",
         print "ardlFull: running ARDL bounds test ...";
     endif;
 
-    { fstat, cv } = ardlbounds(data, pst, qst);
+    { fstat, tstat, cv, used_case, q_restrict } =
+        ardlboundsCase(data, pst, qst, case_id);
     if verbose;
-        call ardlbounds_print(fstat, cv, cols(data) - 1);
+        call ardlboundsCase_print(fstat, tstat, cv, cols(data) - 1, used_case);
     endif;
 
     struct ardlFullOut afOut;
@@ -278,7 +292,7 @@ proc (struct ardlFullOut) = ardlFull(data, pend = 8, qend = 8, formula = "",
     afOut.formula = formula;
     afOut.depvar = depvar;
     afOut.xvars = xvars;
-    afOut.deterministic = "constant";
+    afOut.deterministic = _ardlDeterministicLabel(case_id);
     afOut.covariance_type = "ols";
     afOut.selection_criterion = criterion;
     afOut.pmax = pend;
@@ -1049,7 +1063,7 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, 
     beta_lr_ols = bt_ols[2+qqq*k0:1+(qqq+1)*k0] ./ (-rho_ols);
 
     { Y_ecm, ONEX_ecm } =
-        _ardlBuildECMDesignX(data, ppp, qqq*ones(k0, 1), beta_lr_ols, ecm_type);
+        _ardlBuildECMDesignX(data, ppp, qqq*ones(k0, 1), beta_lr_ols, ecm_type, 3);
     N_ecm = rows(Y_ecm);
     call _qardlCheckFullColumnRank(ONEX_ecm, "qardlECM", "ECM design matrix");
 
@@ -1226,7 +1240,7 @@ proc (struct qardlECMOut) = qardlECMX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }
     beta_lr_ols = bt_ols[theta_start:theta_start+k0-1] ./ (-rho_ols);
 
     { Y_ecm, ONEX_ecm } =
-        _ardlBuildECMDesignX(data, ppp, qvec, beta_lr_ols, ecm_type);
+        _ardlBuildECMDesignX(data, ppp, qvec, beta_lr_ols, ecm_type, 3);
     N_ecm = rows(Y_ecm);
     call _qardlCheckFullColumnRank(ONEX_ecm, "qardlECMX", "ECM design matrix");
 
@@ -2215,12 +2229,18 @@ proc (0) = printARDLECM(struct ardlECMOut arECMOut);
     local ii, se_alpha, se_rho, z_alpha, z_rho, pv_alpha, pv_rho;
     local header, note, table_width, eq_line, dash_line;
 
-    se_alpha = sqrt(arECMOut.alpha_cov);
     se_rho = sqrt(arECMOut.rho_cov);
-    z_alpha = arECMOut.alpha ./ se_alpha;
     z_rho = arECMOut.rho ./ se_rho;
-    pv_alpha = 2*cdfnc(abs(z_alpha));
     pv_rho = 2*cdfnc(abs(z_rho));
+    if arECMOut.alpha_cov > 0;
+        se_alpha = sqrt(arECMOut.alpha_cov);
+        z_alpha = arECMOut.alpha ./ se_alpha;
+        pv_alpha = 2*cdfnc(abs(z_alpha));
+    else;
+        se_alpha = 0;
+        z_alpha = 0;
+        pv_alpha = 1;
+    endif;
 
     header = "Name                  Coeff.       Std. Err.      z-value       P>|z|    Sig.";
     note = _qardlSignifNote();
@@ -2264,9 +2284,14 @@ proc (0) = printARDLECM(struct ardlECMOut arECMOut);
     print dash_line;
     print header;
     print dash_line;
-    sprintf("  alpha        %16.6f%15.6f%13.6f%12.6f%7s",
-            arECMOut.alpha, se_alpha, z_alpha, pv_alpha,
-            _qardlSignifStars(pv_alpha));
+    if arECMOut.alpha_cov > 0;
+        sprintf("  alpha        %16.6f%15.6f%13.6f%12.6f%7s",
+                arECMOut.alpha, se_alpha, z_alpha, pv_alpha,
+                _qardlSignifStars(pv_alpha));
+    else;
+        sprintf("  alpha        %16.6f%15s%13s%12s%7s",
+                arECMOut.alpha, "", "", "", "");
+    endif;
     sprintf("  rho          %16.6f%15.6f%13.6f%12.6f%7s",
             arECMOut.rho, se_rho, z_rho, pv_rho,
             _qardlSignifStars(pv_rho));
@@ -3781,9 +3806,48 @@ proc (1) = _ardlNormalizeECMType(ecm_type, caller, allow_none);
     end;
 endp;
 
-proc (2) = _ardlBuildECMDesignX(data, ppp, qvec, beta_lr, ecm_type);
+proc (0) = _ardlValidateCaseID(case_id, caller);
+    if rows(case_id) * cols(case_id) /= 1 or round(case_id) /= case_id or
+       case_id < 1 or case_id > 5;
+        errorlog caller $+ ": case_id must be an integer from 1 through 5";
+        end;
+    endif;
+endp;
+
+proc (0) = _ardlValidateECMCase(ecm_type, case_id, caller);
+    if not (ecm_type $== "uecm") and case_id /= 3;
+        errorlog caller $+ ": case_id values other than 3 require ecm_type = \"uecm\"";
+        end;
+    endif;
+endp;
+
+proc (1) = _ardlDeterministicColumnCount(case_id);
+    if case_id == 1;
+        retp(0);
+    elseif case_id == 4 or case_id == 5;
+        retp(2);
+    endif;
+    retp(1);
+endp;
+
+proc (1) = _ardlDeterministicLabel(case_id);
+    if case_id == 1;
+        retp("case I: no intercept, no trend");
+    elseif case_id == 2;
+        retp("case II: restricted intercept, no trend");
+    elseif case_id == 3;
+        retp("case III: unrestricted intercept, no trend");
+    elseif case_id == 4;
+        retp("case IV: unrestricted intercept, restricted trend");
+    endif;
+    retp("case V: unrestricted intercept, unrestricted trend");
+endp;
+
+proc (2) = _ardlBuildECMDesignX(data, ppp, qvec, beta_lr, ecm_type,
+                                case_id = 3);
     local nn, k0, qmax, T0, N_ecm, yy, xx, Y, ONEX;
     local ec_lag, y_lag, x_lag, dy_lags, dx_lags, ii, jj, col_idx;
+    local trend, level_terms;
 
     nn = rows(data);
     k0 = cols(data) - 1;
@@ -3800,11 +3864,19 @@ proc (2) = _ardlBuildECMDesignX(data, ppp, qvec, beta_lr, ecm_type);
     endif;
 
     Y = yy[(T0+2):nn] - yy[(T0+1):(nn-1)];
+    trend = seqa(T0+2, 1, N_ecm);
 
     if ecm_type $== "uecm";
         y_lag = yy[(T0+1):(nn-1)];
         x_lag = xx[(T0+1):(nn-1), .];
-        ONEX = ones(N_ecm, 1)~y_lag~x_lag;
+        level_terms = y_lag~x_lag;
+        if case_id == 1;
+            ONEX = level_terms;
+        elseif case_id == 2 or case_id == 3;
+            ONEX = ones(N_ecm, 1)~level_terms;
+        else;
+            ONEX = ones(N_ecm, 1)~trend~level_terms;
+        endif;
     else;
         ec_lag = yy[(T0+1):(nn-1)] - xx[(T0+1):(nn-1), .]*beta_lr;
         ONEX = ones(N_ecm, 1)~ec_lag;

@@ -10,7 +10,8 @@ estimation.
 ```gauss
 nfOut = nardlFull(data);
 nfOut = nardlFull(data, pend, qend, formula, verbose, criterion,
-                  decomp_vars, control_vars, q_control, ecm_type, gets_pval);
+                  decomp_vars, control_vars, q_control, ecm_type, gets_pval,
+                  case_id);
 ```
 
 ## Parameters
@@ -29,6 +30,9 @@ nfOut = nardlFull(data, pend, qend, formula, verbose, criterion,
   `"two-step"`.
 - `gets_pval` (*scalar*) - Wald p-value threshold used when
   `criterion = "gets"`. Default is `0.1`.
+- `case_id` (*scalar*) - Pesaran-Shin-Smith deterministic case passed to the
+  NARDL ECM when `ecm_type = "uecm"`. Default is `3`. Cases other than `3`
+  require `ecm_type = "uecm"`.
 
 ## Returns
 
@@ -42,6 +46,9 @@ output in `.ecm`.
 maximum searched values for `p` and the decomposed-variable `q`. GETS starts
 from those maxima and reduces highest-order lag blocks while preserving
 contiguous `p/q` orders.
+`case_id` controls deterministic terms in the ECM stored in `.ecm`; the
+levels estimator stored in `.na` remains the standard constant-only NARDL
+levels model.
 
 ## Examples
 
@@ -52,6 +59,8 @@ nfOut = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
                   "x1", "x2", 1, "uecm");
 nfGets = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "gets",
                    "x1", "x2", 1, "uecm", 0.1);
+nfCaseI = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
+                    "x1", "x2", 1, "uecm", 0.1, 1);
 printNARDL(nfOut.na);
 printNARDLECM(nfOut.ecm);
 ```

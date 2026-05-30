@@ -9,6 +9,7 @@ embedded in every estimator call.
 | Levels estimator | Yes | Yes | Yes | Yes |
 | Full workflow | Yes | Yes | Yes | Yes |
 | ECM workflow | `ardlECM`; two-step or UECM | Yes; two-step or UECM | Yes; two-step or UECM | Yes; two-step or UECM |
+| UECM deterministic cases | Cases I-V | Default Case III | Cases I-V | Default Case III |
 | Formula strings | Yes | Yes | Yes | Yes |
 | Automatic lag selection | IC and GETS | IC and GETS | IC and GETS | IC and GETS |
 | Explicit decomposed-variable / linear-control NARDL specs | Not applicable | Not applicable | Yes | Not applicable |

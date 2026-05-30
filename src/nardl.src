@@ -200,7 +200,8 @@ endp;
 proc (struct nardlECMOut) = nardlECM(data, ppp, qqq, formula = "",
                                     print_results = 1, decomp_vars = "",
                                     control_vars = "", q_decomp = -1,
-                                    q_control = 0, ecm_type = "two-step");
+                                    q_control = 0, ecm_type = "two-step",
+                                    case_id = 3);
     local q_eff;
     struct nardlECMOut nECMOut;
 
@@ -211,7 +212,7 @@ proc (struct nardlECMOut) = nardlECM(data, ppp, qqq, formula = "",
 
     nECMOut = _nardlEstimateECM(data, ppp, q_eff, formula, print_results,
                                 decomp_vars, control_vars, q_control,
-                                "nardlECM", "none", ecm_type);
+                                "nardlECM", "none", ecm_type, case_id);
     retp(nECMOut);
 endp;
 
@@ -221,12 +222,14 @@ endp;
 proc (struct nardlECMOut) = _nardlEstimateECM(data, ppp, q_decomp, formula,
                                              print_results, decomp_vars,
                                              control_vars, q_control, caller,
-                                             selection_criterion, ecm_type);
+                                             selection_criterion, ecm_type,
+                                             case_id);
     local Y_ecm, ONEX_ecm, bt_ecm, fitted, resid, coef_cov, sigma2;
     local depvar, xvars, decomp_idx, control_idx, decomp_names, control_names;
     local raw_data;
     local ndecomp, ncontrol, pos_start, neg_start, ctrl_start, lr_cov;
     local beta_pos_ecm, beta_neg_ecm, beta_control_ecm, asym_wald_ecm, asym_pv_ecm;
+    local det_cols, rho_pos;
 
     raw_data = data;
     { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
@@ -237,6 +240,8 @@ proc (struct nardlECMOut) = _nardlEstimateECM(data, ppp, q_decomp, formula,
         q_control = 0;
     endif;
     ecm_type = _ardlNormalizeECMType(ecm_type, caller, 0);
+    call _ardlValidateCaseID(case_id, caller);
+    call _ardlValidateECMCase(ecm_type, case_id, caller);
     call _nardlValidateSpecInputs(data, ppp, q_decomp, q_control,
                                   decomp_idx, control_idx, caller);
 
@@ -248,7 +253,7 @@ proc (struct nardlECMOut) = _nardlEstimateECM(data, ppp, q_decomp, formula,
     if ecm_type $== "uecm";
         { Y_ecm, ONEX_ecm } =
             _nardlBuildSpecUECMDesign(data, ppp, q_decomp, decomp_idx,
-                                      control_idx, q_control);
+                                      control_idx, q_control, case_id);
     else;
         { Y_ecm, ONEX_ecm } =
             _nardlBuildSpecECMDesign(data, ppp, q_decomp, decomp_idx, control_idx,
@@ -264,18 +269,20 @@ proc (struct nardlECMOut) = _nardlEstimateECM(data, ppp, q_decomp, formula,
 
     ndecomp = rows(decomp_idx);
     ncontrol = _nardlIndexCount(control_idx);
+    det_cols = _ardlDeterministicColumnCount(case_id);
+    rho_pos = det_cols + 1;
     if ecm_type $== "uecm";
-        pos_start = 3;
+        pos_start = rho_pos + 1;
         neg_start = pos_start + ndecomp;
         ctrl_start = neg_start + ndecomp;
-        beta_pos_ecm = -bt_ecm[pos_start:pos_start+ndecomp-1] ./ bt_ecm[2];
-        beta_neg_ecm = -bt_ecm[neg_start:neg_start+ndecomp-1] ./ bt_ecm[2];
+        beta_pos_ecm = -bt_ecm[pos_start:pos_start+ndecomp-1] ./ bt_ecm[rho_pos];
+        beta_neg_ecm = -bt_ecm[neg_start:neg_start+ndecomp-1] ./ bt_ecm[rho_pos];
         if ncontrol > 0;
-            beta_control_ecm = -bt_ecm[ctrl_start:ctrl_start+ncontrol-1] ./ bt_ecm[2];
+            beta_control_ecm = -bt_ecm[ctrl_start:ctrl_start+ncontrol-1] ./ bt_ecm[rho_pos];
         else;
             beta_control_ecm = error(0);
         endif;
-        lr_cov = _ardlUECMLongRunCov(bt_ecm, coef_cov, 2, pos_start,
+        lr_cov = _ardlUECMLongRunCov(bt_ecm, coef_cov, rho_pos, pos_start,
                                      2*ndecomp+ncontrol);
         { asym_wald_ecm, asym_pv_ecm } =
             _nardlLongRunAsymmetry(beta_pos_ecm, beta_neg_ecm, lr_cov);
@@ -294,7 +301,7 @@ proc (struct nardlECMOut) = _nardlEstimateECM(data, ppp, q_decomp, formula,
     nECMOut.xvars = xvars;
     nECMOut.decomp_vars = decomp_names;
     nECMOut.control_vars = control_names;
-    nECMOut.deterministic = "constant";
+    nECMOut.deterministic = _ardlDeterministicLabel(case_id);
     nECMOut.covariance_type = "ols";
     nECMOut.selection_criterion = selection_criterion;
     nECMOut.ecm_type = ecm_type;
@@ -320,10 +327,15 @@ proc (struct nardlECMOut) = _nardlEstimateECM(data, ppp, q_decomp, formula,
     nECMOut.beta_neg = beta_neg_ecm;
     nECMOut.beta_control = beta_control_ecm;
     nECMOut.rho_ols = naOut.rho;
-    nECMOut.alpha = bt_ecm[1];
-    nECMOut.rho = bt_ecm[2];
-    nECMOut.alpha_cov = coef_cov[1, 1];
-    nECMOut.rho_cov = coef_cov[2, 2];
+    if det_cols >= 1;
+        nECMOut.alpha = bt_ecm[1];
+        nECMOut.alpha_cov = coef_cov[1, 1];
+    else;
+        nECMOut.alpha = 0;
+        nECMOut.alpha_cov = 0;
+    endif;
+    nECMOut.rho = bt_ecm[rho_pos];
+    nECMOut.rho_cov = coef_cov[rho_pos, rho_pos];
     nECMOut.bt = bt_ecm;
     nECMOut.asymmetry_wald = asym_wald_ecm;
     nECMOut.asymmetry_pv = asym_pv_ecm;
@@ -348,7 +360,7 @@ endp;
 **  Format:     nfOut = nardlFull(data);
 **              nfOut = nardlFull(data, pend, qend, formula, verbose, criterion,
 **                                decomp_vars, control_vars, q_control,
-**                                ecm_type, gets_pval);
+**                                ecm_type, gets_pval, case_id);
 **
 **  Note:       If omitted, pend and qend default to 8.
 */
@@ -356,7 +368,7 @@ proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "",
                                       verbose = 1, criterion = "bic",
                                       decomp_vars = "", control_vars = "",
                                       q_control = 0, ecm_type = "two-step",
-                                      gets_pval = 0.1);
+                                      gets_pval = 0.1, case_id = 3);
     local pst, qst, depvar, xvars, raw_data, grid, idx;
     local decomp_idx, control_idx, decomp_names, control_names;
 
@@ -367,6 +379,8 @@ proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "",
     call _qardlValidateSelectionCriterion(criterion, "nardlFull");
     call _qardlValidateGETSPValue(gets_pval, "nardlFull");
     ecm_type = _ardlNormalizeECMType(ecm_type, "nardlFull", 0);
+    call _ardlValidateCaseID(case_id, "nardlFull");
+    call _ardlValidateECMCase(ecm_type, case_id, "nardlFull");
 
     raw_data = data;
     { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
@@ -397,7 +411,7 @@ proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "",
     nfOut.formula = formula;
     nfOut.depvar = depvar;
     nfOut.xvars = xvars;
-    nfOut.deterministic = "constant";
+    nfOut.deterministic = _ardlDeterministicLabel(case_id);
     nfOut.covariance_type = "ols";
     nfOut.selection_criterion = criterion;
     nfOut.pmax = pend;
@@ -412,7 +426,7 @@ proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "",
                                     "nardlFull", criterion);
     nfOut.ecm = _nardlEstimateECM(raw_data, pst, qst, formula, 0,
                                   decomp_vars, control_vars, q_control,
-                                  "nardlFull", criterion, ecm_type);
+                                  "nardlFull", criterion, ecm_type, case_id);
 
     if verbose;
         call printNARDL(nfOut.na);
@@ -756,12 +770,18 @@ proc (0) = printNARDLECM(struct nardlECMOut nECMOut);
     local se_alpha, se_rho, z_alpha, z_rho, pv_alpha, pv_rho;
     local header, note, table_width, eq_line, dash_line;
 
-    se_alpha = sqrt(nECMOut.alpha_cov[1, 1]);
     se_rho = sqrt(nECMOut.rho_cov[1, 1]);
-    z_alpha = nECMOut.alpha[1] / se_alpha;
     z_rho = nECMOut.rho[1] / se_rho;
-    pv_alpha = 2*cdfnc(abs(z_alpha));
     pv_rho = 2*cdfnc(abs(z_rho));
+    if nECMOut.alpha_cov[1, 1] > 0;
+        se_alpha = sqrt(nECMOut.alpha_cov[1, 1]);
+        z_alpha = nECMOut.alpha[1] / se_alpha;
+        pv_alpha = 2*cdfnc(abs(z_alpha));
+    else;
+        se_alpha = 0;
+        z_alpha = 0;
+        pv_alpha = 1;
+    endif;
 
     header = "Name                          Coeff.     Std. Err.       z-value        P>|z|  Sig.";
     note = _qardlSignifNote();
@@ -784,9 +804,14 @@ proc (0) = printNARDLECM(struct nardlECMOut nECMOut);
     print dash_line;
     print header;
     print dash_line;
-    sprintf("%-22s%14.6f%14.6f%14.6f%13.6f%6s",
-            "  alpha", nECMOut.alpha[1], se_alpha, z_alpha, pv_alpha,
-            _qardlSignifStars(pv_alpha));
+    if nECMOut.alpha_cov[1, 1] > 0;
+        sprintf("%-22s%14.6f%14.6f%14.6f%13.6f%6s",
+                "  alpha", nECMOut.alpha[1], se_alpha, z_alpha, pv_alpha,
+                _qardlSignifStars(pv_alpha));
+    else;
+        sprintf("%-22s%14.6f%14s%14s%13s%6s",
+                "  alpha", nECMOut.alpha[1], "", "", "", "");
+    endif;
     sprintf("%-22s%14.6f%14.6f%14.6f%13.6f%6s",
             "  rho", nECMOut.rho[1], se_rho, z_rho, pv_rho,
             _qardlSignifStars(pv_rho));
@@ -1657,7 +1682,7 @@ proc (1) = _nardlBoundsFstatForSelectors(data, ppp, q_decomp, decomp_idx,
     local ndecomp, ncontrol, q_restrict, N, K_total, rest_start;
 
     { Y, XU } = _nardlBuildSpecUECMDesign(data, ppp, q_decomp,
-                                          decomp_idx, control_idx, q_control);
+                                          decomp_idx, control_idx, q_control, 3);
     call _qardlCheckFullColumnRank(XU, caller, "UECM bounds design matrix");
 
     ndecomp = rows(decomp_idx);
@@ -1683,11 +1708,13 @@ proc (1) = _nardlBoundsFstatForSelectors(data, ppp, q_decomp, decomp_idx,
     retp(((rss_r - rss_u) / q_restrict) / (rss_u / (N - K_total)));
 endp;
 
-proc (2) = _nardlBuildSpecUECMDesign(data, ppp, q_decomp, decomp_idx, control_idx, q_control);
+proc (2) = _nardlBuildSpecUECMDesign(data, ppp, q_decomp, decomp_idx,
+                                     control_idx, q_control, case_id = 3);
     local nn, ndecomp, ncontrol, max_lag, N, yy, x_pos, x_neg, dx_pos, dx_neg;
     local x_ctrl, dx_ctrl, Y, y_lag, pos_lag, neg_lag, ctrl_lag;
     local ONEX, dy_lags, dx_pos_lags, dx_neg_lags, dx_ctrl_lags;
     local ii, jj, src, col;
+    local trend, level_terms;
 
     nn = rows(data);
     ndecomp = rows(decomp_idx);
@@ -1707,6 +1734,7 @@ proc (2) = _nardlBuildSpecUECMDesign(data, ppp, q_decomp, decomp_idx, control_id
     endif;
 
     Y = zeros(N, 1);
+    trend = seqa(max_lag + 2, 1, N);
     y_lag = zeros(N, 1);
     pos_lag = zeros(N, ndecomp);
     neg_lag = zeros(N, ndecomp);
@@ -1727,9 +1755,17 @@ proc (2) = _nardlBuildSpecUECMDesign(data, ppp, q_decomp, decomp_idx, control_id
         ii = ii + 1;
     endo;
 
-    ONEX = ones(N, 1)~y_lag~pos_lag~neg_lag;
+    level_terms = y_lag~pos_lag~neg_lag;
     if ncontrol > 0;
-        ONEX = ONEX~ctrl_lag;
+        level_terms = level_terms~ctrl_lag;
+    endif;
+
+    if case_id == 1;
+        ONEX = level_terms;
+    elseif case_id == 2 or case_id == 3;
+        ONEX = ones(N, 1)~level_terms;
+    else;
+        ONEX = ones(N, 1)~trend~level_terms;
     endif;
 
     if ppp > 1;

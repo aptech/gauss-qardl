@@ -174,6 +174,14 @@ call assert_true(nECMOut.ecm_type $== "uecm" and nECMOut.nobs == n - 2 and
                  "nardlECM UECM option metadata invalid");
 call assert_true(rows(nECMOut.bt) == 10 and nECMOut.sigma2 > 0,
                  "nardlECM UECM option output shape invalid");
+nECMOut = nardlECM(nardl_data, 1, 1, "", 0, "", "", -1, 0, "uecm", 1);
+call assert_true(nECMOut.deterministic $== "case I: no intercept, no trend" and
+                 rows(nECMOut.bt) == 9 and nECMOut.alpha == 0,
+                 "nardlECM Case I UECM output invalid");
+nECMOut = nardlECM(nardl_data, 1, 1, "", 0, "", "", -1, 0, "uecm", 5);
+call assert_true(nECMOut.deterministic $== "case V: unrestricted intercept, unrestricted trend" and
+                 rows(nECMOut.bt) == 11 and rows(nECMOut.beta_pos) == 2,
+                 "nardlECM Case V UECM output invalid");
 
 struct nardlFullOut nfOut;
 nfOut = nardlFull(nardl_data, 1, 1, "", 0);
@@ -189,6 +197,10 @@ call assert_true(nfOut.na.ndecomp == 1 and nfOut.na.ncontrol == 1 and
 nfOut = nardlFull(nardl_data, 1, 1, "", 0, "bic", "", "", 0, "uecm");
 call assert_true(nfOut.ecm.ecm_type $== "uecm" and rows(nfOut.ecm.beta_pos) == 2,
                  "nardlFull UECM option metadata invalid");
+nfOut = nardlFull(nardl_data, 1, 1, "", 0, "bic", "", "", 0, "uecm", 0.1, 1);
+call assert_true(nfOut.deterministic $== "case I: no intercept, no trend" and
+                 rows(nfOut.ecm.bt) == 9,
+                 "nardlFull Case I UECM output invalid");
 
 rndseed 260511;
 n_default = 120;

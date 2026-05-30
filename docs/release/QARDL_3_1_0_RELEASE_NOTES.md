@@ -21,6 +21,9 @@ coverage, and release-verification tooling.
 - Added scalar GETS lag selection through `criterion = "gets"` and optional
   `gets_pval` in ARDL/QARDL, NARDL, and CS-ARDL order-selection and full
   workflows.
+- Added Pesaran-Shin-Smith deterministic Case I-V controls for ARDL and NARDL
+  unrestricted ECM paths through `case_id`, with `ardlFull(..., case_id)`
+  using the selected case for bounds testing.
 - Added unified `predictARDL` and `forecastARDL` dispatch across ARDL, QARDL,
   NARDL, and CS-ARDL outputs.
 - Preserved backward-compatible `predictQARDL` and `forecastQARDL` wrappers.
