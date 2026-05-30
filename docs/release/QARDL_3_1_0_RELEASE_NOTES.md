@@ -18,6 +18,9 @@ coverage, and release-verification tooling.
 - Added explicit NARDL decomposed-variable and linear-control specifications
   through optional arguments on `nardl`, `nardlECM`, and `nardlFull` while
   preserving the legacy all-RHS-decomposed `nardl` shortcut.
+- Added scalar GETS lag selection through `criterion = "gets"` and optional
+  `gets_pval` in ARDL/QARDL, NARDL, and CS-ARDL order-selection and full
+  workflows.
 - Added unified `predictARDL` and `forecastARDL` dispatch across ARDL, QARDL,
   NARDL, and CS-ARDL outputs.
 - Preserved backward-compatible `predictQARDL` and `forecastQARDL` wrappers.

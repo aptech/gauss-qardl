@@ -6,12 +6,23 @@ new;
 ** script is called.
 */
 
-#include ../../src/qardl.sdf
-#include ../../src/qardl.src
-#include ../../src/nardl.src
+#include qardl.sdf
+#include qardl.src
+#include nardl.src
+#include csardl.src
+#include ardl_dispatch.src
+#include wtestlrb.src
+#include wtestsrp.src
+#include wtestsrg.src
+#include icmean.src
+#include p_values_qardl.src
+#include wtestsym.src
+#include wtestconst.src
+#include ardlbounds.src
+#include qirf.src
 
 proc (0) = write_numeric_csv(mat, header, fpath);
-    local fid, rr, cc, ii, jj, line, ret;
+    local fid, rr, cc, ii, jj, csv_line, ret;
 
     fid = fopen(fpath, "w");
     if fid == -1;
@@ -24,16 +35,16 @@ proc (0) = write_numeric_csv(mat, header, fpath);
     cc = cols(mat);
     ii = 1;
     do until ii > rr;
-        line = "";
+        csv_line = "";
         jj = 1;
         do until jj > cc;
             if jj > 1;
-                line = line $+ ",";
+                csv_line = csv_line $+ ",";
             endif;
-            line = line $+ ftos(mat[ii, jj], "%*.*lf", 1, 15);
+            csv_line = csv_line $+ ftos(mat[ii, jj], "%*.*lf", 1, 15);
             jj = jj + 1;
         endo;
-        ret = fputs(fid, line $+ "\n");
+        ret = fputs(fid, csv_line $+ "\n");
         ii = ii + 1;
     endo;
 
@@ -76,6 +87,72 @@ proc (1) = make_nardl_r_package_data(n);
     retp(y~x1~x2);
 endp;
 
+proc (4) = estimate_validation_ols(Y, X, caller);
+    local bt, fitted, resid, sigma2;
+
+    call _qardlCheckFullColumnRank(X, caller, "validation design matrix");
+    bt = _qardlSafeInv(X'*X, caller, "validation moment matrix")*X'*Y;
+    fitted = X*bt;
+    resid = Y - fitted;
+    sigma2 = (resid'resid)/(rows(Y) - cols(X));
+
+    retp(bt, fitted, resid, sigma2);
+endp;
+
+proc (2) = build_r_ardl_uecm_design(data);
+    local nrows, yy, x1, x2, nobs, Y, X, ii, tt;
+
+    nrows = rows(data);
+    yy = data[., 1];
+    x1 = data[., 2];
+    x2 = data[., 3];
+    nobs = nrows - 3;
+    Y = zeros(nobs, 1);
+    X = zeros(nobs, 12);
+
+    for ii(1, nobs, 1);
+        tt = ii + 3;
+        Y[ii] = yy[tt] - yy[tt-1];
+        X[ii, .] = 1~yy[tt-1]~x1[tt-1]~x2[tt-1]~
+            (yy[tt-1] - yy[tt-2])~(yy[tt-2] - yy[tt-3])~
+            (x1[tt] - x1[tt-1])~(x2[tt] - x2[tt-1])~
+            (x1[tt-1] - x1[tt-2])~(x1[tt-2] - x1[tt-3])~
+            (x2[tt-1] - x2[tt-2])~(x2[tt-2] - x2[tt-3]);
+    endfor;
+
+    retp(Y, X);
+endp;
+
+proc (2) = build_r_nardl_uecm_design(data);
+    local nrows, yy, x1, x2, dx, dxp, dxn, xp, xn, nobs, Y, X, ii, tt;
+
+    nrows = rows(data);
+    yy = data[., 1];
+    x1 = data[., 2];
+    x2 = data[., 3];
+
+    dx = x1[2:nrows] - x1[1:nrows-1];
+    dxp = dx.*(dx .>= 0);
+    dxn = dx.*(dx .< 0);
+    xp = cumsumc(dxp);
+    xn = cumsumc(dxn);
+
+    nobs = nrows - 3;
+    Y = zeros(nobs, 1);
+    X = zeros(nobs, 12);
+
+    for ii(1, nobs, 1);
+        tt = ii + 3;
+        Y[ii] = yy[tt] - yy[tt-1];
+        X[ii, .] = 1~yy[tt-1]~xp[tt-2]~xn[tt-2]~x2[tt-1]~
+            (yy[tt-1] - yy[tt-2])~(yy[tt-2] - yy[tt-3])~
+            dxp[tt-2]~dxp[tt-3]~dxn[tt-2]~dxn[tt-3]~
+            (x2[tt-1] - x2[tt-2]);
+    endfor;
+
+    retp(Y, X);
+endp;
+
 outdir = __FILE_DIR $+ "actual/";
 
 ardl_data = make_ardl_r_package_data(180);
@@ -93,6 +170,16 @@ call write_numeric_csv(arOut.resid, "value", outdir $+ "ardl_resid.csv");
 call write_numeric_csv(arOut.sigma2, "value", outdir $+ "ardl_sigma2.csv");
 call write_numeric_csv(arOut.nobs, "value", outdir $+ "ardl_nobs.csv");
 
+{ Y_ardl_uecm, X_ardl_uecm } = build_r_ardl_uecm_design(ardl_data);
+{ ar_uecm_bt, ar_uecm_fitted, ar_uecm_resid, ar_uecm_sigma2 } =
+    estimate_validation_ols(Y_ardl_uecm, X_ardl_uecm, "ardl R-package UECM validation");
+
+call write_numeric_csv(ar_uecm_bt, "value", outdir $+ "ardl_uecm_bt.csv");
+call write_numeric_csv(ar_uecm_fitted, "value", outdir $+ "ardl_uecm_fitted.csv");
+call write_numeric_csv(ar_uecm_resid, "value", outdir $+ "ardl_uecm_resid.csv");
+call write_numeric_csv(ar_uecm_sigma2, "value", outdir $+ "ardl_uecm_sigma2.csv");
+call write_numeric_csv(rows(Y_ardl_uecm), "value", outdir $+ "ardl_uecm_nobs.csv");
+
 struct nardlOut naOut;
 naOut = nardl(nardl_data, 2, 2, "", 0, "x1", "x2", -1, 1);
 
@@ -101,5 +188,24 @@ call write_numeric_csv(naOut.fitted, "value", outdir $+ "nardl_fitted.csv");
 call write_numeric_csv(naOut.resid, "value", outdir $+ "nardl_resid.csv");
 call write_numeric_csv(naOut.sigma2, "value", outdir $+ "nardl_sigma2.csv");
 call write_numeric_csv(naOut.nobs, "value", outdir $+ "nardl_nobs.csv");
+
+struct nardlECMOut naECMOut;
+naECMOut = nardlECM(nardl_data, 2, 2, "", 0, "x1", "x2", -1, 1);
+
+call write_numeric_csv(naECMOut.bt, "value", outdir $+ "nardl_recm_bt.csv");
+call write_numeric_csv(naECMOut.fitted, "value", outdir $+ "nardl_recm_fitted.csv");
+call write_numeric_csv(naECMOut.resid, "value", outdir $+ "nardl_recm_resid.csv");
+call write_numeric_csv(naECMOut.sigma2, "value", outdir $+ "nardl_recm_sigma2.csv");
+call write_numeric_csv(naECMOut.nobs, "value", outdir $+ "nardl_recm_nobs.csv");
+
+{ Y_nardl_uecm, X_nardl_uecm } = build_r_nardl_uecm_design(nardl_data);
+{ na_uecm_bt, na_uecm_fitted, na_uecm_resid, na_uecm_sigma2 } =
+    estimate_validation_ols(Y_nardl_uecm, X_nardl_uecm, "nardl R-package UECM validation");
+
+call write_numeric_csv(na_uecm_bt, "value", outdir $+ "nardl_uecm_bt.csv");
+call write_numeric_csv(na_uecm_fitted, "value", outdir $+ "nardl_uecm_fitted.csv");
+call write_numeric_csv(na_uecm_resid, "value", outdir $+ "nardl_uecm_resid.csv");
+call write_numeric_csv(na_uecm_sigma2, "value", outdir $+ "nardl_uecm_sigma2.csv");
+call write_numeric_csv(rows(Y_nardl_uecm), "value", outdir $+ "nardl_uecm_nobs.csv");
 
 print "ardl_nardl_gauss_export.e: PASS";

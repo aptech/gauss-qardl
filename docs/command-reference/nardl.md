@@ -2,71 +2,73 @@
 
 ## Purpose
 
-Estimates nonlinear ARDL models using positive and negative partial-sum
-decompositions. The source includes `nardl`, `nardlECM`, `nardlFull`,
-`nardlOrder`, `nardlOrderGrid`, `nardlICMean`, `printNARDL`,
-`printNARDLECM`, `predictNARDL`, `forecastNARDL`, and
-`applyNARDLFormula`.
+Estimates a levels-form nonlinear ARDL model using positive and negative
+partial-sum decompositions.
 
 ## Format
 
 ```gauss
 naOut = nardl(data, ppp, qqq);
+naOut = nardl(data, ppp, qqq, formula, print_results);
 naOut = nardl(data, ppp, qqq, formula, print_results,
               decomp_vars, control_vars, q_decomp, q_control);
-nECMOut = nardlECM(data, ppp, qqq);
-nECMOut = nardlECM(data, ppp, qqq, formula, print_results,
-                   decomp_vars, control_vars, q_decomp, q_control);
-nfOut = nardlFull(data);
-nfOut = nardlFull(data, pend, qend, formula);
-nfOut = nardlFull(data, pend, qend, formula, verbose, criterion,
-                  decomp_vars, control_vars, q_control);
 ```
+
+## Parameters
+
+- `data` (*Tx(1+k) matrix or dataframe*) - Matrix input is ordered
+  `[y, x1, x2, ...]`.
+- `ppp` (*scalar*) - Autoregressive lag order. Must be at least `1`.
+- `qqq` (*scalar*) - Distributed-lag order for decomposed variables. May be
+  `0`.
+- `formula` (*string*) - Optional formula such as `"y ~ x1 + x2"`.
+- `print_results` (*scalar*) - If `1`, print a formatted results table.
+- `decomp_vars` (*string or string array*) - RHS variables to decompose into
+  positive and negative partial sums. Empty means all non-control RHS
+  variables are decomposed.
+- `control_vars` (*string or string array*) - RHS variables to keep linear.
+  Empty means the complement of `decomp_vars`.
+- `q_decomp` (*scalar*) - Optional alias for the decomposed-variable lag
+  order. If nonnegative, it overrides `qqq`.
+- `q_control` (*scalar*) - Distributed-lag order for linear controls.
+
+## Returns
+
+`naOut` is a `nardlOut` structure containing:
+
+- `beta_pos`, `beta_neg`, `beta_control` - Long-run coefficients.
+- `bigbt`, `bigbt_cov` - Stacked long-run coefficients and covariance.
+- `theta_pos`, `theta_neg`, `theta_control`, `phi`, `bt` - Levels-form
+  coefficient blocks.
+- `asymmetry_wald`, `asymmetry_pv`, `sr_asymmetry_wald`, `sr_asymmetry_pv` -
+  Long-run and short-run asymmetry diagnostics.
+- `bounds_fstat` - Bounds-style F-statistic from the NARDL UECM design.
+- `fitted`, `resid`, `sigma2`, `coef_cov` - OLS diagnostics.
+- Metadata fields including `decomp_vars`, `control_vars`, `qvec`, and
+  `control_qvec`.
 
 ## Remarks
 
-The levels estimator reports long-run positive and negative coefficients,
-delta-method long-run covariance, a UECM bounds F-statistic, and long-run and
-short-run asymmetry Wald tests.
+The compatibility shortcut `nardl(data, p, q)` decomposes every RHS variable.
+To decompose only selected RHS variables, pass `decomp_vars` and optionally
+`control_vars`. If `control_vars` is omitted, every RHS variable not listed in
+`decomp_vars` is treated as a linear control.
 
-`nardlFull`, `nardlOrder`, and `nardlOrderGrid` support information-criterion
-lag selection. If `pend` and `qend` are omitted, the default maximum search
-bounds are `8` and `8`.
+Use `nardlECM` for the corresponding error-correction estimator and
+`nardlFull` for lag selection plus levels and ECM estimation.
 
-`nardl(data, p, q)` is the compatibility shortcut that decomposes every RHS
-regressor. To decompose only selected RHS variables, pass `decomp_vars` and
-optionally `control_vars` to `nardl`, `nardlECM`, or `nardlFull`. If
-`control_vars` is omitted, every RHS variable not listed in `decomp_vars` is
-treated as a linear control. If `decomp_vars` is omitted but `control_vars` is
-provided, every remaining RHS variable is decomposed.
-
-`q_decomp` is an optional alias for the decomposed-variable lag order in
-`nardl` and `nardlECM`; when it is supplied, it overrides `qqq`.
-`q_control` sets the distributed-lag order for linear controls. In
-`nardlFull`, `qend` remains the maximum search bound for decomposed variables,
-and `q_control` is fixed across the search grid.
+## Examples
 
 ```gauss
-// x1 is decomposed into positive and negative partial sums; x2 is linear.
+library qardl;
+
+// x1 is decomposed; x2 enters linearly.
 naOut = nardl(df, 2, 2, formula = "y ~ x1 + x2",
               print_results = 0, decomp_vars = "x1",
               control_vars = "x2", q_control = 1);
 
-nECMOut = nardlECM(df, 2, 2, formula = "y ~ x1 + x2",
-                   print_results = 0, decomp_vars = "x1",
-                   control_vars = "x2", q_control = 1);
-
-nfOut = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
-                  "x1", "x2", 1);
+printNARDL(naOut);
 ```
-
-Use `nardlDynamicMultipliers` to compute positive and negative dynamic
-multiplier paths from a stored `nardlOut`.
-
-The current benchmark coverage uses deterministic synthetic decomposition,
-coefficient, bounds, asymmetry, and dynamic-multiplier fixtures. Additional
-published-result validation cases can be added as reference datasets and
-specifications become available.
 
 ## Source
 
@@ -74,5 +76,6 @@ specifications become available.
 
 ## See Also
 
-[qardl](qardl.md), [csardl](csardl.md),
-[nardlDynamicMultipliers](nardlDynamicMultipliers.md)
+[nardlECM](nardlECM.md), [nardlFull](nardlFull.md),
+[nardlDynamicMultipliers](nardlDynamicMultipliers.md),
+[applyNARDLFormula](applyNARDLFormula.md)

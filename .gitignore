@@ -9,3 +9,4 @@ examples/*.tex
 .github/ARDL_NARDL_R_PACKAGE_PARITY_ROADMAP.md
 tests/r_package/actual/
 tests/r_package/r_expected/
+Rplots.pdf

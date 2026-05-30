@@ -110,22 +110,30 @@ endp;
 /*
 **> csardlECM
 **
-**  Purpose:    Two-step CS-ARDL-ECM estimation using pooled long-run
-**              coefficients from csardl(), with lagged error correction,
-**              lagged Dy/Dx terms, and cross-sectional-average changes.
+**  Purpose:    CS-ARDL-ECM estimation. The default two-step estimator uses
+**              pooled long-run coefficients from csardl(), with lagged error
+**              correction, lagged Dy/Dx terms, and cross-sectional-average
+**              changes. Set ecm_type = "uecm" to estimate the unrestricted
+**              ECM directly.
 */
-proc (struct csardlECMOut) = csardlECM(data, ppp, qqq, cs_lags = 0, formula = "", print_results = 1, group_var = "", time_var = "");
+proc (struct csardlECMOut) = csardlECM(data, ppp, qqq, cs_lags = 0, formula = "", print_results = 1, group_var = "", time_var = "", ecm_type = "two-step");
     local Y_ecm, ONEX_ecm, bt_ecm, fitted, resid, coef_cov, sigma2;
     local depvar, xvars, unitvar, timevar, unit_ids, T, max_lag;
+    local beta_lr_ecm;
 
     { depvar, xvars, unitvar, timevar } = _csardlMetadataNames(data, formula, group_var, time_var);
     data = applyCSARDLFormula(data, formula, group_var, time_var);
     call _csardlValidateEstimatorInputs(data, ppp, qqq, cs_lags, "csardlECM");
+    ecm_type = _ardlNormalizeECMType(ecm_type, "csardlECM", 0);
 
     struct csardlOut csaOut;
     csaOut = csardl(data, ppp, qqq, cs_lags, "", 0);
 
-    { Y_ecm, ONEX_ecm } = _csardlBuildECMDesign(data, ppp, qqq, cs_lags, csaOut.bigbt);
+    if ecm_type $== "uecm";
+        { Y_ecm, ONEX_ecm } = _csardlBuildUECMDesign(data, ppp, qqq, cs_lags);
+    else;
+        { Y_ecm, ONEX_ecm } = _csardlBuildECMDesign(data, ppp, qqq, cs_lags, csaOut.bigbt);
+    endif;
     call _qardlCheckFullColumnRank(ONEX_ecm, "csardlECM", "ECM design matrix");
 
     bt_ecm = _qardlSafeInv(ONEX_ecm'*ONEX_ecm, "csardlECM", "ECM moment matrix")*ONEX_ecm'*Y_ecm;
@@ -134,6 +142,11 @@ proc (struct csardlECMOut) = csardlECM(data, ppp, qqq, cs_lags = 0, formula = ""
     { coef_cov, sigma2 } = _csardlOLSCov(ONEX_ecm, resid, "csardlECM");
     { unit_ids, T } = _csardlPanelInfo(data, "csardlECM");
     max_lag = maxc(ppp|qqq|cs_lags);
+    if ecm_type $== "uecm";
+        beta_lr_ecm = _ardlLongRunFromUECM(bt_ecm, 2, 3, cols(data) - 2);
+    else;
+        beta_lr_ecm = csaOut.bigbt;
+    endif;
 
     struct csardlECMOut cECMOut;
     cECMOut.model_family = "CS-ARDL-ECM";
@@ -145,6 +158,7 @@ proc (struct csardlECMOut) = csardlECM(data, ppp, qqq, cs_lags = 0, formula = ""
     cECMOut.deterministic = "constant";
     cECMOut.covariance_type = "ols";
     cECMOut.selection_criterion = "none";
+    cECMOut.ecm_type = ecm_type;
     cECMOut.sample_start = 1;
     cECMOut.sample_end = rows(data);
     cECMOut.estimation_start = max_lag + 2;
@@ -159,7 +173,7 @@ proc (struct csardlECMOut) = csardlECM(data, ppp, qqq, cs_lags = 0, formula = ""
     cECMOut.design_rank = rank(ONEX_ecm);
     cECMOut.design_cols = cols(ONEX_ecm);
     cECMOut.design_condition = sqrt(_qardlConditionNumber(ONEX_ecm'ONEX_ecm));
-    cECMOut.beta_lr = csaOut.bigbt;
+    cECMOut.beta_lr = beta_lr_ecm;
     cECMOut.rho_ols = csaOut.rho;
     cECMOut.alpha = bt_ecm[1];
     cECMOut.rho = bt_ecm[2];
@@ -182,26 +196,37 @@ endp;
 /*
 **> csardlFull
 **
-**  Purpose:    Integrated CS-ARDL workflow with information-criterion lag
-**              selection followed by levels and ECM estimation.
+**  Purpose:    Integrated CS-ARDL workflow with lag selection followed by
+**              levels and ECM estimation.
 **
 **  Format:     cfOut = csardlFull(data);
 **              cfOut = csardlFull(data, pend, qend, cs_lags, formula,
-**                                verbose, criterion, group_var, time_var);
+**                                verbose, criterion, group_var, time_var,
+**                                ecm_type, gets_pval);
 **
 **  Note:       If omitted, pend and qend default to 8 and cs_lags defaults
 **              to 0.
 */
-proc (struct csardlFullOut) = csardlFull(data, pend = 8, qend = 8, cs_lags = 0, formula = "", verbose = 1, criterion = "bic", group_var = "", time_var = "");
+proc (struct csardlFullOut) = csardlFull(data, pend = 8, qend = 8,
+                                         cs_lags = 0, formula = "",
+                                         verbose = 1, criterion = "bic",
+                                         group_var = "", time_var = "",
+                                         ecm_type = "two-step",
+                                         gets_pval = 0.1);
     local pst, qst, depvar, xvars, unitvar, timevar;
 
     call _qardlValidateLagScalar(pend, "csardlFull: pend");
     call _qardlValidateLagScalarZero(qend, "csardlFull: qend");
     call _qardlValidateLagScalarZero(cs_lags, "csardlFull: cs_lags");
+    criterion = lower(criterion);
+    call _qardlValidateSelectionCriterion(criterion, "csardlFull");
+    call _qardlValidateGETSPValue(gets_pval, "csardlFull");
+    ecm_type = _ardlNormalizeECMType(ecm_type, "csardlFull", 0);
 
     { depvar, xvars, unitvar, timevar } = _csardlMetadataNames(data, formula, group_var, time_var);
     data = applyCSARDLFormula(data, formula, group_var, time_var);
-    { pst, qst } = csardlOrder(data, pend, qend, cs_lags, criterion);
+    { pst, qst } = csardlOrder(data, pend, qend, cs_lags, criterion,
+                               gets_pval);
 
     if verbose;
         sprintf("csardlFull: %s-selected p = %d, q = %d", upper(criterion), pst, qst);
@@ -226,7 +251,7 @@ proc (struct csardlFullOut) = csardlFull(data, pend = 8, qend = 8, cs_lags = 0, 
     cfOut.cs_lags = cs_lags;
     cfOut.nobs = rows(data);
     cfOut.csa = csardl(data, pst, qst, cs_lags, "", 0);
-    cfOut.ecm = csardlECM(data, pst, qst, cs_lags, "", 0);
+    cfOut.ecm = csardlECM(data, pst, qst, cs_lags, "", 0, "", "", ecm_type);
     cfOut.csa.formula = formula;
     cfOut.csa.depvar = depvar;
     cfOut.csa.xvars = xvars;
@@ -251,10 +276,24 @@ endp;
 /*
 **> csardlOrder
 **
-**  Purpose:    Select scalar CS-ARDL p and q orders by information criterion.
+**  Purpose:    Select scalar CS-ARDL p and q orders by IC or GETS.
 */
-proc (2) = csardlOrder(data, pend = 8, qend = 8, cs_lags = 0, criterion = "bic");
-    local grid, idx;
+proc (2) = csardlOrder(data, pend = 8, qend = 8, cs_lags = 0,
+                       criterion = "bic", gets_pval = 0.1);
+    local grid, idx, pst, qst;
+
+    call _qardlValidateLagScalar(pend, "csardlOrder: pend");
+    call _qardlValidateLagScalarZero(qend, "csardlOrder: qend");
+    call _qardlValidateLagScalarZero(cs_lags, "csardlOrder: cs_lags");
+    criterion = lower(criterion);
+    call _qardlValidateSelectionCriterion(criterion, "csardlOrder");
+    call _qardlValidateGETSPValue(gets_pval, "csardlOrder");
+
+    if _qardlCriterionIsGETS(criterion);
+        { pst, qst } = _csardlGETSOrder(data, 1, pend, 0, qend, cs_lags,
+                                        gets_pval, "csardlOrder");
+        retp(pst, qst);
+    endif;
 
     grid = csardlOrderGrid(data, pend, qend, cs_lags, criterion);
     idx = minindc(grid[., 3]);
@@ -291,6 +330,67 @@ proc (1) = csardlOrderGrid(data, pend = 8, qend = 8, cs_lags = 0, criterion = "b
     endo;
 
     retp(grid);
+endp;
+
+proc (2) = _csardlGETSOrder(data, pstart, pend, qstart, qend, cs_lags,
+                            gets_pval, caller);
+    local pst, qst, p_pv, q_pv;
+
+    call _csardlValidateEstimatorInputs(data, pend, qend, cs_lags, caller);
+
+    pst = pend;
+    qst = qend;
+
+    do while 1;
+        p_pv = -1;
+        q_pv = -1;
+
+        if pst > pstart;
+            p_pv = _csardlGETSBoundaryPValue(data, pst, qst, cs_lags, 1,
+                                             caller);
+        endif;
+        if qst > qstart;
+            q_pv = _csardlGETSBoundaryPValue(data, pst, qst, cs_lags, 0,
+                                             caller);
+        endif;
+
+        if p_pv <= gets_pval and q_pv <= gets_pval;
+            break;
+        endif;
+
+        if p_pv >= q_pv and p_pv > gets_pval;
+            pst = pst - 1;
+        elseif q_pv > gets_pval;
+            qst = qst - 1;
+        else;
+            break;
+        endif;
+    endo;
+
+    retp(pst, qst);
+endp;
+
+proc (1) = _csardlGETSBoundaryPValue(data, ppp, qqq, cs_lags, is_p_lag,
+                                     caller);
+    local Y, ONEX, csavg, unit_ids, unit_nobs, k0, test_cols, lag_start, ii;
+
+    { Y, ONEX, csavg, unit_ids, unit_nobs } =
+        _csardlBuildDesign(data, ppp, qqq, cs_lags);
+
+    k0 = cols(data) - 2;
+    if is_p_lag;
+        test_cols = 2 + k0 + ppp - 1;
+    else;
+        lag_start = 2 + k0 + ppp;
+        test_cols = zeros(k0, 1);
+        ii = 1;
+        do until ii > k0;
+            test_cols[ii] = lag_start + (ii - 1)*qqq + qqq - 1;
+            ii = ii + 1;
+        endo;
+    endif;
+
+    retp(_qardlGETSWaldPValue(Y, ONEX, test_cols, caller));
 endp;
 
 /*
@@ -811,7 +911,11 @@ proc (0) = printCSARDLECM(struct csardlECMOut cECMOut);
     dash_line = _qardlTableBorder("-", table_width);
 
     print eq_line;
-    print "CS-ARDL-ECM Estimator";
+    if cECMOut.ecm_type $== "uecm";
+        print "CS-ARDL-ECM Estimator (Unrestricted)";
+    else;
+        print "CS-ARDL-ECM Estimator (Two-Step)";
+    endif;
     print eq_line;
     sprintf("%-26s%12.0f        %-26s%12.0f", "No. of obs:", cECMOut.nobs,
             "No. units:", cECMOut.nunits);
@@ -1289,6 +1393,87 @@ proc (2) = _csardlBuildECMDesign(data, ppp, qqq, cs_lags, beta_lr);
     endo;
 
     ONEX = ones(N, 1)~ec_lag;
+    if ppp > 1;
+        ONEX = ONEX~dy_lags;
+    endif;
+    if qqq > 0;
+        ONEX = ONEX~dx_lags;
+    endif;
+    ONEX = ONEX~cs_diff_terms;
+
+    retp(Y, ONEX);
+endp;
+
+proc (2) = _csardlBuildUECMDesign(data, ppp, qqq, cs_lags);
+    local unit_ids, T, nunits, k0, max_lag, N, Y, ONEX, csavg;
+    local y_lag, x_lag, dy_lags, dx_lags, cs_diff_terms;
+    local ii, jj, kk, tt, rr, start_row, src, col, block_width;
+
+    { unit_ids, T } = _csardlPanelInfo(data, "_csardlBuildUECMDesign");
+    nunits = rows(unit_ids);
+    k0 = cols(data) - 2;
+    max_lag = maxc(ppp|qqq|cs_lags);
+    N = nunits*(T - max_lag - 1);
+    csavg = _csardlCrossAverages(data);
+
+    Y = zeros(N, 1);
+    y_lag = zeros(N, 1);
+    x_lag = zeros(N, k0);
+    if ppp > 1;
+        dy_lags = zeros(N, ppp-1);
+    endif;
+    if qqq > 0;
+        dx_lags = zeros(N, qqq*k0);
+    endif;
+    block_width = (cs_lags+1)*(k0+1);
+    cs_diff_terms = zeros(N, block_width);
+
+    rr = 1;
+    ii = 1;
+    do until ii > nunits;
+        start_row = (ii-1)*T + 1;
+        tt = max_lag + 2;
+        do until tt > T;
+            src = start_row + tt - 1;
+            Y[rr] = data[src, 2] - data[src-1, 2];
+            y_lag[rr] = data[src-1, 2];
+            x_lag[rr, .] = data[src-1, 3:cols(data)];
+
+            if ppp > 1;
+                jj = 1;
+                do until jj > ppp-1;
+                    dy_lags[rr, jj] = data[src-jj, 2] - data[src-jj-1, 2];
+                    jj = jj + 1;
+                endo;
+            endif;
+
+            if qqq > 0;
+                kk = 1;
+                do until kk > k0;
+                    jj = 0;
+                    do until jj > qqq-1;
+                        col = (kk-1)*qqq + jj + 1;
+                        dx_lags[rr, col] = data[src-jj, 2+kk] - data[src-jj-1, 2+kk];
+                        jj = jj + 1;
+                    endo;
+                    kk = kk + 1;
+                endo;
+            endif;
+
+            jj = 0;
+            do until jj > cs_lags;
+                cs_diff_terms[rr, jj*(k0+1)+1:(jj+1)*(k0+1)] =
+                    csavg[tt-jj, .] - csavg[tt-jj-1, .];
+                jj = jj + 1;
+            endo;
+
+            rr = rr + 1;
+            tt = tt + 1;
+        endo;
+        ii = ii + 1;
+    endo;
+
+    ONEX = ones(N, 1)~y_lag~x_lag;
     if ppp > 1;
         ONEX = ONEX~dy_lags;
     endif;

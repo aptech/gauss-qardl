@@ -10,9 +10,19 @@ The ARDL workflow estimates levels-form autoregressive distributed lag models
 by OLS. `ardlFull` combines lag selection, Pesaran-Shin-Smith style bounds
 testing where supported, and final levels-form estimation.
 
+`ardlECM` is the dedicated ARDL error-correction estimator. Its default
+`ecm_type = "two-step"` estimates the GAUSS restricted ECM by first estimating
+the levels long-run relation and then using one lagged error-correction term.
+`ecm_type = "uecm"` estimates the unrestricted ECM with lagged dependent and
+level regressors entered directly.
+
 Automatic lag selection uses information criteria over candidate maximum lag
-bounds. If omitted in automatic workflows, the current default maximum search
-bounds are `p = 8` and `q = 8`.
+bounds, or `criterion = "gets"` for general-to-specific backward reduction of
+the highest-order lag blocks. The GETS selector starts from the requested
+maximum lags and removes lag blocks while their Wald p-values exceed
+`gets_pval` (default `0.1`), preserving contiguous scalar `p/q` orders. If
+omitted in automatic workflows, the current default maximum search bounds are
+`p = 8` and `q = 8`.
 
 Classical OLS covariance and asymptotic p-values are the current default
 inference path. Residual diagnostics are available through
@@ -21,7 +31,8 @@ inference path. Residual diagnostics are available through
 ## QARDL
 
 QARDL estimates quantile ARDL models for a user-specified quantile grid.
-Levels-form, per-regressor lag-order, and two-step ECM workflows are available.
+Levels-form, per-regressor lag-order, two-step ECM, and unrestricted ECM
+workflows are available.
 Robust and HAC covariance paths are implemented for QARDL-specific workflows.
 
 QARDL full workflows use the same lag-selection and bounds-testing helper
@@ -45,9 +56,11 @@ The package stores positive and negative long-run effects, optional
 linear-control long-run effects, and long-run asymmetry tests where the output
 structure contains the required statistics.
 
-Dynamic multiplier paths are available through `nardlDynamicMultipliers`.
-NARDL bounds output is a bounds-style UECM statistic; exact finite-sample
-critical-value integration remains documented separately.
+`nardlECM` defaults to the same restricted two-step ECM pattern and can run a
+direct unrestricted ECM with `ecm_type = "uecm"`. Dynamic multiplier paths are
+available through `nardlDynamicMultipliers`. NARDL bounds output is a
+bounds-style UECM statistic; exact finite-sample critical-value integration
+remains documented separately.
 
 ## CS-ARDL
 
@@ -61,7 +74,9 @@ unbalanced panels as unsupported. Diagnostics exposed through
 `csardlDiagnostics` include mean-group summaries, poolability Wald statistics,
 long-run slope heterogeneity summaries, Pesaran-Yamagata Delta and
 bias-adjusted Delta slope homogeneity tests, and Pesaran CD residual
-cross-sectional dependence checks. Pesaran-Yamagata diagnostics are reported
+cross-sectional dependence checks. `csardlECM` defaults to the restricted
+two-step ECM and supports an unrestricted ECM with `ecm_type = "uecm"`.
+Pesaran-Yamagata diagnostics are reported
 for direct dynamic CS-ARDL slopes and for transformed long-run coefficients.
 Pesaran CD uses all residual pairs by default and supports fixed-order `CD(p)`
 through `cd_order`.

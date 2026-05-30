@@ -10,6 +10,8 @@ intercept and speed-of-adjustment parameters.
 ```gauss
 qECMOut = qardlECMHAC(data, ppp, qqq);
 qECMOut = qardlECMHAC(data, ppp, qqq, tau, hac_lags, print_results);
+qECMOut = qardlECMHAC(data, ppp, qqq, tau, hac_lags,
+                      print_results, ecm_type);
 ```
 
 ## Parameters
@@ -21,6 +23,7 @@ qECMOut = qardlECMHAC(data, ppp, qqq, tau, hac_lags, print_results);
 - `hac_lags` (*scalar*) - HAC truncation lag. Use `0` for automatic bandwidth.
 - `print_results` (*scalar*) - If `1`, print a formatted table. Default is
   `1`.
+- `ecm_type` (*string*) - `"two-step"` (default) or `"uecm"`.
 
 ## Returns
 
@@ -29,7 +32,8 @@ A `qardlECMOut` structure. Estimates match `qardlECM`; `alpha_cov` and
 
 ## Remarks
 
-Equivalent to `qardlECM(data, ppp, qqq, tau, "hac", hac_lags, print_results)`.
+Equivalent to
+`qardlECM(data, ppp, qqq, tau, "hac", hac_lags, print_results, ecm_type)`.
 
 ## Examples
 

@@ -13,10 +13,10 @@ qfOut = qardlFull(data, tau = { 0.25, 0.5, 0.75 }, formula = "", verbose = 1);
 qfOut = qardlFull(data, 8, 8, tau, "", 0, "bic", "hac", 4);
 ```
 
-It performs information-criterion lag selection, ARDL bounds testing, QARDL
-levels estimation, QARDL-ECM estimation, and optional printing. BIC is the
-default lag-selection criterion. Set `verbose = 0` for scripts that need the
-results without console output.
+It performs lag selection, ARDL bounds testing, QARDL levels estimation,
+QARDL-ECM estimation, and optional printing. BIC is the default lag-selection
+criterion, and GETS is available with `criterion = "gets"`. Set `verbose = 0`
+for scripts that need the results without console output.
 When `pend` and `qend` are omitted, full workflows use default maximum lag
 search bounds of `8` and `8`.
 
@@ -29,10 +29,15 @@ printQARDL(qaOut, tau);
 ```
 
 Use `ardl` when you want the standard OLS ARDL companion estimator with the
-same data ordering, formula workflow, print style, and output conventions:
+same data ordering, formula workflow, print style, and output conventions.
+Use `ardlECM` when you want the corresponding ARDL error-correction estimator.
+The default is the package's two-step ECM; pass `ecm_type = "uecm"` for the
+unrestricted ECM:
 
 ```gauss
 arOut = ardl(data, 2, 1, "", 0);
+arECMOut = ardlECM(data, 2, 1, "", 0);
+arUECMOut = ardlECM(data, 2, 1, "", 0, "uecm");
 printARDL(arOut);
 afOut = ardlFull(data, verbose = 0, criterion = "bic");
 ```
@@ -59,10 +64,12 @@ qaAutoHAC = qardlHAC(data, 2, 1, tau, 0);
 `floor(4*(T/100)^(2/9))`. The parameter estimates are the same as `qardl`;
 only `bigbt_cov`, `gamma_cov`, and `phi_cov` change.
 
-Use `qardlECM` when you specifically want the two-step ECM estimator:
+Use `qardlECM` when you specifically want the ECM estimator. The default is
+the two-step restricted ECM; pass `ecm_type = "uecm"` for the unrestricted ECM:
 
 ```gauss
 qECMOut = qardlECM(data, 2, 1, tau);
+qUECMOut = qardlECM(data, 2, 1, tau, "iid", 0, 0, "uecm");
 printQARDLECM(qECMOut, tau);
 ```
 
@@ -78,21 +85,28 @@ qECMAutoHAC = qardlECMHAC(data, 2, 1, tau, 0);
 `qardlECMHAC(..., 0)` uses the automatic Newey-West bandwidth
 `floor(4*(T/100)^(2/9))`. The parameter estimates are the same as `qardlECM`;
 only `alpha_cov` and `rho_cov` change.
+The robust and HAC wrappers accept the same final `ecm_type` argument.
 
 Use `pqorder` directly when you only need lag selection:
 
 ```gauss
 { pst, qst } = pqorder(data);
 { pst, qst } = pqorder(data, pend = 8, qend = 8, criterion = "aic");
+{ pg, qg } = pqorder(data, pend = 8, qend = 8, criterion = "gets",
+                     gets_pval = 0.1);
 { pst, qst } = pqorderRange(data, 2, 8, 1, 4, "bic");
 ic_grid = pqorderGrid(data, 8, 8, "bic");
 ```
 
-Supported lag-selection criteria are `"bic"` (default), `"aic"`, `"hq"`, and
-`"hqc"`. `qardlFull` accepts the same criterion as its final optional argument:
+Supported lag-selection criteria are `"bic"` (default), `"aic"`, `"hq"`,
+`"hqc"`, and `"gets"`. GETS starts from the maximum lag orders and removes
+highest-order lag blocks while their Wald p-values exceed `gets_pval`
+(default `0.1`). `qardlFull` accepts the same criterion:
 
 ```gauss
 qfOut = qardlFull(data, tau = tau, verbose = 0, criterion = "hq");
+qfGets = qardlFull(data, tau = tau, verbose = 0, criterion = "gets",
+                   gets_pval = 0.1);
 ```
 
 Use `pqorderRange` when you need a restricted lag-search grid. For example,
@@ -111,6 +125,7 @@ lag-order APIs:
 { pst_x, qvec_x } = pqorderX(data, 4, 2, "bic");
 qaOut = qardlX(data, pst_x, qvec_x, tau);
 qECMOut = qardlECMX(data, pst_x, qvec_x, tau);
+qUECMOut = qardlECMX(data, pst_x, qvec_x, tau, "iid", 0, 0, "uecm");
 ```
 
 `qvec_x` is `k x 1`, ordered the same way as the regressors in `data`.
@@ -184,6 +199,7 @@ partial-sum decompositions:
 
 ```gauss
 nfOut = nardlFull(data, verbose = 0, criterion = "bic");
+nfGets = nardlFull(data, verbose = 0, criterion = "gets");
 nfOut = nardlFull(df, formula = "y ~ x1 + x2", verbose = 0, criterion = "bic");
 printNARDL(nfOut.na);
 printNARDLECM(nfOut.ecm);
@@ -193,7 +209,9 @@ print dmOut.pos;
 print dmOut.neg;
 ```
 
-`nardl` and `nardlECM` are available when lag orders are fixed. The output
+`nardl` and `nardlECM` are available when lag orders are fixed. `nardlECM`
+uses the GAUSS two-step ECM by default and accepts `ecm_type = "uecm"` for an
+unrestricted ECM. The output
 includes long-run positive and negative coefficients, long-run and short-run
 asymmetry Wald tests, a UECM bounds F-statistic, fitted values, residuals, and
 OLS covariance fields. `predictARDL` and `forecastARDL` infer NARDL output
@@ -212,6 +230,9 @@ naSpec = nardl(df, 2, 2, formula = "y ~ x1 + x2", print_results = 0,
                decomp_vars = "x1", control_vars = "x2", q_control = 1);
 nECMSpec = nardlECM(df, 2, 2, formula = "y ~ x1 + x2", print_results = 0,
                     decomp_vars = "x1", control_vars = "x2", q_control = 1);
+nUECMSpec = nardlECM(df, 2, 2, formula = "y ~ x1 + x2", print_results = 0,
+                     decomp_vars = "x1", control_vars = "x2",
+                     q_control = 1, ecm_type = "uecm");
 nfSpec = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
                    "x1", "x2", 1);
 ```
@@ -224,6 +245,7 @@ Use `csardlFull` for pooled cross-sectionally augmented ARDL panels:
 
 ```gauss
 cfOut = csardlFull(panel, cs_lags = 1, verbose = 0, criterion = "bic");
+cfGets = csardlFull(panel, cs_lags = 1, verbose = 0, criterion = "gets");
 cfOut = csardlFull(df_panel, cs_lags = 1, formula = "y ~ x1 + x2",
                    verbose = 0, criterion = "bic");
 cfOut = csardlFull(df_panel, cs_lags = 1, formula = "y ~ x1 + x2",
@@ -232,6 +254,9 @@ cfOut = csardlFull(df_panel, cs_lags = 1, formula = "y ~ x1 + x2",
 printCSARDL(cfOut.csa);
 printCSARDLECM(cfOut.ecm);
 ```
+
+`csardlECM` and `csardlFull` also use `ecm_type = "two-step"` by default and
+accept `ecm_type = "uecm"` for unrestricted ECM estimation.
 
 CS-ARDL matrix input must be a balanced panel stacked by unit in
 `[unit_id, y, x1, ...]` order. Dataframe formula input uses `"y ~ x1 + x2"`;
@@ -365,6 +390,9 @@ plotRollingQARDLECM(rECMOut, tau, 0, 1, 0.05);
 plotQIRF(qOut, 1);
 ```
 
+`rollingQardlECM` accepts `ecm_type = "uecm"` when rolling unrestricted ECM
+paths are needed.
+
 For QIRF bands, create `qOut` with `blockBootstrapQIRF`; `qirf` itself returns
 point estimates and zero band placeholders.
 
@@ -462,9 +490,9 @@ applied inference.
   pseudoinverse with rank-adjusted chi-squared degrees of freedom and print a
   warning.
 - HAC/robust covariance support is available for levels-form beta/gamma/phi
-  covariance and two-step ECM alpha/rho covariance. The default estimators
-  preserve the original covariance formulas unless an alternate covariance type
-  is requested.
+  covariance and QARDL ECM alpha/rho covariance in both two-step and UECM
+  modes. The default estimators preserve the original covariance formulas
+  unless an alternate covariance type is requested.
 - `ardlboundsCase` computes deterministic Cases I-V and the bounds t-statistic.
   PSS asymptotic F critical values are bundled for Cases I-V with up to 10
   regressors; simulation-based critical values are available for the wider

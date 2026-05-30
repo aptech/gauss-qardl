@@ -104,6 +104,22 @@ call assert_true(rd_schema.stability_available == 1 and rows(rd_schema.cusum_pat
                  cols(rd_schema.cusum_path) == 1 and rd_schema.cusum_crit5[1] > 0,
                  "residual diagnostic stability metadata");
 
+struct ardlECMOut ar_ecm_matrix;
+struct ardlECMOut ar_ecm_formula;
+ar_ecm_matrix = ardlECM(data, 1, 1, "", 0, "uecm");
+ar_ecm_formula = ardlECM(df, 1, 1, formula, 0, "uecm");
+call assert_close(ar_ecm_formula.bt, ar_ecm_matrix.bt, 1e-10,
+                  "ARDL-ECM formula and matrix estimates differ");
+call assert_common_metadata(ar_ecm_formula.model_family, ar_ecm_formula.formula,
+                            ar_ecm_formula.depvar, ar_ecm_formula.xvars,
+                            ar_ecm_formula.covariance_type,
+                            ar_ecm_formula.sample_start, ar_ecm_formula.sample_end,
+                            ar_ecm_formula.estimation_start, ar_ecm_formula.estimation_end,
+                            "ARDL-ECM", formula, "ols", n, 3, n);
+call assert_string(ar_ecm_formula.ecm_type, "uecm", "ARDL-ECM ecm_type metadata");
+call assert_true(rows(ar_ecm_formula.qvec) == 2 and ar_ecm_formula.nobs == ar_formula.nobs - 1,
+                 "ARDL-ECM lag/sample metadata");
+
 struct qardlOut qa_matrix;
 struct qardlOut qa_formula;
 qa_matrix = qardl(data, 1, 1, tau, "iid", 0, 0);

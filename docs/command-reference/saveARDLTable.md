@@ -15,7 +15,7 @@ saveARDLTable(modelOut, fpath, table_format, precision, stars, ci_level);
 ## Parameters
 
 `modelOut` is an ARDL-family levels, ECM, or full-workflow output structure.
-Supported structures include `ardlOut`, `qardlOut`, `qardlECMOut`,
+Supported structures include `ardlOut`, `ardlECMOut`, `qardlOut`, `qardlECMOut`,
 `nardlOut`, `nardlECMOut`, `csardlOut`, `csardlECMOut`, and the matching
 full-workflow structures.
 

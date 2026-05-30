@@ -27,15 +27,22 @@ proc _icmeanUnchecked(data, ppp, qqq, criterion, caller);
     retp(ic);
 endp;
 
-proc (2) = pqorder(data, pend = 8, qend = 8, criterion = "bic");
+proc (2) = pqorder(data, pend = 8, qend = 8, criterion = "bic",
+                   gets_pval = 0.1);
 
     local pst, qst;
 
     call _qardlValidateSearchInputs(data, pend, qend, { 0.5 }, "pqorder");
     criterion = lower(criterion);
-    call _qardlValidateICCriterion(criterion, "pqorder");
+    call _qardlValidateSelectionCriterion(criterion, "pqorder");
+    call _qardlValidateGETSPValue(gets_pval, "pqorder");
 
-    { pst, qst } = _qardlLagOrderSearch(data, 1, pend, 0, qend, criterion);
+    if _qardlCriterionIsGETS(criterion);
+        { pst, qst } = _qardlGETSLagOrderSearch(data, 1, pend, 0, qend,
+                                                gets_pval, "pqorder");
+    else;
+        { pst, qst } = _qardlLagOrderSearch(data, 1, pend, 0, qend, criterion);
+    endif;
 
     retp(pst, qst);
 endp;
@@ -107,17 +114,24 @@ proc (1) = pqorderGrid(data, pend = 8, qend = 8, criterion = "bic");
     retp(icgrid);
 endp;
 
-proc (2) = pqorderRange(data, pstart, pend, qstart, qend, criterion);
+proc (2) = pqorderRange(data, pstart, pend, qstart, qend, criterion,
+                        gets_pval = 0.1);
 
     local pst, qst;
 
     call _qardlValidateSearchInputs(data, pend, qend, { 0.5 }, "pqorderRange");
     criterion = lower(criterion);
-    call _qardlValidateICCriterion(criterion, "pqorderRange");
+    call _qardlValidateSelectionCriterion(criterion, "pqorderRange");
+    call _qardlValidateGETSPValue(gets_pval, "pqorderRange");
     call _qardlValidateLagRange(pstart, pend, "pqorder: pstart/pend");
     call _qardlValidateLagRangeZero(qstart, qend, "pqorder: qstart/qend");
 
-    { pst, qst } = _qardlLagOrderSearch(data, pstart, pend, qstart, qend, criterion);
+    if _qardlCriterionIsGETS(criterion);
+        { pst, qst } = _qardlGETSLagOrderSearch(data, pstart, pend, qstart,
+                                                qend, gets_pval, "pqorderRange");
+    else;
+        { pst, qst } = _qardlLagOrderSearch(data, pstart, pend, qstart, qend, criterion);
+    endif;
 
     retp(pst, qst);
 endp;
@@ -148,6 +162,77 @@ proc (2) = _qardlLagOrderSearch(data, pstart, pend, qstart, qend, criterion);
     qst = icgrid[lst, 2];
 
     retp(pst, qst);
+endp;
+
+proc (2) = _qardlGETSLagOrderSearch(data, pstart, pend, qstart, qend,
+                                    gets_pval, caller);
+    local pst, qst, p_pv, q_pv;
+
+    pst = pend;
+    qst = qend;
+
+    do while 1;
+        p_pv = -1;
+        q_pv = -1;
+
+        if pst > pstart;
+            p_pv = _qardlGETSBoundaryPValue(data, pst, qst, 1, caller);
+        endif;
+        if qst > qstart;
+            q_pv = _qardlGETSBoundaryPValue(data, pst, qst, 0, caller);
+        endif;
+
+        if p_pv <= gets_pval and q_pv <= gets_pval;
+            break;
+        endif;
+
+        if p_pv >= q_pv and p_pv > gets_pval;
+            pst = pst - 1;
+        elseif q_pv > gets_pval;
+            qst = qst - 1;
+        else;
+            break;
+        endif;
+    endo;
+
+    retp(pst, qst);
+endp;
+
+proc (1) = _qardlGETSBoundaryPValue(data, ppp, qqq, is_p_lag, caller);
+    local k0, qvec, Y, ONEX, theta_start, phi_start, test_cols, ii;
+
+    k0 = cols(data) - 1;
+    qvec = qqq*ones(k0, 1);
+    { Y, ONEX, theta_start, phi_start } = _qardlBuildLevelsDesignX(data, ppp, qvec);
+
+    if is_p_lag;
+        test_cols = phi_start + ppp - 1;
+    else;
+        test_cols = zeros(k0, 1);
+        ii = 1;
+        do until ii > k0;
+            test_cols[ii] = 2 + (ii - 1)*qqq + qqq - 1;
+            ii = ii + 1;
+        endo;
+    endif;
+
+    retp(_qardlGETSWaldPValue(Y, ONEX, test_cols, caller));
+endp;
+
+proc (1) = _qardlGETSWaldPValue(Y, ONEX, test_cols, caller);
+    local bt, resid, coef_cov, sigma2, b, sub_cov, wald, df;
+
+    call _qardlCheckFullColumnRank(ONEX, caller, "GETS design matrix");
+    bt = _qardlSafeInv(ONEX'*ONEX, caller, "GETS moment matrix")*ONEX'*Y;
+    resid = Y - ONEX*bt;
+    { coef_cov, sigma2 } = _ardlOLSCov(ONEX, resid, caller);
+
+    b = bt[test_cols];
+    sub_cov = coef_cov[test_cols, test_cols];
+    df = rows(test_cols);
+    wald = b' * _qardlSafeInv(sub_cov, caller, "GETS Wald covariance") * b;
+
+    retp(cdfchic(wald, df));
 endp;
 
 proc (1) = _qardlLagOrderGrid(data, pstart, pend, qstart, qend, criterion);
@@ -237,6 +322,25 @@ endp;
 proc (0) = _qardlValidateICCriterion(criterion, caller);
     if not (criterion $== "aic" or criterion $== "bic" or criterion $== "hq" or criterion $== "hqc");
         errorlog caller $+ ": criterion must be \"aic\", \"bic\", \"hq\", or \"hqc\"";
+        end;
+    endif;
+endp;
+
+proc (0) = _qardlValidateSelectionCriterion(criterion, caller);
+    if not (criterion $== "aic" or criterion $== "bic" or criterion $== "hq" or
+            criterion $== "hqc" or criterion $== "gets");
+        errorlog caller $+ ": criterion must be \"aic\", \"bic\", \"hq\", \"hqc\", or \"gets\"";
+        end;
+    endif;
+endp;
+
+proc (1) = _qardlCriterionIsGETS(criterion);
+    retp(criterion $== "gets");
+endp;
+
+proc (0) = _qardlValidateGETSPValue(gets_pval, caller);
+    if rows(gets_pval)*cols(gets_pval) /= 1 or gets_pval <= 0 or gets_pval >= 1;
+        errorlog caller $+ ": gets_pval must be a scalar between 0 and 1";
         end;
     endif;
 endp;

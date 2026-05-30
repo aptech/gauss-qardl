@@ -40,6 +40,10 @@ arOut = ardl(data, ppp, qqq, formula, print_results);
 lag validation, formula handling, print conventions, and downstream
 prediction/forecast style as the QARDL family.
 
+Use `ardlECM` when you want the ARDL error-correction estimator. `ardlECM`
+supports the package default two-step ECM and the unrestricted ECM through its
+`ecm_type` argument.
+
 ## Examples
 
 ```gauss
@@ -59,6 +63,6 @@ fcst = forecastARDL(arOut, data, 4);
 
 ## See Also
 
-[ardlFull](ardlFull.md), [printARDL](printARDL.md),
+[ardlECM](ardlECM.md), [ardlFull](ardlFull.md), [printARDL](printARDL.md),
 [predictARDL](predictARDL.md), [forecastARDL](forecastARDL.md),
 [qardl](qardl.md)

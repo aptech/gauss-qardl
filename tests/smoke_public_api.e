@@ -49,16 +49,23 @@ call assert_true(pst_default >= 1 and pst_default <= 8 and qst_default >= 0 and 
                  "pqorder default lag search returned invalid lag orders");
 { pst_aic, qst_aic } = pqorder(data, 3, 3, "aic");
 { pst_hq, qst_hq } = pqorder(data, 3, 3, "hq");
+{ pst_gets, qst_gets } = pqorder(data, 3, 3, "gets", 0.1);
 { pst_rect, qst_rect } = pqorder(data, 2, 3, "bic");
 { pst_range, qst_range } = pqorderRange(data, 2, 3, 2, 3, "bic");
+{ pst_range_gets, qst_range_gets } = pqorderRange(data, 2, 3, 1, 3, "gets", 0.1);
 ic_grid = pqorderGrid(data, 2, 3, "bic");
 ic_range_grid = pqorderRangeGrid(data, 2, 3, 2, 3, "bic");
 call assert_true(pst_aic >= 1 and qst_aic >= 0, "pqorder AIC returned invalid lag orders");
 call assert_true(pst_hq >= 1 and qst_hq >= 0, "pqorder HQ returned invalid lag orders");
+call assert_true(pst_gets >= 1 and pst_gets <= 3 and qst_gets >= 0 and qst_gets <= 3,
+                 "pqorder GETS returned invalid lag orders");
 call assert_true(pst_rect >= 1 and pst_rect <= 2 and qst_rect >= 0 and qst_rect <= 3,
                  "pqorder rectangular grid returned invalid lag orders");
 call assert_true(pst_range >= 2 and qst_range >= 2,
                  "pqorderRange ignored lower lag bounds");
+call assert_true(pst_range_gets >= 2 and pst_range_gets <= 3 and
+                 qst_range_gets >= 1 and qst_range_gets <= 3,
+                 "pqorderRange GETS ignored lag bounds");
 call assert_true(rows(ic_grid) == 8 and cols(ic_grid) == 3, "pqorderGrid returned wrong shape");
 call assert_true(rows(ic_range_grid) == 4 and cols(ic_range_grid) == 3, "pqorderRangeGrid returned wrong shape");
 best_idx = minindc(ic_grid[., 3]);
@@ -141,6 +148,21 @@ call assert_true(rdiagOut.nobs == arOut.nobs and rdiagOut.nseries == 1 and
                  rdiagOut.cusumsq_pv[1] >= 0 and rdiagOut.cusumsq_pv[1] <= 1,
                  "ardlResidualDiagnostics ARDL output invalid");
 
+struct ardlECMOut arECMOut;
+arECMOut = ardlECM(data, 2, 1, "", 0);
+call assert_true(arECMOut.ecm_type $== "two-step" and arECMOut.nobs == arOut.nobs - 1,
+                 "ardlECM default two-step metadata invalid");
+call assert_true(rows(arECMOut.bt) == 5 and rows(arECMOut.beta_lr) == 2,
+                 "ardlECM two-step output shape invalid");
+rdiagOut = ardlResidualDiagnostics(arECMOut, 4);
+call assert_true(rdiagOut.nobs == arECMOut.nobs and rdiagOut.source_model_family $== "ARDL-ECM",
+                 "ardlResidualDiagnostics ARDL-ECM output invalid");
+arECMOut = ardlECM(data, 2, 1, "", 0, "uecm");
+call assert_true(arECMOut.ecm_type $== "uecm" and arECMOut.nobs == arOut.nobs - 1,
+                 "ardlECM UECM option metadata invalid");
+call assert_true(rows(arECMOut.bt) == 7 and rows(arECMOut.beta_lr) == 2,
+                 "ardlECM UECM option output shape invalid");
+
 struct ardlFullOut afOut;
 afOut = ardlFull(data, 2, 2, "", 0, "bic");
 call assert_true(afOut.pst >= 1 and afOut.qst >= 0 and afOut.ardl_fstat > 0 and afOut.ar.nobs > 0,
@@ -148,6 +170,10 @@ call assert_true(afOut.pst >= 1 and afOut.qst >= 0 and afOut.ardl_fstat > 0 and 
 afOut = ardlFull(data, verbose = 0);
 call assert_true(afOut.pst >= 1 and afOut.pst <= 8 and afOut.qst >= 0 and afOut.qst <= 8,
                  "ardlFull default lag bounds invalid");
+afOut = ardlFull(data, 2, 2, "", 0, "gets", 0.1);
+call assert_true(afOut.selection_criterion $== "gets" and afOut.pst >= 1 and
+                 afOut.pst <= 2 and afOut.qst >= 0 and afOut.qst <= 2,
+                 "ardlFull GETS output invalid");
 
 struct qardlOut qaQ0Out;
 qaQ0Out = qardl(data, 2, 0, tau, "iid", 0, 0);
@@ -197,6 +223,19 @@ call assert_true(qECMOut.q == 0 and rows(qECMOut.rho) == rows(tau), "qardlECM q=
 qECMOut = qardlECMX(data, 2, { 1, 0 }, tau, "robust", 0, 0);
 call assert_true(qECMOut.q == 1 and rows(qECMOut.rho) == rows(tau),
                  "qardlECMX output changed");
+qECMOut = qardlECM(data, 2, 1, tau, "iid", 0, 0, "uecm");
+call assert_true(qECMOut.ecm_type $== "uecm" and rows(qECMOut.beta_lr) == 2 and
+                 cols(qECMOut.beta_lr) == rows(tau) and rows(qECMOut.bt) == 7,
+                 "qardlECM UECM option output shape invalid");
+
+struct qardlFullOut qfOut;
+qfOut = qardlFull(data, 2, 2, tau, "", 0, "bic", "iid", 0, "uecm");
+call assert_true(qfOut.ecm.ecm_type $== "uecm" and cols(qfOut.ecm.beta_lr) == rows(tau),
+                 "qardlFull UECM option metadata invalid");
+qfOut = qardlFull(data, 2, 2, tau, "", 0, "gets", "iid", 0, "uecm", 0.1);
+call assert_true(qfOut.selection_criterion $== "gets" and qfOut.pst >= 1 and
+                 qfOut.pst <= 2 and qfOut.qst >= 0 and qfOut.qst <= 2,
+                 "qardlFull GETS output invalid");
 
 struct qardlECMOut qECMRobustOut;
 qECMRobustOut = qardlECMRobust(data, 2, 1, tau, 0);
@@ -338,5 +377,8 @@ call assert_true(roll_dims[1] == 2 and roll_dims[3] == rows(tau), "rollingQardl 
 struct rollingQardlECMOut rECMOut;
 rECMOut = rollingQardlECM(roll_data, 1, 1, tau);
 call assert_true(cols(rECMOut.rho) == rows(tau) and rows(rECMOut.rho) > 0, "rollingQardlECM rho shape changed");
+rECMOut = rollingQardlECM(roll_data, 1, 1, tau, "uecm");
+call assert_true(rECMOut.ecm_type $== "uecm" and cols(rECMOut.beta_lr) == 2*rows(tau),
+                 "rollingQardlECM UECM beta_lr shape changed");
 
 print "smoke_public_api.e: PASS";

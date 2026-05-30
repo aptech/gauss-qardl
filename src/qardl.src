@@ -142,6 +142,90 @@ proc (struct ardlOut) = ardl(data, ppp, qqq, formula = "", print_results = 1);
 endp;
 
 /*
+**> ardlECM
+**
+**  Purpose:    Estimate ARDL error-correction models by OLS. The default
+**              two-step estimator uses levels-form ARDL long-run coefficients
+**              to construct the lagged error-correction term. Set
+**              ecm_type = "uecm" to estimate the unrestricted ECM directly.
+**
+**  Format:     arECMOut = ardlECM(data, ppp, qqq);
+**              arECMOut = ardlECM(data, ppp, qqq, formula, print_results);
+**              arECMOut = ardlECM(data, ppp, qqq, formula, print_results,
+**                                 ecm_type);
+*/
+proc (struct ardlECMOut) = ardlECM(data, ppp, qqq, formula = "",
+                                   print_results = 1, ecm_type = "two-step");
+    local depvar, xvars, qvec, k0;
+    local Y_ecm, ONEX_ecm, bt_ecm, fitted, resid, coef_cov, sigma2;
+    local beta_lr_ecm;
+
+    { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
+    data = applyQARDLFormula(data, formula);
+    call _qardlValidateEstimatorInputs(data, ppp, qqq, { 0.5 }, "ardlECM");
+    ecm_type = _ardlNormalizeECMType(ecm_type, "ardlECM", 0);
+
+    k0 = cols(data) - 1;
+    qvec = qqq*ones(k0, 1);
+
+    struct ardlOut arOut;
+    arOut = ardl(data, ppp, qqq, "", 0);
+
+    { Y_ecm, ONEX_ecm } = _ardlBuildECMDesignX(data, ppp, qvec, arOut.bigbt, ecm_type);
+    call _qardlCheckFullColumnRank(ONEX_ecm, "ardlECM", "ECM design matrix");
+
+    bt_ecm = _qardlSafeInv(ONEX_ecm'*ONEX_ecm, "ardlECM", "ECM moment matrix")*ONEX_ecm'*Y_ecm;
+    fitted = ONEX_ecm*bt_ecm;
+    resid = Y_ecm - fitted;
+    { coef_cov, sigma2 } = _ardlOLSCov(ONEX_ecm, resid, "ardlECM");
+
+    if ecm_type $== "uecm";
+        beta_lr_ecm = _ardlLongRunFromUECM(bt_ecm, 2, 3, k0);
+    else;
+        beta_lr_ecm = arOut.bigbt;
+    endif;
+
+    struct ardlECMOut arECMOut;
+    arECMOut.model_family = "ARDL-ECM";
+    arECMOut.formula = formula;
+    arECMOut.depvar = depvar;
+    arECMOut.xvars = xvars;
+    arECMOut.deterministic = "constant";
+    arECMOut.covariance_type = "ols";
+    arECMOut.selection_criterion = "none";
+    arECMOut.ecm_type = ecm_type;
+    arECMOut.sample_start = 1;
+    arECMOut.sample_end = rows(data);
+    arECMOut.estimation_start = rows(data) - rows(Y_ecm) + 1;
+    arECMOut.estimation_end = rows(data);
+    arECMOut.p = ppp;
+    arECMOut.q = qqq;
+    arECMOut.qvec = qvec;
+    arECMOut.nobs = rows(Y_ecm);
+    arECMOut.k = k0;
+    arECMOut.design_rank = rank(ONEX_ecm);
+    arECMOut.design_cols = cols(ONEX_ecm);
+    arECMOut.design_condition = sqrt(_qardlConditionNumber(ONEX_ecm'ONEX_ecm));
+    arECMOut.beta_lr = beta_lr_ecm;
+    arECMOut.rho_ols = arOut.rho;
+    arECMOut.alpha = bt_ecm[1];
+    arECMOut.rho = bt_ecm[2];
+    arECMOut.alpha_cov = coef_cov[1, 1];
+    arECMOut.rho_cov = coef_cov[2, 2];
+    arECMOut.bt = bt_ecm;
+    arECMOut.fitted = fitted;
+    arECMOut.resid = resid;
+    arECMOut.sigma2 = sigma2;
+    arECMOut.coef_cov = coef_cov;
+
+    if print_results;
+        call printARDLECM(arECMOut);
+    endif;
+
+    retp(arECMOut);
+endp;
+
+/*
 **> ardlFull
 **
 **  Purpose:    Integrated ARDL workflow: lag selection, ARDL bounds test, and
@@ -149,11 +233,14 @@ endp;
 **
 **  Format:     afOut = ardlFull(data);
 **              afOut = ardlFull(data, pend, qend);
-**              afOut = ardlFull(data, pend, qend, formula, verbose, criterion);
+**              afOut = ardlFull(data, pend, qend, formula, verbose, criterion,
+**                               gets_pval);
 **
 **  Note:       If omitted, pend and qend default to 8.
 */
-proc (struct ardlFullOut) = ardlFull(data, pend = 8, qend = 8, formula = "", verbose = 1, criterion = "bic");
+proc (struct ardlFullOut) = ardlFull(data, pend = 8, qend = 8, formula = "",
+                                     verbose = 1, criterion = "bic",
+                                     gets_pval = 0.1);
     local pst, qst, fstat, cv, depvar, xvars;
 
     if verbose /= 0 and verbose /= 1;
@@ -164,9 +251,11 @@ proc (struct ardlFullOut) = ardlFull(data, pend = 8, qend = 8, formula = "", ver
     { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
     data = applyQARDLFormula(data, formula);
     call _qardlValidateSearchInputs(data, pend, qend, { 0.5 }, "ardlFull");
-    call _qardlValidateICCriterion(criterion, "ardlFull");
+    criterion = lower(criterion);
+    call _qardlValidateSelectionCriterion(criterion, "ardlFull");
+    call _qardlValidateGETSPValue(gets_pval, "ardlFull");
 
-    { pst, qst } = pqorder(data, pend, qend, criterion);
+    { pst, qst } = pqorder(data, pend, qend, criterion, gets_pval);
     if verbose;
         sprintf("ardlFull: %s-selected p = %d, q = %d", upper(criterion), pst, qst);
         print "ardlFull: running ARDL bounds test ...";
@@ -370,6 +459,7 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_ty
         qaOutQ0.deterministic = "constant";
         qaOutQ0.covariance_type = cov_type;
         qaOutQ0.selection_criterion = "none";
+        qaOutQ0.ecm_type = "none";
         qaOutQ0.sample_start = 1;
         qaOutQ0.sample_end = rows(data);
         qaOutQ0.estimation_start = rows(data) - rows(Y_qr) + 1;
@@ -605,6 +695,7 @@ proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_ty
     qaOut.deterministic = "constant";
     qaOut.covariance_type = cov_type;
     qaOut.selection_criterion = "none";
+    qaOut.ecm_type = "none";
     qaOut.sample_start = 1;
     qaOut.sample_end = rows(data);
     qaOut.estimation_start = rows(data) - rows(Y_qr) + 1;
@@ -773,6 +864,7 @@ proc (struct qardlOut) = qardlX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }, cov_
     qaOut.deterministic = "constant";
     qaOut.covariance_type = cov_type;
     qaOut.selection_criterion = "none";
+    qaOut.ecm_type = "none";
     qaOut.sample_start = 1;
     qaOut.sample_end = rows(data);
     qaOut.estimation_start = rows(data) - rows(Y) + 1;
@@ -810,21 +902,26 @@ endp;
 /*
 **> qardlECM
 **
-**  Purpose:    Perform two-step QARDL-ECM estimation.
+**  Purpose:    Perform QARDL-ECM estimation.
 **
-**              Step 1: Estimate the ARDL model by OLS to obtain consistent
-**                      long-run coefficient estimates (beta_lr) and the OLS
-**                      speed of adjustment (rho_ols).
-**              Step 2: Form the error correction term EC_{t-1} = y_{t-1} - beta_lr'*x_{t-1}
-**                      and estimate the ECM by quantile regression:
+**              The default two-step estimator first estimates the ARDL model
+**              by OLS to obtain consistent long-run coefficient estimates
+**              (beta_lr) and the OLS speed of adjustment (rho_ols). It then
+**              forms the error correction term
+**                      EC_{t-1} = y_{t-1} - beta_lr'*x_{t-1}
+**              and estimates the ECM by quantile regression:
 **                        Dy_t = alpha(tau) + rho(tau)*EC_{t-1}
 **                               + sum_j psi_j(tau)*Dy_{t-j}      [j=1,...,p-1]
 **                               + sum_j delta_j(tau)*Dx_{t-j}    [j=0,...,q-1]
 **                               + u_t(tau)
+**              With ecm_type = "uecm", lagged y and lagged x levels enter the
+**              ECM design directly and long-run coefficients are derived as
+**              -theta/rho at each quantile.
 **
 **  Format:     qECMOut = qardlECM(data, ppp, qqq);
 **              qECMOut = qardlECM(data, ppp, qqq, tau);
 **              qECMOut = qardlECM(data, ppp, qqq, tau, cov_type, hac_lags, print_results);
+**              qECMOut = qardlECM(data, ppp, qqq, tau, cov_type, hac_lags, print_results, ecm_type);
 **
 **  Input:      data        (n x (1+k)) matrix. Column 1 is the dependent variable;
 **                          columns 2:(1+k) are the k regressors.
@@ -842,10 +939,13 @@ endp;
 **                          is "hac" and hac_lags = 0, a Newey-West automatic
 **                          bandwidth floor(4*(T/100)^(2/9)) is used.
 **
+**              ecm_type    string, "two-step" (default) or "uecm".
+**
 **  Output:     qECMOut     instance of qardlECMOut. Members:
 **
-**                  qECMOut.beta_lr     (k x 1) OLS long-run coefficients used
-**                                      to construct the error correction term.
+**                  qECMOut.beta_lr     long-run coefficients. For "two-step",
+**                                      this is (k x 1) OLS beta; for "uecm",
+**                                      this is (k x s) quantile-specific beta.
 **
 **                  qECMOut.rho_ols     scalar (1x1 matrix), OLS speed of adjustment
 **                                      rho_OLS = -(1 - sum_j phi_j^OLS).
@@ -864,7 +964,7 @@ endp;
 **  Developed:  March 2026
 */
 
-proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_type = "iid", hac_lags = 0, print_results = 1);
+proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_type = "iid", hac_lags = 0, print_results = 1, ecm_type = "two-step");
     local nn, k0, ss, jj, ii, j;
     local yy, xx, ee;
     local eei, xxi, yyi, X_ols, ONEX_ols, Y_ols;
@@ -874,9 +974,10 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, 
     local bt_ecm, fh_ecm, uu_ecm, hb;
     local za, cc, mfh, mtau, psu;
     local D_ecm, D_inv_ecm, rho_cov, alpha_cov, cov_lags;
-    local depvar, xvars, fitted_mat, resid_mat;
+    local depvar, xvars, fitted_mat, resid_mat, beta_lr_ecm;
 
     call _qardlValidateEstimatorInputs(data, ppp, qqq, tau, "qardlECM");
+    ecm_type = _ardlNormalizeECMType(ecm_type, "qardlECM", 0);
     cov_type = lower(cov_type);
     call _qardlValidateECMCovType(cov_type, "qardlECM");
     call _qardlValidateHACLags(hac_lags, "qardlECM");
@@ -947,39 +1048,9 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, 
     // where theta = bt_ols[2+qqq*k0:1+(qqq+1)*k0] are the x-level coefficients
     beta_lr_ols = bt_ols[2+qqq*k0:1+(qqq+1)*k0] ./ (-rho_ols);
 
-    // ---- Step 2: Build ECM regressors (N_ecm = N-1 usable observations) ----
-    // t runs from T0+2 to nn; the extra lag consumed by first-differencing y
-    N_ecm = N - 1;
-
-    // Dependent variable: Dy_t = y_t - y_{t-1} for t = T0+2,...,nn
-    Y_ecm = yy[(T0+2):nn] - yy[(T0+1):(nn-1)];
-
-    // Error correction term (lagged): EC_{t-1} = y_{t-1} - beta_lr' * x_{t-1}
-    ec_lag = yy[(T0+1):(nn-1)] - xx[(T0+1):(nn-1), .]*beta_lr_ols;
-
-    // Start with constant and EC term
-    ONEX_ecm = ones(N_ecm, 1)~ec_lag;
-
-    // Lagged first-differences of y: Dy_{t-j} for j = 1,...,ppp-1
-    if ppp > 1;
-        dy_lags = zeros(N_ecm, ppp-1);
-        for j(1, ppp-1, 1);
-            dy_lags[., j] = yy[(T0+2-j):(nn-j)] - yy[(T0+1-j):(nn-j-1)];
-        endfor;
-        ONEX_ecm = ONEX_ecm~dy_lags;
-    endif;
-
-    // First-differences of x: Dx_{t-j} for j = 0,...,qqq-1
-    // j=0 is contemporaneous Dx_t; j=qqq-1 is Dx_{t-q+1}
-    if qqq > 0;
-        dx_ecm = zeros(N_ecm, qqq*k0);
-        for ii(1, k0, 1);
-            for j(0, qqq-1, 1);
-                dx_ecm[., j+1+(ii-1)*qqq] = xx[(T0+2-j):(nn-j), ii] - xx[(T0+1-j):(nn-j-1), ii];
-            endfor;
-        endfor;
-        ONEX_ecm = ONEX_ecm~dx_ecm;
-    endif;
+    { Y_ecm, ONEX_ecm } =
+        _ardlBuildECMDesignX(data, ppp, qqq*ones(k0, 1), beta_lr_ols, ecm_type);
+    N_ecm = rows(Y_ecm);
     call _qardlCheckFullColumnRank(ONEX_ecm, "qardlECM", "ECM design matrix");
 
     // ---- Step 3: Quantile regression of ECM ----
@@ -991,6 +1062,16 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, 
     struct qfitOut qOutECM;
     qOutECM = quantileFit(Y_ecm, ONEX_ecm, tau, 0, qCtl);
     bt_ecm = qOutECM.beta;
+    if ecm_type $== "uecm";
+        beta_lr_ecm = zeros(k0, ss);
+        jj = 1;
+        do until jj > ss;
+            beta_lr_ecm[., jj] = _ardlLongRunFromUECM(bt_ecm[., jj], 2, 3, k0);
+            jj = jj + 1;
+        endo;
+    else;
+        beta_lr_ecm = beta_lr_ols;
+    endif;
 
     // Density estimates at quantile residuals (for covariance computation)
     fh_ecm = zeros(ss, 1);
@@ -1049,6 +1130,7 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, 
     qECMOut.deterministic = "constant";
     qECMOut.covariance_type = cov_type;
     qECMOut.selection_criterion = "none";
+    qECMOut.ecm_type = ecm_type;
     qECMOut.sample_start = 1;
     qECMOut.sample_end = rows(data);
     qECMOut.estimation_start = rows(data) - N_ecm + 1;
@@ -1062,7 +1144,7 @@ proc (struct qardlECMOut) = qardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, 
     qECMOut.design_rank = rank(ONEX_ecm);
     qECMOut.design_cols = cols(ONEX_ecm);
     qECMOut.design_condition = sqrt(_qardlConditionNumber(ONEX_ecm'ONEX_ecm));
-    qECMOut.beta_lr   = beta_lr_ols;
+    qECMOut.beta_lr   = beta_lr_ecm;
     qECMOut.rho_ols   = rho_ols;
     qECMOut.alpha     = bt_ecm[1, .]';
     qECMOut.rho       = bt_ecm[2, .]';
@@ -1087,9 +1169,9 @@ endp;
 **  Purpose:    Two-step QARDL-ECM estimation with heteroskedasticity-robust
 **              quantile-regression sandwich covariance for alpha and rho.
 */
-proc (struct qardlECMOut) = qardlECMRobust(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, print_results = 1);
+proc (struct qardlECMOut) = qardlECMRobust(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, print_results = 1, ecm_type = "two-step");
     struct qardlECMOut qECMOut;
-    qECMOut = qardlECM(data, ppp, qqq, tau, "robust", 0, print_results);
+    qECMOut = qardlECM(data, ppp, qqq, tau, "robust", 0, print_results, ecm_type);
     retp(qECMOut);
 endp;
 
@@ -1102,9 +1184,9 @@ endp;
 **  Input:      hac_lags    scalar non-negative lag truncation. Use 0 for the
 **                          automatic Newey-West bandwidth.
 */
-proc (struct qardlECMOut) = qardlECMHAC(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, hac_lags = 0, print_results = 1);
+proc (struct qardlECMOut) = qardlECMHAC(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, hac_lags = 0, print_results = 1, ecm_type = "two-step");
     struct qardlECMOut qECMOut;
-    qECMOut = qardlECM(data, ppp, qqq, tau, "hac", hac_lags, print_results);
+    qECMOut = qardlECM(data, ppp, qqq, tau, "hac", hac_lags, print_results, ecm_type);
     retp(qECMOut);
 endp;
 
@@ -1114,14 +1196,15 @@ endp;
 **  Purpose:    Two-step QARDL-ECM with a separate distributed-lag order for
 **              each regressor.
 */
-proc (struct qardlECMOut) = qardlECMX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }, cov_type = "robust", hac_lags = 0, print_results = 1);
+proc (struct qardlECMOut) = qardlECMX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }, cov_type = "robust", hac_lags = 0, print_results = 1, ecm_type = "two-step");
     local nn, k0, ss, yy, xx, Y_ols, ONEX_ols, theta_start, phi_start;
     local bt_ols, rho_ols, beta_lr_ols, qmax, T0, N, N_ecm, Y_ecm, ec_lag;
     local ONEX_ecm, dy_lags, dx_ecm, ii, jj, j, bt_ecm, fh_ecm, uu_ecm;
     local za, hb, D_ecm, D_inv_ecm, rho_cov, alpha_cov, cov_lags, cc, mtau, mfh, psu;
-    local depvar, xvars, fitted_mat, resid_mat;
+    local depvar, xvars, fitted_mat, resid_mat, beta_lr_ecm;
 
     call _qardlValidateEstimatorInputs(data, ppp, 0, tau, "qardlECMX");
+    ecm_type = _ardlNormalizeECMType(ecm_type, "qardlECMX", 0);
     k0 = cols(data) - 1;
     { depvar, xvars } = _qardlFormulaNames("", k0);
     qvec = _qardlNormalizeQVector(qvec, k0, "qardlECMX: qvec");
@@ -1142,36 +1225,9 @@ proc (struct qardlECMOut) = qardlECMX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }
     rho_ols = -(1 - sumc(bt_ols[phi_start:phi_start+ppp-1]));
     beta_lr_ols = bt_ols[theta_start:theta_start+k0-1] ./ (-rho_ols);
 
-    T0 = maxc(ppp|qmax);
-    N = rows(Y_ols);
-    N_ecm = N - 1;
-    Y_ecm = yy[(T0+2):nn] - yy[(T0+1):(nn-1)];
-    ec_lag = yy[(T0+1):(nn-1)] - xx[(T0+1):(nn-1), .]*beta_lr_ols;
-    ONEX_ecm = ones(N_ecm, 1)~ec_lag;
-
-    if ppp > 1;
-        dy_lags = zeros(N_ecm, ppp-1);
-        for j(1, ppp-1, 1);
-            dy_lags[., j] = yy[(T0+2-j):(nn-j)] - yy[(T0+1-j):(nn-j-1)];
-        endfor;
-        ONEX_ecm = ONEX_ecm~dy_lags;
-    endif;
-
-    if sumc(qvec) > 0;
-        dx_ecm = zeros(N_ecm, sumc(qvec));
-        jj = 1;
-        ii = 1;
-        do until ii > k0;
-            if qvec[ii] > 0;
-                for j(0, qvec[ii]-1, 1);
-                    dx_ecm[., jj] = xx[(T0+2-j):(nn-j), ii] - xx[(T0+1-j):(nn-j-1), ii];
-                    jj = jj + 1;
-                endfor;
-            endif;
-            ii = ii + 1;
-        endo;
-        ONEX_ecm = ONEX_ecm~dx_ecm;
-    endif;
+    { Y_ecm, ONEX_ecm } =
+        _ardlBuildECMDesignX(data, ppp, qvec, beta_lr_ols, ecm_type);
+    N_ecm = rows(Y_ecm);
     call _qardlCheckFullColumnRank(ONEX_ecm, "qardlECMX", "ECM design matrix");
 
     za = cdfni(0.975);
@@ -1190,6 +1246,16 @@ proc (struct qardlECMOut) = qardlECMX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }
     struct qfitOut qOutECM;
     qOutECM = quantileFit(Y_ecm, ONEX_ecm, tau, 0, qCtl);
     bt_ecm = qOutECM.beta;
+    if ecm_type $== "uecm";
+        beta_lr_ecm = zeros(k0, ss);
+        jj = 1;
+        do until jj > ss;
+            beta_lr_ecm[., jj] = _ardlLongRunFromUECM(bt_ecm[., jj], 2, 3, k0);
+            jj = jj + 1;
+        endo;
+    else;
+        beta_lr_ecm = beta_lr_ols;
+    endif;
 
     fh_ecm = zeros(ss, 1);
     jj = 1;
@@ -1239,6 +1305,7 @@ proc (struct qardlECMOut) = qardlECMX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }
     qECMOut.deterministic = "constant";
     qECMOut.covariance_type = cov_type;
     qECMOut.selection_criterion = "none";
+    qECMOut.ecm_type = ecm_type;
     qECMOut.sample_start = 1;
     qECMOut.sample_end = rows(data);
     qECMOut.estimation_start = rows(data) - N_ecm + 1;
@@ -1252,7 +1319,7 @@ proc (struct qardlECMOut) = qardlECMX(data, ppp, qvec, tau = { 0.25, 0.5, 0.75 }
     qECMOut.design_rank = rank(ONEX_ecm);
     qECMOut.design_cols = cols(ONEX_ecm);
     qECMOut.design_condition = sqrt(_qardlConditionNumber(ONEX_ecm'ONEX_ecm));
-    qECMOut.beta_lr = beta_lr_ols;
+    qECMOut.beta_lr = beta_lr_ecm;
     qECMOut.rho_ols = rho_ols;
     qECMOut.alpha = bt_ecm[1, .]';
     qECMOut.rho = bt_ecm[2, .]';
@@ -1734,7 +1801,7 @@ proc (struct rollingQardlOut) = rollingQardl(data, pend, qend, tau, struct waldT
     
     // qardl order estimation
     // Estimated using full sample
-    { pst, qst } = pqorder(data, pend, qend, "bic");
+    { pst, qst } = pqorder(data, pend, qend, "bic", 0.1);
     
     // Select window size
     window_size = trunc(0.1*rows(data));
@@ -1839,33 +1906,40 @@ endp;
 **              asymptotic standard errors are stored.
 **
 **  Format:     rECMOut = rollingQardlECM(data, ppp, qqq, tau);
+**              rECMOut = rollingQardlECM(data, ppp, qqq, tau, ecm_type);
 **
 **  Input:      data    (T x (1+k)) matrix.
 **              ppp     scalar, AR lag order.
 **              qqq     scalar, distributed-lag order.
 **              tau     (ss x 1) vector of quantile levels.
+**              ecm_type string, "two-step" (default) or "uecm".
 **
 **  Output:     rECMOut     struct rollingQardlECMOut with fields:
+**                  .ecm_type   "two-step" or "uecm".
 **                  .alpha      (num_est x ss) rolling intercept at each tau.
 **                  .rho        (num_est x ss) rolling speed of adjustment.
 **                  .alpha_se   (num_est x ss) SE of alpha.
 **                  .rho_se     (num_est x ss) SE of rho.
-**                  .beta_lr    (num_est x k) OLS long-run coefficients.
+**                  .beta_lr    two-step: (num_est x k) OLS long-run
+**                              coefficients; UECM: (num_est x (k*ss))
+**                              quantile-specific long-run coefficients
+**                              stacked by tau, then regressor.
 **                  .rho_ols    (num_est x 1) OLS speed of adjustment.
 **
 **  Developed:  March 2026
 */
-proc (struct rollingQardlECMOut) = rollingQardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 });
+proc (struct rollingQardlECMOut) = rollingQardlECM(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, ecm_type = "two-step");
     local window_size, k, T, num_est, ss, st, fin_obs;
     local alpha_mat, rho_mat, alpha_se_mat, rho_se_mat;
     local beta_lr_mat, rho_ols_vec;
-    local data_subset;
+    local data_subset, beta_cols, lr_row, tt, kk;
 
     // Structs declared once at proc scope (not inside the loop)
     struct qardlECMOut qECMOut;
     struct rollingQardlECMOut rECMOut;
 
     call _qardlValidateEstimatorInputs(data, ppp, qqq, tau, "rollingQardlECM");
+    ecm_type = _ardlNormalizeECMType(ecm_type, "rollingQardlECM", 0);
 
     T          = rows(data);
     k          = cols(data) - 1;
@@ -1882,7 +1956,12 @@ proc (struct rollingQardlECMOut) = rollingQardlECM(data, ppp, qqq, tau = { 0.25,
     rho_mat      = zeros(num_est, ss);
     alpha_se_mat = zeros(num_est, ss);
     rho_se_mat   = zeros(num_est, ss);
-    beta_lr_mat  = zeros(num_est, k);
+    if ecm_type $== "uecm";
+        beta_cols = k*ss;
+    else;
+        beta_cols = k;
+    endif;
+    beta_lr_mat  = zeros(num_est, beta_cols);
     rho_ols_vec  = zeros(num_est, 1);
 
     st      = 1;
@@ -1892,19 +1971,34 @@ proc (struct rollingQardlECMOut) = rollingQardlECM(data, ppp, qqq, tau = { 0.25,
 
         data_subset = data[st:fin_obs, .];
 
-        qECMOut = qardlECM(data_subset, ppp, qqq, tau, "iid", 0, 0);
+        qECMOut = qardlECM(data_subset, ppp, qqq, tau, "iid", 0, 0, ecm_type);
 
         alpha_mat[st, .]    = qECMOut.alpha';
         rho_mat[st, .]      = qECMOut.rho';
         alpha_se_mat[st, .] = sqrt(diag(qECMOut.alpha_cov))';
         rho_se_mat[st, .]   = sqrt(diag(qECMOut.rho_cov))';
-        beta_lr_mat[st, .]  = qECMOut.beta_lr';
+        if ecm_type $== "uecm";
+            lr_row = zeros(1, k*ss);
+            tt = 1;
+            do until tt > ss;
+                kk = 1;
+                do until kk > k;
+                    lr_row[1, (tt-1)*k+kk] = qECMOut.beta_lr[kk, tt];
+                    kk = kk + 1;
+                endo;
+                tt = tt + 1;
+            endo;
+            beta_lr_mat[st, .]  = lr_row;
+        else;
+            beta_lr_mat[st, .]  = qECMOut.beta_lr';
+        endif;
         rho_ols_vec[st]     = qECMOut.rho_ols[1, 1];
 
         st      = st + 1;
         fin_obs = fin_obs + 1;
     endo;
 
+    rECMOut.ecm_type = ecm_type;
     rECMOut.alpha    = alpha_mat;
     rECMOut.rho      = rho_mat;
     rECMOut.alpha_se = alpha_se_mat;
@@ -2117,6 +2211,69 @@ proc (0) = printARDL(struct ardlOut arOut);
     print note;
 endp;
 
+proc (0) = printARDLECM(struct ardlECMOut arECMOut);
+    local ii, se_alpha, se_rho, z_alpha, z_rho, pv_alpha, pv_rho;
+    local header, note, table_width, eq_line, dash_line;
+
+    se_alpha = sqrt(arECMOut.alpha_cov);
+    se_rho = sqrt(arECMOut.rho_cov);
+    z_alpha = arECMOut.alpha ./ se_alpha;
+    z_rho = arECMOut.rho ./ se_rho;
+    pv_alpha = 2*cdfnc(abs(z_alpha));
+    pv_rho = 2*cdfnc(abs(z_rho));
+
+    header = "Name                  Coeff.       Std. Err.      z-value       P>|z|    Sig.";
+    note = _qardlSignifNote();
+    table_width = maxc(strlen(header)|84|strlen(note));
+    eq_line = _qardlTableBorder("=", table_width);
+    dash_line = _qardlTableBorder("-", table_width);
+
+    print eq_line;
+    if arECMOut.ecm_type $== "uecm";
+        print "ARDL-ECM Estimator (Unrestricted)";
+    else;
+        print "ARDL-ECM Estimator (Two-Step)";
+    endif;
+    print eq_line;
+    sprintf("%-26s%12.0f        %-26s%12.0f", "No. of obs:", arECMOut.nobs,
+            "No. regressors:", arECMOut.k);
+    sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", arECMOut.p,
+            "DL lags (q):", arECMOut.q);
+    print "Covariance: " $+ arECMOut.covariance_type;
+    print dash_line;
+
+    if arECMOut.ecm_type $== "uecm";
+        print "Unrestricted ECM Long-Run Coefficients";
+    else;
+        print "Step 1 - OLS Long-Run Coefficients";
+    endif;
+    print dash_line;
+    ii = 1;
+    do until ii > arECMOut.k;
+        sprintf("  beta_lr_x%-4d%16.6f", ii, arECMOut.beta_lr[ii]);
+        ii = ii + 1;
+    endo;
+    sprintf("  rho_OLS      %16.6f", arECMOut.rho_ols[1, 1]);
+
+    print "";
+    if arECMOut.ecm_type $== "uecm";
+        print "Unrestricted ECM Parameters";
+    else;
+        print "Step 2 - ECM Parameters";
+    endif;
+    print dash_line;
+    print header;
+    print dash_line;
+    sprintf("  alpha        %16.6f%15.6f%13.6f%12.6f%7s",
+            arECMOut.alpha, se_alpha, z_alpha, pv_alpha,
+            _qardlSignifStars(pv_alpha));
+    sprintf("  rho          %16.6f%15.6f%13.6f%12.6f%7s",
+            arECMOut.rho, se_rho, z_rho, pv_rho,
+            _qardlSignifStars(pv_rho));
+    print eq_line;
+    print note;
+endp;
+
 proc (0) = printQARDL(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
     local ss, k, p, jj, ii, idx, level, alpha_ci, zcrit;
     local se_bt, se_phi, se_gam;
@@ -2229,14 +2386,14 @@ endp;
 **  Developed:  April 2026
 */
 proc (0) = printQARDLECM(struct qardlECMOut qECMOut, tau = { 0.25, 0.5, 0.75 });
-    local ss, k, jj, level, alpha_ci, zcrit, lb, ub;
+    local ss, k, jj, kk, level, alpha_ci, zcrit, lb, ub;
     local se_alpha, se_rho;
     local z_alpha, z_rho;
     local pv_alpha, pv_rho;
     local header, note, table_width, eq_line, dash_line;
 
     ss = rows(tau);
-    k  = rows(qECMOut.beta_lr);
+    k  = qECMOut.k;
     level = 0.95;
     alpha_ci = 1 - level;
     zcrit = cdfni(1 - alpha_ci/2);
@@ -2256,7 +2413,11 @@ proc (0) = printQARDLECM(struct qardlECMOut qECMOut, tau = { 0.25, 0.5, 0.75 });
     dash_line = _qardlTableBorder("-", table_width);
 
     print eq_line;
-    print "QARDL-ECM Estimator (Two-Step)";
+    if qECMOut.ecm_type $== "uecm";
+        print "QARDL-ECM Estimator (Unrestricted)";
+    else;
+        print "QARDL-ECM Estimator (Two-Step)";
+    endif;
     print eq_line;
     sprintf("%-26s%12.0f        %-26s%12.0f", "No. of obs:", qECMOut.nobs,
             "No. regressors:", qECMOut.k);
@@ -2268,18 +2429,40 @@ proc (0) = printQARDLECM(struct qardlECMOut qECMOut, tau = { 0.25, 0.5, 0.75 });
     print dash_line;
 
     print "";
-    print "Step 1 - OLS Long-Run Coefficients";
+    if qECMOut.ecm_type $== "uecm";
+        print "Unrestricted ECM Long-Run Coefficients";
+    else;
+        print "Step 1 - OLS Long-Run Coefficients";
+    endif;
     print dash_line;
-    print "Name                  Coeff.";
-    jj = 1;
-    do until jj > k;
-        sprintf("  x%-4d      %16.6f", jj, qECMOut.beta_lr[jj]);
-        jj = jj + 1;
-    endo;
-    sprintf("  rho_OLS   %16.6f", qECMOut.rho_ols[1, 1]);
+    if qECMOut.ecm_type $== "uecm";
+        print "Name                    Tau            Coeff.";
+        jj = 1;
+        do until jj > ss;
+            kk = 1;
+            do until kk > k;
+                sprintf("  x%-4d           %8.4f      %16.6f",
+                        kk, tau[jj], qECMOut.beta_lr[kk, jj]);
+                kk = kk + 1;
+            endo;
+            jj = jj + 1;
+        endo;
+    else;
+        print "Name                  Coeff.";
+        jj = 1;
+        do until jj > k;
+            sprintf("  x%-4d      %16.6f", jj, qECMOut.beta_lr[jj]);
+            jj = jj + 1;
+        endo;
+        sprintf("  rho_OLS   %16.6f", qECMOut.rho_ols[1, 1]);
+    endif;
 
     print "";
-    print "Step 2 - ECM Quantile Parameters";
+    if qECMOut.ecm_type $== "uecm";
+        print "Unrestricted ECM Quantile Parameters";
+    else;
+        print "Step 2 - ECM Quantile Parameters";
+    endif;
     print dash_line;
     print header;
     print dash_line;
@@ -2508,14 +2691,14 @@ endp;
 **  Developed:  April 2026
 */
 proc (0) = saveQARDLECMResults(struct qardlECMOut qECMOut, tau = { 0.25, 0.5, 0.75 }, outdir = ".");
-    local ss, k, jj, sep, fpath;
+    local ss, k, jj, ii, row, sep, fpath;
     local se_alpha, se_rho, z_alpha, z_rho, pv_alpha, pv_rho;
     local out_lr, out_qr;
 
     call _qardlValidateTau(tau, "saveQARDLECMResults");
 
     ss = rows(tau);
-    k  = rows(qECMOut.beta_lr);
+    k  = qECMOut.k;
 
     if rows(qECMOut.alpha) /= ss or rows(qECMOut.rho) /= ss;
         errorlog "saveQARDLECMResults: tau length does not match qECMOut";
@@ -2527,10 +2710,26 @@ proc (0) = saveQARDLECMResults(struct qardlECMOut qECMOut, tau = { 0.25, 0.5, 0.
         outdir = outdir $+ "/";
     endif;
 
-    // OLS long-run CSV: [var_index, beta_lr]
-    out_lr = seqa(1, 1, k)~qECMOut.beta_lr;
     fpath  = outdir $+ "qardl_ecm_lr.csv";
-    _saveCSV(out_lr, "var_index,beta_lr", fpath);
+    if qECMOut.ecm_type $== "uecm";
+        out_lr = zeros(k*ss, 3);
+        row = 1;
+        jj = 1;
+        do until jj > ss;
+            ii = 1;
+            do until ii > k;
+                out_lr[row, .] = tau[jj]~ii~qECMOut.beta_lr[ii, jj];
+                row = row + 1;
+                ii = ii + 1;
+            endo;
+            jj = jj + 1;
+        endo;
+        _saveCSV(out_lr, "tau,var_index,beta_lr", fpath);
+    else;
+        // OLS long-run CSV: [var_index, beta_lr]
+        out_lr = seqa(1, 1, k)~qECMOut.beta_lr;
+        _saveCSV(out_lr, "var_index,beta_lr", fpath);
+    endif;
 
     // Quantile ECM CSV: [tau, alpha, se_alpha, z_alpha, pval_alpha, rho, se_rho, z_rho, pval_rho]
     se_alpha = sqrt(diag(qECMOut.alpha_cov));
@@ -3556,6 +3755,109 @@ proc (2) = _ardlOLSCov(X, resid, caller);
     retp(cov, sigma2);
 endp;
 
+proc (1) = _ardlNormalizeECMType(ecm_type, caller, allow_none);
+    ecm_type = lower(ecm_type);
+
+    if ecm_type $== "twostep" or ecm_type $== "two_step" or
+       ecm_type $== "restricted" or ecm_type $== "recm";
+        ecm_type = "two-step";
+    elseif ecm_type $== "unrestricted";
+        ecm_type = "uecm";
+    endif;
+
+    if allow_none and ecm_type $== "none";
+        retp(ecm_type);
+    endif;
+
+    if ecm_type $== "two-step" or ecm_type $== "uecm";
+        retp(ecm_type);
+    endif;
+
+    if allow_none;
+        errorlog caller $+ ": ecm_type must be 'none', 'two-step', or 'uecm'";
+    else;
+        errorlog caller $+ ": ecm_type must be 'two-step' or 'uecm'";
+    endif;
+    end;
+endp;
+
+proc (2) = _ardlBuildECMDesignX(data, ppp, qvec, beta_lr, ecm_type);
+    local nn, k0, qmax, T0, N_ecm, yy, xx, Y, ONEX;
+    local ec_lag, y_lag, x_lag, dy_lags, dx_lags, ii, jj, col_idx;
+
+    nn = rows(data);
+    k0 = cols(data) - 1;
+    yy = data[., 1];
+    xx = data[., 2:cols(data)];
+    qvec = _qardlNormalizeQVector(qvec, k0, "_ardlBuildECMDesignX: qvec");
+    qmax = maxc(qvec);
+    T0 = maxc(ppp|qmax);
+    N_ecm = nn - T0 - 1;
+
+    if N_ecm <= 0;
+        errorlog "_ardlBuildECMDesignX: insufficient observations for requested lag orders";
+        end;
+    endif;
+
+    Y = yy[(T0+2):nn] - yy[(T0+1):(nn-1)];
+
+    if ecm_type $== "uecm";
+        y_lag = yy[(T0+1):(nn-1)];
+        x_lag = xx[(T0+1):(nn-1), .];
+        ONEX = ones(N_ecm, 1)~y_lag~x_lag;
+    else;
+        ec_lag = yy[(T0+1):(nn-1)] - xx[(T0+1):(nn-1), .]*beta_lr;
+        ONEX = ones(N_ecm, 1)~ec_lag;
+    endif;
+
+    if ppp > 1;
+        dy_lags = zeros(N_ecm, ppp-1);
+        for jj(1, ppp-1, 1);
+            dy_lags[., jj] = yy[(T0+2-jj):(nn-jj)] - yy[(T0+1-jj):(nn-jj-1)];
+        endfor;
+        ONEX = ONEX~dy_lags;
+    endif;
+
+    if sumc(qvec) > 0;
+        dx_lags = zeros(N_ecm, sumc(qvec));
+        col_idx = 1;
+        ii = 1;
+        do until ii > k0;
+            if qvec[ii] > 0;
+                for jj(0, qvec[ii]-1, 1);
+                    dx_lags[., col_idx] = xx[(T0+2-jj):(nn-jj), ii] -
+                                          xx[(T0+1-jj):(nn-jj-1), ii];
+                    col_idx = col_idx + 1;
+                endfor;
+            endif;
+            ii = ii + 1;
+        endo;
+        ONEX = ONEX~dx_lags;
+    endif;
+
+    retp(Y, ONEX);
+endp;
+
+proc (1) = _ardlLongRunFromUECM(bt, y_lag_pos, x_lag_start, k0);
+    retp(-bt[x_lag_start:x_lag_start+k0-1] ./ bt[y_lag_pos]);
+endp;
+
+proc (1) = _ardlUECMLongRunCov(bt, coef_cov, y_lag_pos, x_lag_start, k0);
+    local G, jj, rho, theta;
+
+    rho = bt[y_lag_pos];
+    G = zeros(k0, rows(bt));
+    jj = 1;
+    do until jj > k0;
+        theta = bt[x_lag_start+jj-1];
+        G[jj, y_lag_pos] = theta/(rho^2);
+        G[jj, x_lag_start+jj-1] = -1/rho;
+        jj = jj + 1;
+    endo;
+
+    retp(G*coef_cov*G');
+endp;
+
 proc (1) = _ardlLongRunCov(bt, coef_cov, theta_start, phi_start, k0, ppp);
     local G, denom, ii, jj;
 
@@ -4039,7 +4341,8 @@ endp;
 **              qfOut = qardlFull(data, pend, qend);
 **              qfOut = qardlFull(data, pend, qend, tau = { 0.25, 0.5, 0.75 },
 **                                formula = "", verbose = 1, criterion = "bic",
-**                                cov_type = "iid", hac_lags = 0);
+**                                cov_type = "iid", hac_lags = 0,
+**                                ecm_type = "two-step");
 **
 **  Input:      data    (T x (1+k)) matrix (or dataframe with formula).
 **              pend    scalar, maximum AR lag to search. Default is 8.
@@ -4069,7 +4372,12 @@ endp;
 **
 **  Developed:  April 2026
 */
-proc (struct qardlFullOut) = qardlFull(data, pend = 8, qend = 8, tau = { 0.25, 0.5, 0.75 }, formula = "", verbose = 1, criterion = "bic", cov_type = "iid", hac_lags = 0);
+proc (struct qardlFullOut) = qardlFull(data, pend = 8, qend = 8,
+                                       tau = { 0.25, 0.5, 0.75 },
+                                       formula = "", verbose = 1,
+                                       criterion = "bic", cov_type = "iid",
+                                       hac_lags = 0, ecm_type = "two-step",
+                                       gets_pval = 0.1);
     local pst, qst, fstat, cv, depvar, xvars;
 
     struct qardlFullOut qfOut;
@@ -4085,16 +4393,18 @@ proc (struct qardlFullOut) = qardlFull(data, pend = 8, qend = 8, tau = { 0.25, 0
     data = _applyFormula(data, formula);
     call _qardlValidateSearchInputs(data, pend, qend, tau, "qardlFull");
     criterion = lower(criterion);
-    call _qardlValidateICCriterion(criterion, "qardlFull");
+    call _qardlValidateSelectionCriterion(criterion, "qardlFull");
+    call _qardlValidateGETSPValue(gets_pval, "qardlFull");
     cov_type = lower(cov_type);
     call _qardlValidateECMCovType(cov_type, "qardlFull");
     call _qardlValidateHACLags(hac_lags, "qardlFull");
+    ecm_type = _ardlNormalizeECMType(ecm_type, "qardlFull", 0);
 
-    // Step 1: Information-criterion lag order selection
+    // Step 1: Lag order selection
     if verbose;
         print "qardlFull: selecting lag orders (" $+ upper(criterion) $+ ") ...";
     endif;
-    { pst, qst } = pqorder(data, pend, qend, criterion);
+    { pst, qst } = pqorder(data, pend, qend, criterion, gets_pval);
     if verbose;
         sprintf("  %s-selected: p = %d, q = %d", upper(criterion), pst, qst);
     endif;
@@ -4125,15 +4435,15 @@ proc (struct qardlFullOut) = qardlFull(data, pend = 8, qend = 8, tau = { 0.25, 0
         printQARDL(qa, tau);
     endif;
 
-    // Step 4: QARDL-ECM two-step estimation
+    // Step 4: QARDL-ECM estimation
     if verbose;
         if cov_type $== "iid";
-            print "qardlFull: estimating QARDL-ECM (two-step) ...";
+            print "qardlFull: estimating QARDL-ECM (" $+ ecm_type $+ ") ...";
         else;
-            print "qardlFull: estimating QARDL-ECM (two-step, " $+ upper(cov_type) $+ " covariance) ...";
+            print "qardlFull: estimating QARDL-ECM (" $+ ecm_type $+ ", " $+ upper(cov_type) $+ " covariance) ...";
         endif;
     endif;
-    ecm = qardlECM(data, pst, qst, tau, cov_type, hac_lags, 0);
+    ecm = qardlECM(data, pst, qst, tau, cov_type, hac_lags, 0, ecm_type);
     ecm.formula = formula;
     ecm.depvar = depvar;
     ecm.xvars = xvars;

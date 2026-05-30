@@ -47,6 +47,7 @@ proc (0) = clean_package_table_exports(outdir);
     local ret;
 
     ret = deleteFile(outdir $+ "package_ardl_table.md");
+    ret = deleteFile(outdir $+ "package_ardl_ecm_table.md");
     ret = deleteFile(outdir $+ "package_qardl_table.tex");
     ret = deleteFile(outdir $+ "package_nardl_table.md");
     ret = deleteFile(outdir $+ "package_csardl_table.csv");
@@ -66,6 +67,9 @@ call assert_true(pst_default >= 1 and pst_default <= 8 and qst_default >= 0 and 
                  "pqorder default lag search returned invalid lag orders");
 { pst_aic, qst_aic } = pqorder(data, 2, 2, "aic");
 call assert_true(pst_aic >= 1 and qst_aic >= 0, "pqorder AIC returned invalid lag orders");
+{ pst_gets, qst_gets } = pqorder(data, 2, 2, "gets", 0.1);
+call assert_true(pst_gets >= 1 and pst_gets <= 2 and qst_gets >= 0 and qst_gets <= 2,
+                 "pqorder GETS returned invalid lag orders");
 { pst_range, qst_range } = pqorderRange(data, 2, 2, 2, 2, "bic");
 call assert_true(pst_range == 2 and qst_range == 2, "pqorderRange fixed grid returned invalid lag orders");
 ic_grid = pqorderGrid(data, 2, 2, "bic");
@@ -127,6 +131,18 @@ call assert_true(rdiagOut.nobs == arOut.nobs and rdiagOut.nseries == 1 and rdiag
                  rdiagOut.cusumsq_pv[1] <= 1,
                  "ardlResidualDiagnostics ARDL output invalid");
 
+struct ardlECMOut arECMOut;
+arECMOut = ardlECM(data, pst, qst, "", 0, "uecm");
+call assert_true(arECMOut.ecm_type $== "uecm" and rows(arECMOut.beta_lr) == 2 and
+                 rows(arECMOut.bt) > rows(arECMOut.beta_lr),
+                 "ardlECM public API output changed");
+saveARDLMarkdown(arECMOut, outdir $+ "package_ardl_ecm_table.md", 4, 0, 0);
+call assert_true(filesa(outdir $+ "package_ardl_ecm_table.md") $/= "",
+                 "saveARDLMarkdown ARDL-ECM output missing");
+rdiagOut = ardlResidualDiagnostics(arECMOut, 4);
+call assert_true(rdiagOut.nobs == arECMOut.nobs and rdiagOut.source_model_family $== "ARDL-ECM",
+                 "ardlResidualDiagnostics ARDL-ECM output invalid");
+
 struct ardlFullOut afOut;
 afOut = ardlFull(data, 2, 2, "", 0, "bic");
 call assert_true(afOut.pst >= 1 and afOut.qst >= 0 and afOut.ardl_fstat > 0,
@@ -134,6 +150,10 @@ call assert_true(afOut.pst >= 1 and afOut.qst >= 0 and afOut.ardl_fstat > 0,
 afOut = ardlFull(data, verbose = 0);
 call assert_true(afOut.pst >= 1 and afOut.pst <= 8 and afOut.qst >= 0 and afOut.qst <= 8,
                  "ardlFull default lag bounds invalid");
+afOut = ardlFull(data, 2, 2, "", 0, "gets", 0.1);
+call assert_true(afOut.selection_criterion $== "gets" and afOut.pst >= 1 and
+                 afOut.pst <= 2 and afOut.qst >= 0 and afOut.qst <= 2,
+                 "ardlFull GETS output changed");
 struct qardlOut qaQ0Out;
 qaQ0Out = qardl(data, 2, 0, tau, "iid", 0, 0);
 call assert_true(qaQ0Out.q == 0 and rows(qaQ0Out.bigbt) == 2*rows(tau), "qardl q=0 output changed");
@@ -209,6 +229,10 @@ call assert_true(qfOut.pst >= 1 and qfOut.pst <= 8 and qfOut.qst >= 0 and qfOut.
                  "qardlFull default lag bounds invalid");
 qfOut = qardlFull(data, 2, 2, tau, "", 0, "hq");
 call assert_true(qfOut.pst >= 1 and qfOut.qst >= 1, "qardlFull HQ returned invalid lag orders");
+qfOut = qardlFull(data, 2, 2, tau, "", 0, "gets", "iid", 0, "two-step", 0.1);
+call assert_true(qfOut.selection_criterion $== "gets" and qfOut.pst >= 1 and
+                 qfOut.pst <= 2 and qfOut.qst >= 0 and qfOut.qst <= 2,
+                 "qardlFull GETS output changed");
 qfOut = qardlFull(data, 2, 2, tau, "", 0, "bic", "robust", 0);
 call assert_true(rows(qfOut.qa.bigbt_cov) == rows(qfOut.qa.bigbt), "qardlFull robust covariance changed");
 { ci_rho, ci_alpha } = blockBootstrapQARDLECM(data, pst, qst, tau, 2, 10, 0.10);
@@ -278,10 +302,19 @@ y_default = zeros(n_default, 1);
 for tt(2, n_default, 1);
     y_default[tt] = 0.35*y_default[tt-1] + 0.45*x1_default[tt] - 0.25*x2_default[tt] + 0.10*rndn(1, 1);
 endfor;
+n_default_data = y_default~x1_default~x2_default;
 n_default_df = asDF(y_default~x1_default~x2_default, "y", "x1", "x2");
 nfOut = nardlFull(n_default_df, formula = "y ~ x1 + x2", verbose = 0);
 call assert_true(nfOut.pst >= 1 and nfOut.pst <= 8 and nfOut.qst >= 0 and nfOut.qst <= 8,
                  "nardlFull default lag bounds invalid");
+{ n_p_gets, n_q_gets } = nardlOrder(n_default_data, 2, 2, "gets", 0.1);
+call assert_true(n_p_gets >= 1 and n_p_gets <= 2 and n_q_gets >= 0 and n_q_gets <= 2,
+                 "nardlOrder GETS returned invalid lag orders");
+nfOut = nardlFull(n_default_df, 2, 2, "y ~ x1 + x2", 0, "gets", "x1", "x2", 1,
+                  "two-step", 0.1);
+call assert_true(nfOut.selection_criterion $== "gets" and nfOut.pst >= 1 and
+                 nfOut.pst <= 2 and nfOut.qst >= 0 and nfOut.qst <= 2,
+                 "nardlFull GETS output changed");
 call assert_true(rows(predictNARDL(nfOut.na, n_default_df, "y ~ x1 + x2")) == nfOut.na.nobs,
                  "predictNARDL formula output changed");
 
@@ -316,6 +349,14 @@ call assert_true(cfOut.model_family $== "CS-ARDL" and cfOut.unitvar $== "unit" a
 cfOut = csardlFull(panel_df, cs_lags = 1, formula = "y ~ x1 + x2", verbose = 0);
 call assert_true(cfOut.pst >= 1 and cfOut.pst <= 8 and cfOut.qst >= 0 and cfOut.qst <= 8,
                  "csardlFull default lag bounds invalid");
+{ c_p_gets, c_q_gets } = csardlOrder(panel, 2, 2, 1, "gets", 0.1);
+call assert_true(c_p_gets >= 1 and c_p_gets <= 2 and c_q_gets >= 0 and c_q_gets <= 2,
+                 "csardlOrder GETS returned invalid lag orders");
+cfOut = csardlFull(panel_df, 2, 2, 1, "y ~ x1 + x2", 0, "gets", "", "",
+                   "two-step", 0.1);
+call assert_true(cfOut.selection_criterion $== "gets" and cfOut.pst >= 1 and
+                 cfOut.pst <= 2 and cfOut.qst >= 0 and cfOut.qst <= 2,
+                 "csardlFull GETS output changed");
 cfOut = csardlFull(panel_df_explicit, 1, 1, 1, "y ~ x1 + x2", 0, "bic", "panel_id", "period");
 call assert_true(cfOut.unitvar $== "panel_id" and cfOut.timevar $== "period" and
                  maxc(abs(cfOut.csa.bigbt - csaOut.bigbt)) < 1e-10,

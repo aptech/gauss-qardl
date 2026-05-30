@@ -3,7 +3,7 @@
 ## Purpose
 
 Runs the standard applied QARDL workflow: lag-order selection, ARDL bounds
-testing, levels-form QARDL estimation, and two-step QARDL-ECM estimation.
+testing, levels-form QARDL estimation, and QARDL-ECM estimation.
 
 ## Format
 
@@ -11,7 +11,7 @@ testing, levels-form QARDL estimation, and two-step QARDL-ECM estimation.
 qfOut = qardlFull(data);
 qfOut = qardlFull(data, pend, qend);
 qfOut = qardlFull(data, pend, qend, tau, formula, verbose, criterion,
-                  cov_type, hac_lags);
+                  cov_type, hac_lags, ecm_type, gets_pval);
 ```
 
 ## Parameters
@@ -28,11 +28,15 @@ qfOut = qardlFull(data, pend, qend, tau, formula, verbose, criterion,
 - `verbose` (*scalar*) - If `1`, prints workflow output. If `0`, returns
   results silently. Default is `1`.
 - `criterion` (*string*) - Lag-selection criterion: `"bic"`, `"aic"`, `"hq"`,
-  or `"hqc"`. Default is `"bic"`.
+  `"hqc"`, or `"gets"`. Default is `"bic"`.
 - `cov_type` (*string*) - Covariance estimator: `"iid"`, `"robust"`, or
   `"hac"`. Default is `"iid"`.
 - `hac_lags` (*scalar*) - HAC truncation lag. Use `0` for the automatic
   Newey-West bandwidth. Default is `0`.
+- `ecm_type` (*string*) - `"two-step"` (default) or `"uecm"` for the ECM
+  stored in `qfOut.ecm`.
+- `gets_pval` (*scalar*) - Wald p-value threshold used when
+  `criterion = "gets"`. Default is `0.1`.
 
 ## Returns
 
@@ -51,6 +55,9 @@ qfOut = qardlFull(data, pend, qend, tau, formula, verbose, criterion,
 the lower-level APIs for users who need fixed lag orders or custom workflows.
 Omitting `pend` and `qend` searches the default `p = 1,...,8` and
 `q = 0,...,8` grid.
+With `criterion = "gets"`, lag selection starts from `pend`/`qend` and
+removes highest-order lag blocks by Wald p-value while preserving contiguous
+scalar `p/q` orders.
 
 ## Examples
 
@@ -62,6 +69,8 @@ tau = { 0.10, 0.25, 0.50, 0.75, 0.90 };
 
 qfOut = qardlFull(data, tau = tau, verbose = 0, criterion = "bic",
                   cov_type = "hac", hac_lags = 0);
+qfGets = qardlFull(data, tau = tau, verbose = 0, criterion = "gets",
+                   gets_pval = 0.1);
 printQARDL(qfOut.qa, tau);
 printQARDLECM(qfOut.ecm, tau);
 ```

@@ -1,0 +1,89 @@
+# R `ardl.nardl` Functionality Inventory
+
+This note compares the public scope of the CRAN `ardl.nardl` package with the
+current GAUSS QARDL library. It uses CRAN `ardl.nardl` 1.3.0 and the GAUSS
+command reference/source tree in this repository.
+
+Sources:
+
+- CRAN package page: <https://cran.r-project.org/web/packages/ardl.nardl/index.html>
+- CRAN reference manual: <https://cran.r-project.org/web/packages/ardl.nardl/refman/ardl.nardl.html>
+- GAUSS command reference: `docs/COMMAND_REFERENCE.md`
+- GAUSS feature matrix: `docs/FEATURE_SUPPORT_MATRIX.md`
+
+## Summary
+
+The R package is focused on single-equation ARDL/NARDL workflows, especially
+unrestricted ECM estimation, general-to-specific variable reduction, automatic
+case workflows, bounds testing, and NARDL symmetry restrictions. The GAUSS
+library is broader across the ARDL family: it includes ARDL, QARDL, NARDL, and
+CS-ARDL estimators, IC and hierarchical GETS lag selection, unified
+prediction/forecasting, QARDL bootstrap and QIRF tools, panel diagnostics,
+table export, and validation infrastructure.
+
+## Comparison Table
+
+| Scope | R `ardl.nardl` | GAUSS QARDL library | Status | Notes |
+| --- | --- | --- | --- | --- |
+| Package orientation | Single-equation time-series ARDL/NARDL with UECM, GETS, bounds, and symmetry workflows. | Broader ARDL-family library: ARDL, QARDL, NARDL, CS-ARDL, forecasting, bootstrap, rolling, diagnostics, and export. | Different scope | R is narrower but deeper on UECM/GETS; GAUSS is broader across model families. |
+| Fixed-order ARDL levels model | `ardl_uecm()` returns `ARDL_fit`. | `ardl()` and `ardlFull()`. | Match | Current R-package validation shows levels fitted values, residuals, sigma2, and nobs match for fixed orders. |
+| Fixed-order ARDL unrestricted ECM | `ardl_uecm()` returns `ARDL_ECM_fit` and UECM summaries. | `ardlECM(..., ecm_type = "uecm")` returns unrestricted ECM estimates in `ardlECMOut`. | Partial | Public GAUSS support exists, but exact R parity still depends on sample and lag-convention alignment. |
+| ARDL long-run relation from UECM | Derived from unrestricted ECM lagged-level coefficients. | Levels-form `ardl()` stores long-run effects; validation-only UECM comparison exists. | Partial | The two long-run conventions are intentionally reported separately in `R_PACKAGE_COMPARISON.md`. |
+| ARDL deterministic cases | Estimators accept `case = 1` through `5`. | `ardlboundsCase*` supports cases I-V; `ardlFull` uses a compatibility Case III path. | Partial | GAUSS needs estimator/workflow-level deterministic-case controls for closer R parity. |
+| ARDL bounds testing | `dynamac_pkg_bounds_test()` and estimator outputs report PSS bounds information. | `ardlbounds`, `ardlboundsCase`, `ardlboundsCaseCV`, `ardlboundsCaseSim`, and print helpers. | GAUSS broader for ARDL bounds | GAUSS has direct case-specific and simulation critical-value APIs; R integrates bounds into UECM workflows. |
+| ARDL GETS selection | `gets_ardl_uecm()` performs general-to-specific reduction with `gets.lm`. | `ardlFull()` and scalar `pqorder`/`pqorderRange` accept `criterion = "gets"` and `gets_pval`; IC grids remain available separately. | Partial | GAUSS implements hierarchical p/q backward reduction, not arbitrary sparse-term `gets.lm` reduction. |
+| ARDL automatic case workflow | `auto_case_ardl()` searches case/specification workflow. | No direct auto-case command. | Gap | Candidate roadmap item after public UECM support. |
+| Fixed-order NARDL levels model | `nardl_uecm()` returns `NARDL_fit`; `nardl_mdv()` handles two decomposed variables. | `nardl()` supports named `decomp_vars`, `control_vars`, `q_decomp`, and `q_control`. | Partial | GAUSS supports multiple decomposed variables and controls; R supports threshold decomposition options GAUSS does not yet expose. |
+| Fixed-order NARDL unrestricted ECM | `nardl_uecm()` returns `NARDL_ECM_fit` and UECM summaries. | `nardlECM(..., ecm_type = "uecm")`. | Partial | Public GAUSS support exists; R package parity still needs threshold/case/GETS alignment. |
+| Public NARDL restricted ECM | Not a direct R package estimator; R focuses on UECM fits. | `nardlECM()` is a two-step restricted ECM estimator. | GAUSS-only | Current validation compares GAUSS `nardlECM` to an equivalent R reconstruction. |
+| NARDL decomposed-variable selection | `decomp`, optional `control`, and `c_q_order`; `nardl_mdv()` supports two decomposed variables. | `decomp_vars`, `control_vars`, `q_decomp`, and `q_control`; multiple named decomposed variables and controls. | GAUSS broader, with gaps | GAUSS is broader on variable count/control count; R is broader on threshold options and UECM integration. |
+| NARDL threshold partial sums | `d`, `thresh1`, and `thresh2` allow `Inf`, `mean`, `0`, or custom thresholds. | Sign-based positive/negative partial sums only. | Gap | Add threshold/decomposition policy if matching R behavior. |
+| NARDL GETS selection | `gets_nardl_uecm()` and `nardl_auto_case()` perform general-to-specific reduction. | `nardlFull()` and `nardlOrder()` accept `criterion = "gets"` and `gets_pval`; IC grids remain available separately. | Partial | GAUSS reduces contiguous AR/decomposed-variable lag blocks; R can return sparse parsimonious UECM terms. |
+| NARDL automatic case workflow | `nardl_auto_case()` combines NARDL, GETS, and case selection. | No direct NARDL auto-case command. | Gap | Requires public UECM/case infrastructure first. |
+| NARDL long-run and short-run asymmetry tests | `nardl_uecm()` / GETS outputs include long-run and short-run asymmetry tests. | `nardl()` / `nardlECM()` report long-run and short-run asymmetry Wald tests. | Broad match | Exact finite-sample/sample-convention parity still depends on model parameterization. |
+| NARDL symmetry-restricted estimation | `nardl_uecm_sym()` estimates SRSR and LRSR restrictions. | Wald tests exist; constrained SRSR/LRSR estimators are not public. | Gap | Add constrained NARDL estimators for full parity. |
+| NARDL dynamic multipliers | Not a primary exported command in `ardl.nardl` 1.3.0. | `nardlDynamicMultipliers()`. | GAUSS-only | Useful GAUSS extension beyond the R package surface. |
+| Residual diagnostics | Estimator outputs include BG serial-correlation, ARCH LM, Jarque-Bera, RESET, and Ljung-Box diagnostics. | `ardlResidualDiagnostics()` includes residual diagnostics and CUSUM/CUSUMSQ stability; CS-ARDL has separate panel diagnostics. | Partial | GAUSS lacks direct BG LM, ARCH LM, and RESET parity rows. |
+| Stability plots/tests | Imports/help entries for `cusum` and `cumsq`; `graph_save` can display stability plots. | CUSUM/CUSUMSQ residual stability diagnostics and QARDL/rolling plot helpers. | Partial | GAUSS has diagnostics and richer QARDL plotting; R integrates stability plots into ARDL/NARDL workflows. |
+| ARCH helper | `ArchTest` help is imported from the R `nardl` package and used in diagnostics. | No direct ARCH LM diagnostic; Breusch-Pagan-style heteroskedasticity diagnostic is present. | Gap | Add ARCH LM for diagnostic parity. |
+| Matrix lag helper | `lagm()` is exported. | Lag construction is internal, not a public utility. | R-only utility | Low priority unless users need a public helper. |
+| Output renaming helper | `output_ren()` renames NARDL UECM summary rows. | No exact equivalent; generic table export controls output format. | R-only utility | GAUSS may not need this if table exports expose labels sufficiently. |
+| Example datasets | `expectation`, `fuel_price`, `ssa`, and `syg_data`. | Synthetic validation fixtures and examples, but no matching public data commands. | R-only | Consider adding optional replication datasets only if licensing/source provenance is clear. |
+| Formula strings | Variables supplied by character names in R data frames. | Formula support through `applyQARDLFormula`, `applyNARDLFormula`, and CS-ARDL formula paths. | Match | Syntax differs by language. |
+| Robust/HAC covariance | `F_HC` affects GETS F-statistic handling. | QARDL robust/HAC levels and ECM covariance; OLS ARDL/NARDL remain baseline OLS. | Partial | GAUSS is broader for QARDL; R exposes HC behavior in GETS workflows. |
+| QARDL levels estimation | Not in `ardl.nardl`. | `qardl()`, `qardlRobust()`, `qardlHAC()`, `qardlX()`. | GAUSS-only | Major scope beyond the R package. |
+| QARDL ECM estimation | Not in `ardl.nardl`. | `qardlECM()`, `qardlECMRobust()`, `qardlECMHAC()`, `qardlECMX()` with `ecm_type = "two-step"` or `"uecm"`. | GAUSS-only | Quantile restricted and unrestricted ECM workflows. |
+| QARDL lag selection/full workflow | Not in `ardl.nardl`. | `qardlFull()`, `pqorder*`, `pqorderX*`. | GAUSS-only | Includes IC selection, scalar GETS selection, and per-regressor lag vector support. |
+| QARDL inference tests | Not in `ardl.nardl`. | `qardl_pval`, `qardl_pval_ecm`, `wtestlrb`, `wtestsrp`, `wtestsrg`, `wtestconst`, `wtestsym`. | GAUSS-only | Quantile-specific inference surface. |
+| QARDL bootstrap and QIRF | Not in `ardl.nardl`. | `blockBootstrapQARDL*`, `blockBootstrapQARDLECM*`, `qirf`, `blockBootstrapQIRF`. | GAUSS-only | Major GAUSS extension. |
+| Rolling QARDL | Not in `ardl.nardl`. | `rollingQardl()`, `rollingQardlECM()`, and plot helpers. | GAUSS-only | Major GAUSS extension. |
+| CS-ARDL panel estimation | Not in `ardl.nardl`. | `csardl()`, `csardlECM(..., ecm_type)`, `csardlFull()`, `csardlOrder*`. | GAUSS-only | Major GAUSS extension into panel ARDL. |
+| CS-ARDL diagnostics | Not in `ardl.nardl`. | `csardlDiagnostics()` with Pesaran CD/CD(p), Pesaran-Yamagata slope homogeneity, mean-group and poolability diagnostics. | GAUSS-only | Full panel diagnostic surface is outside R package scope. |
+| Unified prediction | Not a primary exported `ardl.nardl` surface. | `predictARDL()` dispatches across ARDL, QARDL, NARDL, and CS-ARDL. | GAUSS-only | R users can use fitted/model objects, but no comparable package-level dispatcher. |
+| Unified forecasting | Not a primary exported `ardl.nardl` surface. | `forecastARDL()` dispatches across supported model families with point forecasts. | GAUSS-only | Forecast intervals remain deferred in GAUSS. |
+| Long-run extraction | Long-run relation appears in estimator outputs. | `ardlLongRun()` extracts long-run coefficients/covariances across families. | GAUSS broader | R has output fields; GAUSS has a generic dispatcher. |
+| Table/result export | R returns `lm`, summaries, and lists; external packages can format output. | `saveARDLTable`, `saveARDLMarkdown`, `saveARDLLaTeX`, `saveQARDLResults`, `saveQARDLECMResults`. | GAUSS broader | GAUSS has direct package-level export commands. |
+| Cross-implementation validation | Not applicable. | `tests/run_r_package_validation.ps1` validates selected outputs against R. | GAUSS-only | Current required checks cover ARDL levels, ARDL/NARDL UECM validation designs, and public GAUSS NARDL restricted ECM reconstruction. |
+
+## R-Parity Gaps To Prioritize
+
+| Priority | Gap | Why it matters |
+| ---: | --- | --- |
+| 1 | Deterministic case controls in ARDL/NARDL UECM workflows | R exposes cases 1-5 directly in estimators and auto-case workflows. |
+| 2 | Sparse-term GETS parity | GAUSS now supports hierarchical GETS p/q order reduction; R's `gets_*` can return arbitrary parsimonious UECM subsets through `gets.lm`. |
+| 3 | NARDL threshold partial sums | R supports `d`, `mean`, `0`, and custom thresholds; GAUSS currently uses sign-based partial sums. |
+| 4 | Symmetry-restricted NARDL estimators | GAUSS has asymmetry tests, but not public constrained SRSR/LRSR estimators like `nardl_uecm_sym()`. |
+| 5 | Diagnostic parity | Add BG LM, ARCH LM, RESET, and R-style Ljung-Box reporting where applicable. |
+| 6 | Auto-case wrappers | Implement after deterministic case and UECM selection plumbing is finalized. |
+| 7 | Optional example datasets/replications | Useful for user onboarding, but lower priority than estimator parity. |
+
+## GAUSS Scope Beyond R `ardl.nardl`
+
+The GAUSS library already goes well beyond the R package in several areas:
+
+- QARDL levels, robust/HAC covariance, ECM, per-regressor lag orders, Wald tests,
+  plotting, bootstrap intervals, rolling windows, and QIRF.
+- CS-ARDL levels/ECM/full workflows with panel diagnostics.
+- Unified prediction, forecasting, long-run extraction, and result export across
+  ARDL-family output structures.
+- Cross-implementation validation and release-oriented documentation.

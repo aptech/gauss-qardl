@@ -168,6 +168,12 @@ call assert_true(rows(nECMOut.beta_pos) == 2 and rows(nECMOut.beta_neg) == 2,
                  "nardlECM long-run fields invalid");
 call assert_true(nECMOut.sigma2 > 0 and rows(nECMOut.bt) > 2,
                  "nardlECM diagnostics invalid");
+nECMOut = nardlECM(nardl_data, 1, 1, "", 0, "", "", -1, 0, "uecm");
+call assert_true(nECMOut.ecm_type $== "uecm" and nECMOut.nobs == n - 2 and
+                 rows(nECMOut.beta_pos) == 2 and rows(nECMOut.beta_neg) == 2,
+                 "nardlECM UECM option metadata invalid");
+call assert_true(rows(nECMOut.bt) == 10 and nECMOut.sigma2 > 0,
+                 "nardlECM UECM option output shape invalid");
 
 struct nardlFullOut nfOut;
 nfOut = nardlFull(nardl_data, 1, 1, "", 0);
@@ -180,6 +186,9 @@ nfOut = nardlFull(nardl_data, 1, 1, "", 0, "bic", "x1", "x2", 1);
 call assert_true(nfOut.na.ndecomp == 1 and nfOut.na.ncontrol == 1 and
                  nfOut.ecm.ndecomp == 1 and nfOut.ecm.ncontrol == 1,
                  "nardlFull optional spec metadata invalid");
+nfOut = nardlFull(nardl_data, 1, 1, "", 0, "bic", "", "", 0, "uecm");
+call assert_true(nfOut.ecm.ecm_type $== "uecm" and rows(nfOut.ecm.beta_pos) == 2,
+                 "nardlFull UECM option metadata invalid");
 
 rndseed 260511;
 n_default = 120;
@@ -193,6 +202,16 @@ default_nardl_data = y_default~x1_default~x2_default;
 nfOut = nardlFull(default_nardl_data, verbose = 0);
 call assert_true(nfOut.pst >= 1 and nfOut.pst <= 8 and nfOut.qst >= 0 and nfOut.qst <= 8,
                  "nardlFull default lag bounds invalid");
+{ n_p_gets, n_q_gets } = nardlOrder(default_nardl_data, 2, 2, "gets", 0.1);
+call assert_true(n_p_gets >= 1 and n_p_gets <= 2 and
+                 n_q_gets >= 0 and n_q_gets <= 2,
+                 "nardlOrder GETS returned invalid lag orders");
+nfOut = nardlFull(default_nardl_data, 2, 2, "", 0, "gets", "x1", "x2", 1,
+                  "uecm", 0.1);
+call assert_true(nfOut.selection_criterion $== "gets" and nfOut.pst >= 1 and
+                 nfOut.pst <= 2 and nfOut.qst >= 0 and nfOut.qst <= 2 and
+                 nfOut.ecm.ecm_type $== "uecm",
+                 "nardlFull GETS output invalid");
 
 /*
 ** CS-ARDL deterministic checks.  Panel data are balanced and stacked
@@ -316,6 +335,10 @@ call assert_true(rows(cECMOut.beta_lr) == 2 and rows(cECMOut.cross_avg_coef) > 0
                  "csardlECM levels fields invalid");
 call assert_true(cECMOut.sigma2 > 0 and rows(cECMOut.bt) > 2,
                  "csardlECM diagnostics invalid");
+cECMOut = csardlECM(panel, 1, 1, 1, "", 0, "", "", "uecm");
+call assert_true(cECMOut.ecm_type $== "uecm" and cECMOut.nunits == nunits and
+                 rows(cECMOut.beta_lr) == 2 and rows(cECMOut.bt) == 12,
+                 "csardlECM UECM option output shape invalid");
 
 struct csardlFullOut cfOut;
 cfOut = csardlFull(panel, 1, 1, 1, "", 0);
@@ -324,6 +347,18 @@ call assert_true(cfOut.pst == csardl_grid[minindc(csardl_grid[., 3]), 1] and
                  cfOut.qst == csardl_grid[minindc(csardl_grid[., 3]), 2] and
                  cfOut.cs_lags == 1,
                  "csardlFull metadata invalid");
+{ c_p_gets, c_q_gets } = csardlOrder(panel, 2, 2, 1, "gets", 0.1);
+call assert_true(c_p_gets >= 1 and c_p_gets <= 2 and
+                 c_q_gets >= 0 and c_q_gets <= 2,
+                 "csardlOrder GETS returned invalid lag orders");
+cfOut = csardlFull(panel, 1, 1, 1, "", 0, "bic", "", "", "uecm");
+call assert_true(cfOut.ecm.ecm_type $== "uecm" and rows(cfOut.ecm.beta_lr) == 2,
+                 "csardlFull UECM option metadata invalid");
+cfOut = csardlFull(panel, 2, 2, 1, "", 0, "gets", "", "", "uecm", 0.1);
+call assert_true(cfOut.selection_criterion $== "gets" and cfOut.pst >= 1 and
+                 cfOut.pst <= 2 and cfOut.qst >= 0 and cfOut.qst <= 2 and
+                 cfOut.ecm.ecm_type $== "uecm",
+                 "csardlFull GETS output invalid");
 cfOut = csardlFull(panel, cs_lags = 1, verbose = 0);
 call assert_true(cfOut.pst >= 1 and cfOut.pst <= 8 and cfOut.qst >= 0 and cfOut.qst <= 8,
                  "csardlFull default lag bounds invalid");

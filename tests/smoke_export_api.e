@@ -48,10 +48,12 @@ proc (0) = clean_exports(outdir);
     ret = deleteFile(outdir $+ "qardl_ecm_lr.csv");
     ret = deleteFile(outdir $+ "qardl_ecm_qr.csv");
     ret = deleteFile(outdir $+ "ardl_table.md");
+    ret = deleteFile(outdir $+ "ardl_ecm_table.md");
     ret = deleteFile(outdir $+ "qardl_table.tex");
     ret = deleteFile(outdir $+ "nardl_table.csv");
     ret = deleteFile(outdir $+ "csardl_table.md");
     ret = deleteFile(outdir $+ "qardl_ecm_table.tex");
+    ret = deleteFile(outdir $+ "qardl_uecm_table.csv");
 endp;
 
 proc (1) = make_csardl_export_panel(nunits, tobs);
@@ -94,6 +96,7 @@ tau = { 0.25, 0.5, 0.75 };
 qaOut = qardl(data, 1, 1, tau, "iid", 0, 0);
 qECMOut = qardlECM(data, 1, 1, tau, "iid", 0, 0);
 arOut = ardl(data, 1, 1, "", 0);
+arECMOut = ardlECM(data, 1, 1, "", 0, "uecm");
 naOut = nardl(data, 1, 1, "", 0);
 panel = make_csardl_export_panel(5, 45);
 csaOut = csardl(panel, 1, 1, 1, "", 0);
@@ -101,6 +104,7 @@ csaOut = csardl(panel, 1, 1, 1, "", 0);
 saveQARDLResults(qaOut, tau, outdir);
 saveQARDLECMResults(qECMOut, tau, outdir);
 saveARDLMarkdown(arOut, outdir $+ "ardl_table.md", 4, 0, 0);
+saveARDLMarkdown(arECMOut, outdir $+ "ardl_ecm_table.md", 4, 0, 0);
 saveARDLLaTeX(qaOut, outdir $+ "qardl_table.tex", 4, 1, 0.90);
 saveARDLTable(naOut, outdir $+ "nardl_table.csv", "csv", 5, 1, 0);
 saveARDLTable(csaOut, outdir $+ "csardl_table.md", "markdown", 4, 1, 0.95);
@@ -113,6 +117,7 @@ call assert_true(filesa(outdir $+ "qardl_ecm.csv") $/= "", "qardl_ecm.csv was no
 call assert_true(filesa(outdir $+ "qardl_ecm_lr.csv") $/= "", "qardl_ecm_lr.csv was not written");
 call assert_true(filesa(outdir $+ "qardl_ecm_qr.csv") $/= "", "qardl_ecm_qr.csv was not written");
 call assert_true(filesa(outdir $+ "ardl_table.md") $/= "", "ardl_table.md was not written");
+call assert_true(filesa(outdir $+ "ardl_ecm_table.md") $/= "", "ardl_ecm_table.md was not written");
 call assert_true(filesa(outdir $+ "qardl_table.tex") $/= "", "qardl_table.tex was not written");
 call assert_true(filesa(outdir $+ "nardl_table.csv") $/= "", "nardl_table.csv was not written");
 call assert_true(filesa(outdir $+ "csardl_table.md") $/= "", "csardl_table.md was not written");
@@ -130,6 +135,14 @@ call assert_true(count_file_rows(outdir $+ "qardl_ecm_lr.csv") == qECMOut.k,
                  "qardl_ecm_lr.csv row count changed");
 call assert_true(count_file_rows(outdir $+ "qardl_ecm_qr.csv") == rows(tau),
                  "qardl_ecm_qr.csv row count changed");
+
+qECMOut = qardlECM(data, 1, 1, tau, "iid", 0, 0, "uecm");
+saveQARDLECMResults(qECMOut, tau, outdir);
+saveARDLTable(qECMOut, outdir $+ "qardl_uecm_table.csv", "csv", 4, 1, 0.95);
+call assert_true(count_file_rows(outdir $+ "qardl_ecm_lr.csv") == rows(tau)*qECMOut.k,
+                 "qardl_ecm_lr.csv UECM row count changed");
+call assert_true(filesa(outdir $+ "qardl_uecm_table.csv") $/= "",
+                 "qardl_uecm_table.csv was not written");
 
 call clean_exports(outdir);
 

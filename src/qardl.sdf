@@ -70,6 +70,65 @@ struct ardlOut {
     matrix coef_cov;
 };
 
+struct ardlECMOut {
+    // Standardized model metadata
+    string model_family;
+    string formula;
+    string depvar;
+    string array xvars;
+    string deterministic;
+    string covariance_type;
+    string selection_criterion;
+    string ecm_type;
+
+    // Row-index sample metadata
+    scalar sample_start;
+    scalar sample_end;
+    scalar estimation_start;
+    scalar estimation_end;
+
+    // Lag orders used in estimation
+    scalar p;
+    scalar q;
+
+    // Per-regressor distributed-lag orders
+    matrix qvec;
+
+    // Effective ECM estimation sample size
+    scalar nobs;
+
+    // Number of regressors
+    scalar k;
+
+    // Numerical diagnostics for the ECM design matrix
+    scalar design_rank;
+    scalar design_cols;
+    scalar design_condition;
+
+    // Long-run coefficients used by or derived from the ECM
+    matrix beta_lr;
+
+    // Implied levels-form OLS speed of adjustment
+    matrix rho_ols;
+
+    // ECM intercept and speed-of-adjustment coefficient
+    matrix alpha;
+    matrix rho;
+
+    // Scalar covariance entries for alpha and rho
+    matrix alpha_cov;
+    matrix rho_cov;
+
+    // Full OLS coefficient vector from the ECM equation
+    matrix bt;
+
+    // In-sample diagnostics
+    matrix fitted;
+    matrix resid;
+    scalar sigma2;
+    matrix coef_cov;
+};
+
 struct qardlOut {
     // Standardized model metadata
     string model_family;
@@ -79,6 +138,7 @@ struct qardlOut {
     string deterministic;
     string covariance_type;
     string selection_criterion;
+    string ecm_type;
 
     // Row-index sample metadata
     scalar sample_start;
@@ -152,6 +212,7 @@ struct qardlECMOut {
     string deterministic;
     string covariance_type;
     string selection_criterion;
+    string ecm_type;
 
     // Row-index sample metadata
     scalar sample_start;
@@ -251,6 +312,7 @@ struct nardlOut {
     string deterministic;
     string covariance_type;
     string selection_criterion;
+    string ecm_type;
 
     // Row-index sample metadata
     scalar sample_start;
@@ -352,6 +414,7 @@ struct nardlECMOut {
     string deterministic;
     string covariance_type;
     string selection_criterion;
+    string ecm_type;
 
     // Row-index sample metadata
     scalar sample_start;
@@ -559,6 +622,7 @@ struct csardlECMOut {
     string deterministic;
     string covariance_type;
     string selection_criterion;
+    string ecm_type;
 
     // Row-index sample metadata. For panels, estimation_start/end are
     // within-unit time indices after lag alignment.
@@ -814,6 +878,9 @@ struct waldTestRestrictions {
 
 struct rollingQardlECMOut {
 
+    // ECM estimator type: "two-step" or "uecm"
+    string ecm_type;
+
     // Rolling alpha(tau): (num_est x ss) matrix, each row is one window
     matrix alpha;
 
@@ -826,7 +893,8 @@ struct rollingQardlECMOut {
     // Rolling SE of rho: (num_est x ss) matrix
     matrix rho_se;
 
-    // Rolling OLS long-run coefficients: (num_est x k) matrix
+    // Rolling long-run coefficients. For two-step ECM this is (num_est x k).
+    // For UECM this is (num_est x (k*ss)), stacked by tau then regressor.
     matrix beta_lr;
 
     // Rolling OLS rho: (num_est x 1) vector

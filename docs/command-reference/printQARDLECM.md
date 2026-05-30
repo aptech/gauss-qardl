@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Prints formatted two-step QARDL-ECM results with a GAUSS-style diagnostic
-header and coefficient table.
+Prints formatted QARDL-ECM results with a GAUSS-style diagnostic header and
+coefficient table.
 
 ## Format
 
@@ -25,7 +25,8 @@ Nothing. Results are printed to the GAUSS output window.
 
 Direct calls to `qardlECM`, `qardlECMRobust`, `qardlECMHAC`, and `qardlECMX`
 print this table by default. Pass `print_results = 0` to those estimators when
-you want to return results silently.
+you want to return results silently. The header reports whether the output is
+the default two-step ECM or an unrestricted ECM.
 
 The Step 2 coefficient table includes a `Sig.` column:
 `***` for `p < 0.01`, `**` for `p < 0.05`, and `*` for `p < 0.10`.

@@ -8,9 +8,9 @@ embedded in every estimator call.
 | --- | --- | --- | --- | --- |
 | Levels estimator | Yes | Yes | Yes | Yes |
 | Full workflow | Yes | Yes | Yes | Yes |
-| ECM workflow | No standalone ECM | Yes | Yes | Yes |
+| ECM workflow | `ardlECM`; two-step or UECM | Yes; two-step or UECM | Yes; two-step or UECM | Yes; two-step or UECM |
 | Formula strings | Yes | Yes | Yes | Yes |
-| Automatic lag selection | Yes | Yes | Yes | Yes |
+| Automatic lag selection | IC and GETS | IC and GETS | IC and GETS | IC and GETS |
 | Explicit decomposed-variable / linear-control NARDL specs | Not applicable | Not applicable | Yes | Not applicable |
 | Default max `p`, `q` when omitted | 8, 8 | 8, 8 | 8, 8 | 8, 8 |
 | Unified prediction | Yes | Yes | Yes | Yes |

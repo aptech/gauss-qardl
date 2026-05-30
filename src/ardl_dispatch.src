@@ -164,6 +164,8 @@ endp;
 proc (0) = saveARDLTable(modelOut, fpath, table_format = "markdown", precision = 6, stars = 1, ci_level = 0.95);
     if isStructType(modelOut, "ardlOut");
         call _saveARDLTableARDL(modelOut, fpath, table_format, precision, stars, ci_level);
+    elseif isStructType(modelOut, "ardlECMOut");
+        call _saveARDLTableARDLECM(modelOut, fpath, table_format, precision, stars, ci_level);
     elseif isStructType(modelOut, "qardlOut");
         call _saveARDLTableQARDL(modelOut, fpath, table_format, precision, stars, ci_level);
     elseif isStructType(modelOut, "qardlECMOut");
@@ -265,6 +267,40 @@ proc (0) = _saveARDLTableARDL(struct ardlOut arOut, fpath, table_format, precisi
     call _ardlTableEnd(fid, fmt);
 endp;
 
+proc (0) = _saveARDLTableARDLECM(struct ardlECMOut arECMOut, fpath, table_format, precision, stars, ci_level);
+    local fid, fmt, include_stars, include_ci, zcrit, ii;
+    local se_alpha, se_rho, z_alpha, z_rho, pv_alpha, pv_rho;
+
+    { fid, fmt, include_stars, include_ci, zcrit } =
+        _ardlTableOpen(fpath, table_format, precision, stars, ci_level, "saveARDLTable");
+
+    call _ardlTableBegin(fid, fmt, include_stars, include_ci);
+
+    ii = 1;
+    do until ii > arECMOut.k;
+        call _ardlTableWriteRow(fid, fmt, arECMOut.model_family, "", "beta_lr_" $+ arECMOut.xvars[ii],
+                                arECMOut.beta_lr[ii], error(0), error(0), error(0),
+                                include_stars, include_ci, zcrit, precision);
+        ii = ii + 1;
+    endo;
+
+    se_alpha = sqrt(arECMOut.alpha_cov[1, 1]);
+    se_rho = sqrt(arECMOut.rho_cov[1, 1]);
+    z_alpha = arECMOut.alpha[1] / se_alpha;
+    z_rho = arECMOut.rho[1] / se_rho;
+    pv_alpha = 2*cdfnc(abs(z_alpha));
+    pv_rho = 2*cdfnc(abs(z_rho));
+
+    call _ardlTableWriteRow(fid, fmt, arECMOut.model_family, "", "alpha",
+                            arECMOut.alpha[1], se_alpha, z_alpha, pv_alpha,
+                            include_stars, include_ci, zcrit, precision);
+    call _ardlTableWriteRow(fid, fmt, arECMOut.model_family, "", "rho",
+                            arECMOut.rho[1], se_rho, z_rho, pv_rho,
+                            include_stars, include_ci, zcrit, precision);
+
+    call _ardlTableEnd(fid, fmt);
+endp;
+
 proc (0) = _saveARDLTableQARDL(struct qardlOut qaOut, fpath, table_format, precision, stars, ci_level);
     local fid, fmt, include_stars, include_ci, zcrit, ss, k, p, ii, jj, idx, tau_label;
     local se_bt, se_phi, se_gam, z_bt, z_phi, z_gam, pv_bt, pv_phi, pv_gam;
@@ -346,13 +382,29 @@ proc (0) = _saveARDLTableQARDLECM(struct qardlECMOut qECMOut, fpath, table_forma
     pv_alpha = 2*cdfnc(abs(z_alpha));
     pv_rho = 2*cdfnc(abs(z_rho));
 
-    ii = 1;
-    do until ii > qECMOut.k;
-        call _ardlTableWriteRow(fid, fmt, qECMOut.model_family, "", "beta_lr_" $+ qECMOut.xvars[ii],
-                                qECMOut.beta_lr[ii], error(0), error(0), error(0),
-                                include_stars, include_ci, zcrit, precision);
-        ii = ii + 1;
-    endo;
+    if qECMOut.ecm_type $== "uecm";
+        jj = 1;
+        do until jj > ss;
+            tau_label = _ardlFmtNum(qECMOut.tau[jj], precision);
+            ii = 1;
+            do until ii > qECMOut.k;
+                call _ardlTableWriteRow(fid, fmt, qECMOut.model_family, tau_label,
+                                        "beta_lr_" $+ qECMOut.xvars[ii],
+                                        qECMOut.beta_lr[ii, jj], error(0), error(0), error(0),
+                                        include_stars, include_ci, zcrit, precision);
+                ii = ii + 1;
+            endo;
+            jj = jj + 1;
+        endo;
+    else;
+        ii = 1;
+        do until ii > qECMOut.k;
+            call _ardlTableWriteRow(fid, fmt, qECMOut.model_family, "", "beta_lr_" $+ qECMOut.xvars[ii],
+                                    qECMOut.beta_lr[ii], error(0), error(0), error(0),
+                                    include_stars, include_ci, zcrit, precision);
+            ii = ii + 1;
+        endo;
+    endif;
 
     jj = 1;
     do until jj > ss;

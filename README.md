@@ -57,8 +57,8 @@ qfOut = qardlFull(macro, tau = tau,
 
 - Levels-form ARDL and QARDL estimation: `ardl`, `qardl`, `qardlRobust`,
   `qardlHAC`, `qardlX`.
-- Two-step QARDL-ECM estimation: `qardlECM`, `qardlECMRobust`,
-  `qardlECMHAC`, `qardlECMX`.
+- ECM estimation with two-step defaults and unrestricted ECM options:
+  `ardlECM`, `qardlECM`, `qardlECMRobust`, `qardlECMHAC`, `qardlECMX`.
 - NARDL and CS-ARDL model families with levels, ECM, full-workflow,
   print, prediction, and forecast hooks. NARDL also supports explicit
   decomposed-variable and linear-control specifications through optional
@@ -72,8 +72,8 @@ qfOut = qardlFull(macro, tau = tau,
 - Formula dataframe support across ARDL-family workflows, including
   GAUSS-style panel identifier inference and explicit `group_var`/`time_var`
   overrides for CS-ARDL dataframe formulas.
-- Lag selection with BIC, AIC, HQ, and HQC: `pqorder`, `pqorderRange`,
-  `pqorderGrid`, `pqorderX`, `pqorderXGrid`.
+- Lag selection with BIC, AIC, HQ, and HQC in the order/grid helpers; scalar
+  GETS is available in `pqorder`, `pqorderRange`, and the full workflows.
 - ARDL bounds testing for Pesaran-Shin-Smith Cases I-V, with bundled
   asymptotic critical values and simulation critical-value APIs.
 - CS-ARDL panel diagnostics, including Pesaran CD/CD(p) and

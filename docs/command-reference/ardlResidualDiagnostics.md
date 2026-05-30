@@ -13,8 +13,8 @@ dOut = ardlResidualDiagnostics(modelOut, max_lags);
 
 ## Parameters
 
-- `modelOut` (*structure*) - Output from `ardl`, `qardl`, `qardlECM`,
-  `nardl`, or `nardlECM`.
+- `modelOut` (*structure*) - Output from `ardl`, `ardlECM`, `qardl`,
+  `qardlECM`, `nardl`, or `nardlECM`.
 - `max_lags` (*scalar*) - Ljung-Box lag count. If `0` or omitted, the default
   is `min(12, trunc(sqrt(nobs)))`.
 
@@ -47,6 +47,9 @@ library qardl;
 arOut = ardl(data, 2, 1, "", 0);
 dOut = ardlResidualDiagnostics(arOut, 4);
 printARDLResidualDiagnostics(dOut);
+
+arECMOut = ardlECM(data, 2, 1, "", 0, "uecm");
+dECMOut = ardlResidualDiagnostics(arECMOut, 4);
 ```
 
 ## Source
@@ -56,5 +59,5 @@ printARDLResidualDiagnostics(dOut);
 ## See Also
 
 [printARDLResidualDiagnostics](printARDLResidualDiagnostics.md),
-[ardl](ardl.md), [qardl](qardl.md), [nardl](nardl.md),
-[csardlDiagnostics](csardlDiagnostics.md)
+[ardl](ardl.md), [ardlECM](ardlECM.md), [qardl](qardl.md),
+[nardl](nardl.md), [csardlDiagnostics](csardlDiagnostics.md)

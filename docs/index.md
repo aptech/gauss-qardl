@@ -5,7 +5,7 @@
 The GAUSS QARDL library implements Quantile Autoregressive Distributed Lag
 models for quantile cointegration, asymmetric long-run relationships, and
 heterogeneous short-run dynamics. The package includes levels-form QARDL,
-two-step QARDL-ECM estimation, OLS ARDL, NARDL, CS-ARDL, ARDL bounds testing,
+two-step and unrestricted QARDL-ECM estimation, OLS ARDL, NARDL, CS-ARDL, ARDL bounds testing,
 lag selection, Wald tests, bootstrap confidence intervals, rolling estimation,
 quantile impulse responses, prediction/forecast hooks, plotting helpers, and
 table export tools.
@@ -32,19 +32,43 @@ one workflow.
 
 [qardlFull](command-reference/qardlFull.md)
 
-Runs lag selection, ARDL bounds testing, levels-form QARDL, and two-step
-QARDL-ECM estimation in one workflow.
+Runs lag selection, ARDL bounds testing, levels-form QARDL, and QARDL-ECM
+estimation in one workflow.
+
+[nardlFull](command-reference/nardlFull.md)
+
+Runs lag selection, NARDL levels estimation, and NARDL-ECM estimation in one
+workflow.
+
+[csardlFull](command-reference/csardlFull.md)
+
+Runs lag selection, CS-ARDL levels estimation, and CS-ARDL-ECM estimation in
+one workflow.
 
 [applyQARDLFormula](command-reference/applyQARDLFormula.md)
 
 Converts a named GAUSS dataframe and formula string into the numeric matrix
 ordering expected by QARDL estimators.
 
+[applyNARDLFormula](command-reference/applyNARDLFormula.md)
+
+Converts a named GAUSS dataframe and formula string into the numeric matrix
+ordering expected by NARDL estimators.
+
+[applyCSARDLFormula](command-reference/applyCSARDLFormula.md)
+
+Converts a named GAUSS panel dataframe and formula string into the balanced
+panel matrix ordering expected by CS-ARDL estimators.
+
 ### Estimation
 
 [ardl](command-reference/ardl.md)
 
 Estimates the levels-form ARDL model by OLS.
+
+[ardlECM](command-reference/ardlECM.md)
+
+Estimates ARDL error-correction models by OLS.
 
 [qardl](command-reference/qardl.md)
 
@@ -66,7 +90,7 @@ Estimates levels-form QARDL with per-regressor distributed-lag orders.
 
 [qardlECM](command-reference/qardlECM.md)
 
-Estimates the two-step QARDL error-correction model.
+Estimates the QARDL error-correction model.
 
 [qardlECMRobust](command-reference/qardlECMRobust.md)
 
@@ -87,9 +111,17 @@ Estimates nonlinear ARDL models with positive and negative partial-sum
 decompositions, including optional decomposed-variable and linear-control
 specifications.
 
+[nardlECM](command-reference/nardlECM.md)
+
+Estimates NARDL error-correction models.
+
 [csardl](command-reference/csardl.md)
 
 Estimates pooled cross-sectionally augmented ARDL panel models.
+
+[csardlECM](command-reference/csardlECM.md)
+
+Estimates CS-ARDL error-correction models.
 
 ### Lag Selection
 
@@ -120,6 +152,30 @@ Returns the full per-regressor q-vector information-criterion search table.
 [icmean](command-reference/icmean.md)
 
 Computes an information criterion for a specified ARDL lag order.
+
+[nardlOrder](command-reference/nardlOrder.md)
+
+Selects NARDL p and q lag orders by information criterion.
+
+[nardlOrderGrid](command-reference/nardlOrderGrid.md)
+
+Returns the full NARDL information-criterion lag-search table.
+
+[nardlICMean](command-reference/nardlICMean.md)
+
+Computes an information criterion for a specified NARDL lag order.
+
+[csardlOrder](command-reference/csardlOrder.md)
+
+Selects CS-ARDL p and q lag orders by information criterion.
+
+[csardlOrderGrid](command-reference/csardlOrderGrid.md)
+
+Returns the full CS-ARDL information-criterion lag-search table.
+
+[csardlICMean](command-reference/csardlICMean.md)
+
+Computes an information criterion for a specified CS-ARDL lag order.
 
 ### ARDL Bounds Testing
 
@@ -201,7 +257,7 @@ Runs rolling-window levels-form QARDL estimation.
 
 [rollingQardlECM](command-reference/rollingQardlECM.md)
 
-Runs rolling-window two-step QARDL-ECM estimation.
+Runs rolling-window QARDL-ECM estimation.
 
 [qirf](command-reference/qirf.md)
 
@@ -217,13 +273,33 @@ Computes positive and negative NARDL dynamic multiplier paths.
 
 Prints formatted levels-form ARDL results.
 
+[printARDLECM](command-reference/printARDLECM.md)
+
+Prints formatted ARDL-ECM results.
+
 [printQARDL](command-reference/printQARDL.md)
 
 Prints formatted levels-form QARDL results.
 
 [printQARDLECM](command-reference/printQARDLECM.md)
 
-Prints formatted two-step QARDL-ECM results.
+Prints formatted QARDL-ECM results.
+
+[printNARDL](command-reference/printNARDL.md)
+
+Prints formatted NARDL levels results.
+
+[printNARDLECM](command-reference/printNARDLECM.md)
+
+Prints formatted NARDL-ECM results.
+
+[printCSARDL](command-reference/printCSARDL.md)
+
+Prints formatted CS-ARDL levels results.
+
+[printCSARDLECM](command-reference/printCSARDLECM.md)
+
+Prints formatted CS-ARDL-ECM results.
 
 [predictARDL](command-reference/predictARDL.md)
 
@@ -241,6 +317,22 @@ Returns in-sample fitted values from an estimated QARDL model.
 
 Computes recursive QARDL forecasts by quantile.
 
+[predictNARDL](command-reference/predictNARDL.md)
+
+Returns in-sample fitted values from an estimated NARDL model.
+
+[forecastNARDL](command-reference/forecastNARDL.md)
+
+Computes recursive NARDL point forecasts.
+
+[predictCSARDL](command-reference/predictCSARDL.md)
+
+Returns in-sample fitted values from an estimated CS-ARDL model.
+
+[forecastCSARDL](command-reference/forecastCSARDL.md)
+
+Returns CS-ARDL point forecasts.
+
 [ardlLongRun](command-reference/ardlLongRun.md)
 
 Extracts stored long-run coefficients and covariance matrices from ARDL-family
@@ -254,6 +346,10 @@ Computes time-series residual diagnostics for ARDL-family outputs.
 
 Computes optional CS-ARDL mean-group, poolability, Pesaran-Yamagata slope
 homogeneity, and Pesaran CD/CD(p) cross-sectional dependence diagnostics.
+
+[printCSARDLDiagnostics](command-reference/printCSARDLDiagnostics.md)
+
+Prints CS-ARDL panel diagnostics.
 
 [plotQARDL](command-reference/plotQARDL.md)
 

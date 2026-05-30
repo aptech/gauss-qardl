@@ -23,7 +23,10 @@ Nothing. Writes CSV files to `outdir`.
 
 ## Remarks
 
-Use for reproducible tables and downstream reporting.
+Use for reproducible tables and downstream reporting. For two-step ECM output,
+the long-run CSV stores one row per regressor. For unrestricted ECM output, it
+stores one row per quantile and regressor because the long-run coefficients are
+quantile-specific.
 
 ## Examples
 

@@ -11,6 +11,7 @@ levels-form ARDL estimation.
 afOut = ardlFull(data);
 afOut = ardlFull(data, pend, qend);
 afOut = ardlFull(data, pend, qend, formula, verbose, criterion);
+afOut = ardlFull(data, pend, qend, formula, verbose, "gets", gets_pval);
 ```
 
 ## Parameters
@@ -23,7 +24,9 @@ afOut = ardlFull(data, pend, qend, formula, verbose, criterion);
 - `verbose` (*scalar*) - If `1`, print lag selection, bounds-test, and
   estimator output. Default is `1`.
 - `criterion` (*string*) - Lag-selection criterion: `"bic"`, `"aic"`,
-  `"hq"`, or `"hqc"`. Default is `"bic"`.
+  `"hq"`, `"hqc"`, or `"gets"`. Default is `"bic"`.
+- `gets_pval` (*scalar*) - Wald p-value threshold used when
+  `criterion = "gets"`. Default is `0.1`.
 
 ## Returns
 
@@ -39,6 +42,13 @@ afOut = ardlFull(data, pend, qend, formula, verbose, criterion);
 `ardlFull` is the OLS ARDL companion to `qardlFull`. It is additive and does
 not change QARDL behavior. Omitting `pend` and `qend` searches the default
 `p = 1,...,8` and `q = 0,...,8` grid.
+When `criterion = "gets"`, `ardlFull` starts from the requested maximum lags
+and reduces the highest-order lag blocks by Wald p-value while preserving a
+contiguous lag structure.
+
+Use `ardlECM` with selected `pst` and `qst` when you want the matching ARDL
+error-correction model after running the full lag-selection and bounds-test
+workflow.
 
 ## Examples
 
@@ -50,6 +60,8 @@ df = loadd("shiller_stocks_qt.csv",
 
 afOut = ardlFull(df, formula = "real_dividend ~ real_earnings",
                  verbose = 0, criterion = "bic");
+afGets = ardlFull(df, formula = "real_dividend ~ real_earnings",
+                  verbose = 0, criterion = "gets", gets_pval = 0.1);
 printARDL(afOut.ar);
 ```
 
@@ -59,5 +71,5 @@ printARDL(afOut.ar);
 
 ## See Also
 
-[ardl](ardl.md), [ardlbounds](ardlbounds.md), [pqorder](pqorder.md),
-[qardlFull](qardlFull.md)
+[ardl](ardl.md), [ardlECM](ardlECM.md), [ardlbounds](ardlbounds.md),
+[pqorder](pqorder.md), [qardlFull](qardlFull.md)

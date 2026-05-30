@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Estimates the two-step QARDL-ECM model with a separate distributed-lag order
+Estimates the QARDL-ECM model with a separate distributed-lag order
 for each regressor.
 
 ## Format
@@ -10,6 +10,8 @@ for each regressor.
 ```gauss
 qECMOut = qardlECMX(data, ppp, qvec);
 qECMOut = qardlECMX(data, ppp, qvec, tau, cov_type, hac_lags, print_results);
+qECMOut = qardlECMX(data, ppp, qvec, tau, cov_type, hac_lags,
+                    print_results, ecm_type);
 ```
 
 ## Parameters
@@ -23,6 +25,7 @@ qECMOut = qardlECMX(data, ppp, qvec, tau, cov_type, hac_lags, print_results);
 - `hac_lags` (*scalar*) - HAC truncation lag. Use `0` for automatic bandwidth.
 - `print_results` (*scalar*) - If `1`, print a formatted table. Default is
   `1`.
+- `ecm_type` (*string*) - `"two-step"` (default) or `"uecm"`.
 
 ## Returns
 
@@ -32,7 +35,8 @@ compatibility.
 ## Remarks
 
 Use this procedure when the ECM workflow needs heterogeneous distributed-lag
-orders across regressors.
+orders across regressors. The default two-step ECM uses one constructed
+error-correction term; `"uecm"` estimates lagged levels directly.
 
 ## Examples
 

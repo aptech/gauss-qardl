@@ -58,6 +58,18 @@
 - Optional ARDL/NARDL cross-implementation validation against the CRAN
   `ardl.nardl` package through `tests/run_r_package_validation.ps1`, with
   generated comparison artifacts kept out of source control.
+- Fixed-order ARDL/NARDL UECM validation rows against the R package ECM fits,
+  plus public GAUSS `nardlECM` restricted-ECM validation against an equivalent
+  R reconstruction and a generated comparison table with runtime metrics.
+- Dedicated `ardlECM` support for ARDL error-correction estimation, with
+  `ecm_type = "two-step"` (default) or `"uecm"` to match the package's ECM
+  API style. Existing QARDL, NARDL, and CS-ARDL ECM workflows, including
+  `rollingQardlECM`, accept the same ECM mode option.
+- Expanded command-reference coverage so NARDL and CS-ARDL user-facing
+  helpers each have dedicated documentation pages matching the QARDL docs.
+- `docs/developer/R_PACKAGE_FUNCTIONALITY_INVENTORY.md`, comparing the full
+  CRAN `ardl.nardl` package surface with GAUSS ARDL, QARDL, NARDL, CS-ARDL,
+  diagnostics, forecasting, export, and validation support.
 - `docs/validation/PERFORMANCE_NUMERICAL_RELIABILITY.md`, numerical-reliability source
   tests, ARDL rank/tiny-sample negative tests, and a timing smoke-test runner.
 - `docs/guides/DATA_HANDLING.md`, design rank/conditioning metadata on main estimator
@@ -82,6 +94,10 @@
 - Default maximum lag search bounds of `p = 8` and `q = 8` for `pqorder`,
   `pqorderX`, `pqorderGrid`, `qardlFull`, `ardlFull`, `nardlFull`,
   `nardlOrder`, `csardlFull`, and `csardlOrder` when users omit maximum lags.
+- Hierarchical GETS lag selection via `criterion = "gets"` and optional
+  `gets_pval` in scalar ARDL/QARDL, NARDL, and CS-ARDL order selectors and
+  full workflows, while preserving existing AIC/BIC/HQ/HQC selection and IC
+  grid helpers.
 - Confidence-band display controls for `plotQARDL`, `plotQARDLbands`,
   `plotRollingQARDL`, `plotRollingQARDLECM`, and graceful QIRF handling when
   interval data are not available.

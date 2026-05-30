@@ -56,5 +56,5 @@ print dmOut.neg;
 
 ## See Also
 
-[nardl](nardl.md), [forecastARDL](forecastARDL.md)
-
+[nardl](nardl.md), [nardlFull](nardlFull.md), [forecastNARDL](forecastNARDL.md),
+[forecastARDL](forecastARDL.md)

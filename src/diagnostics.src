@@ -14,8 +14,8 @@
 **  Format:     dOut = ardlResidualDiagnostics(modelOut);
 **              dOut = ardlResidualDiagnostics(modelOut, max_lags);
 **
-**  Input:      modelOut   ardlOut, qardlOut, qardlECMOut, nardlOut, or
-**                         nardlECMOut.
+**  Input:      modelOut   ardlOut, ardlECMOut, qardlOut, qardlECMOut,
+**                         nardlOut, or nardlECMOut.
 **              max_lags   Optional Ljung-Box lag count. If 0, uses
 **                         min(12, trunc(sqrt(nobs))).
 **
@@ -28,6 +28,8 @@
 proc (struct ardlResidualDiagOut) = ardlResidualDiagnostics(modelOut, max_lags = 0);
     if isStructType(modelOut, "ardlOut");
         retp(_ardlDiagARDL(modelOut, max_lags));
+    elseif isStructType(modelOut, "ardlECMOut");
+        retp(_ardlDiagARDLECM(modelOut, max_lags));
     elseif isStructType(modelOut, "qardlOut");
         retp(_ardlDiagQARDL(modelOut, max_lags));
     elseif isStructType(modelOut, "qardlECMOut");
@@ -47,6 +49,10 @@ endp;
 
 proc (struct ardlResidualDiagOut) = _ardlDiagARDL(struct ardlOut arOut, max_lags);
     retp(_ardlDiagFromMatrices(arOut.resid, arOut.fitted, arOut.model_family, max_lags));
+endp;
+
+proc (struct ardlResidualDiagOut) = _ardlDiagARDLECM(struct ardlECMOut arECMOut, max_lags);
+    retp(_ardlDiagFromMatrices(arECMOut.resid, arECMOut.fitted, arECMOut.model_family, max_lags));
 endp;
 
 proc (struct ardlResidualDiagOut) = _ardlDiagQARDL(struct qardlOut qaOut, max_lags);

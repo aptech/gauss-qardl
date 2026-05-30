@@ -22,6 +22,7 @@ sections.
 - [ARDL-family output schema](developer/OUTPUT_SCHEMA.md)
 - [Prediction and forecast validation](validation/FORECASTING_VALIDATION.md)
 - [ARDL/NARDL R-package validation](validation/R_PACKAGE_VALIDATION.md)
+- [R `ardl.nardl` functionality inventory](developer/R_PACKAGE_FUNCTIONALITY_INVENTORY.md)
 - [Performance and numerical reliability](validation/PERFORMANCE_NUMERICAL_RELIABILITY.md)
 - [Validation tolerances](validation/VALIDATION_TOLERANCES.md)
 
@@ -29,11 +30,16 @@ sections.
 
 - [ardlFull](command-reference/ardlFull.md)
 - [qardlFull](command-reference/qardlFull.md)
+- [nardlFull](command-reference/nardlFull.md)
+- [csardlFull](command-reference/csardlFull.md)
 - [applyQARDLFormula](command-reference/applyQARDLFormula.md)
+- [applyNARDLFormula](command-reference/applyNARDLFormula.md)
+- [applyCSARDLFormula](command-reference/applyCSARDLFormula.md)
 
 ## Estimation
 
 - [ardl](command-reference/ardl.md)
+- [ardlECM](command-reference/ardlECM.md)
 - [qardl](command-reference/qardl.md)
 - [qardlRobust](command-reference/qardlRobust.md)
 - [qardlHAC](command-reference/qardlHAC.md)
@@ -43,7 +49,9 @@ sections.
 - [qardlECMHAC](command-reference/qardlECMHAC.md)
 - [qardlECMX](command-reference/qardlECMX.md)
 - [nardl](command-reference/nardl.md)
+- [nardlECM](command-reference/nardlECM.md)
 - [csardl](command-reference/csardl.md)
+- [csardlECM](command-reference/csardlECM.md)
 
 ## Lag Selection
 
@@ -53,9 +61,13 @@ sections.
 - [pqorderRangeGrid](command-reference/pqorderRangeGrid.md)
 - [pqorderX](command-reference/pqorderX.md)
 - [pqorderXGrid](command-reference/pqorderXGrid.md)
-- nardlOrder / nardlOrderGrid
-- csardlOrder / csardlOrderGrid
+- [nardlOrder](command-reference/nardlOrder.md)
+- [nardlOrderGrid](command-reference/nardlOrderGrid.md)
+- [csardlOrder](command-reference/csardlOrder.md)
+- [csardlOrderGrid](command-reference/csardlOrderGrid.md)
 - [icmean](command-reference/icmean.md)
+- [nardlICMean](command-reference/nardlICMean.md)
+- [csardlICMean](command-reference/csardlICMean.md)
 
 ## ARDL Bounds Testing
 
@@ -79,6 +91,7 @@ sections.
 - [ardlResidualDiagnostics](command-reference/ardlResidualDiagnostics.md)
 - [printARDLResidualDiagnostics](command-reference/printARDLResidualDiagnostics.md)
 - [csardlDiagnostics](command-reference/csardlDiagnostics.md)
+- [printCSARDLDiagnostics](command-reference/printCSARDLDiagnostics.md)
 
 ## Bootstrap, Rolling, And Dynamics
 
@@ -97,6 +110,7 @@ sections.
 ## Output, Plotting, And Export
 
 - [printARDL](command-reference/printARDL.md)
+- [printARDLECM](command-reference/printARDLECM.md)
 - [ardlLongRun](command-reference/ardlLongRun.md)
 - [predictARDL](command-reference/predictARDL.md)
 - [forecastARDL](command-reference/forecastARDL.md)
@@ -104,6 +118,14 @@ sections.
 - [printQARDLECM](command-reference/printQARDLECM.md)
 - [predictQARDL](command-reference/predictQARDL.md)
 - [forecastQARDL](command-reference/forecastQARDL.md)
+- [printNARDL](command-reference/printNARDL.md)
+- [printNARDLECM](command-reference/printNARDLECM.md)
+- [predictNARDL](command-reference/predictNARDL.md)
+- [forecastNARDL](command-reference/forecastNARDL.md)
+- [printCSARDL](command-reference/printCSARDL.md)
+- [printCSARDLECM](command-reference/printCSARDLECM.md)
+- [predictCSARDL](command-reference/predictCSARDL.md)
+- [forecastCSARDL](command-reference/forecastCSARDL.md)
 - [plotQARDL](command-reference/plotQARDL.md)
 - [plotQARDLbands](command-reference/plotQARDLbands.md)
 - [plotRollingQARDL](command-reference/plotRollingQARDL.md)

@@ -108,4 +108,5 @@ fixed-order `CD(1)` from unit-specific fits.
 
 ## See Also
 
-[csardl](csardl.md), [nardl](nardl.md)
+[printCSARDLDiagnostics](printCSARDLDiagnostics.md), [csardl](csardl.md),
+[csardlFull](csardlFull.md), [nardl](nardl.md)

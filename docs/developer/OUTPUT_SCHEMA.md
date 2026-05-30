@@ -21,6 +21,9 @@ where applicable:
   Current estimators store `"constant"`.
 - `covariance_type`: covariance estimator label, such as `"ols"`, `"iid"`,
   `"robust"`, or `"hac"`.
+- `ecm_type`: ECM estimator label where applicable. ECM outputs store
+  `"two-step"` for the restricted two-stage ECM or `"uecm"` for the
+  unrestricted ECM. Some legacy levels outputs also store `"none"`.
 - `selection_criterion`: lag-selection criterion used by full workflows.
   Direct fixed-lag estimators store `"none"`.
 - `sample_start`, `sample_end`: input row-index range used by the call.
@@ -40,20 +43,35 @@ search bounds.
 
 | Structure | Family | Key metadata additions | Notes |
 | --- | --- | --- | --- |
-| `ardlOut` | ARDL | common metadata, `qvec`, row-index sample metadata | Levels-form OLS output. |
+| `ardlOut` | ARDL | common metadata, `qvec`, row-index sample metadata | Levels-form OLS output. Use `ardlECM` for ARDL error-correction estimates. |
+| `ardlECMOut` | ARDL-ECM | common metadata, `ecm_type`, `qvec`, row-index sample metadata, `beta_lr`, `rho_ols` | Dedicated ARDL ECM output; supports `"two-step"` and `"uecm"`. |
 | `ardlFullOut` | ARDL | common workflow metadata, `pmax`, `qmax` | Bundles selected ARDL output in `.ar`. |
 | `qardlOut` | QARDL | common metadata, `qvec`, `fitted`, `resid` | `fitted` and `resid` are `nobs x rows(tau)`. |
-| `qardlECMOut` | QARDL-ECM | common metadata, `qvec`, `bt`, `fitted`, `resid` | Full covariance is currently exposed through `alpha_cov` and `rho_cov`. |
+| `qardlECMOut` | QARDL-ECM | common metadata, `ecm_type`, `qvec`, `bt`, `fitted`, `resid` | Supports `"two-step"` and `"uecm"`; full covariance is currently exposed through `alpha_cov` and `rho_cov`. |
 | `qardlFullOut` | QARDL | common workflow metadata, `pmax`, `qmax` | Propagates formula/name metadata to `.qa` and `.ecm`. |
 | `nardlOut` | NARDL | common metadata, `qvec`, row-index sample metadata, `decomp_vars`, `control_vars` | Includes positive/negative long-run decomposition fields and optional linear-control long-run fields. |
-| `nardlECMOut` | NARDL-ECM | common metadata, `qvec`, row-index sample metadata, `decomp_vars`, `control_vars` | Includes inherited asymmetric long-run tests and optional linear-control coefficients. |
+| `nardlECMOut` | NARDL-ECM | common metadata, `ecm_type`, `qvec`, row-index sample metadata, `decomp_vars`, `control_vars` | Includes inherited asymmetric long-run tests and optional linear-control coefficients. |
 | `nardlFullOut` | NARDL | common workflow metadata, `pmax`, `qmax` | Propagates formula/name metadata to `.na` and `.ecm`. |
 | `nardlDynMultOut` | NARDL-Dynamic-Multipliers | model family, formula, names, horizon | Contains `pos`, `neg`, and `asymmetry` multiplier matrices. |
 | `csardlOut` | CS-ARDL | common metadata, `unitvar`, `timevar`, `qvec` | `estimation_start/end` are within-unit time indices. |
-| `csardlECMOut` | CS-ARDL-ECM | common metadata, `unitvar`, `timevar`, `qvec` | Uses pooled long-run coefficients from CS-ARDL levels estimation. |
+| `csardlECMOut` | CS-ARDL-ECM | common metadata, `ecm_type`, `unitvar`, `timevar`, `qvec` | Uses pooled long-run coefficients from CS-ARDL levels estimation for `"two-step"` and derives long-run coefficients directly for `"uecm"`. |
 | `csardlDiagOut` | CS-ARDL diagnostics | common metadata, `unitvar`, `timevar`, `qvec`, `cd_stat`, `py_delta`, `py_lr_delta`, `slope_hetero_wald` | Covers mean-group, poolability, long-run slope heterogeneity, Pesaran-Yamagata slope homogeneity, and Pesaran CD residual cross-sectional dependence diagnostics. |
 | `csardlFullOut` | CS-ARDL | common workflow metadata, `unitvar`, `timevar`, `pmax`, `qmax` | Propagates formula/name metadata to `.csa` and `.ecm`. |
 | `ardlResidualDiagOut` | ARDL-family residual diagnostics | `source_model_family`, `nobs`, `nseries`, `lags`, `stability_available` | Covers Ljung-Box, Breusch-Pagan-style, Jarque-Bera, and residual CUSUM/CUSUMSQ diagnostics for time-series outputs. |
+| `rollingQardlECMOut` | Rolling QARDL-ECM | `ecm_type`, rolling alpha/rho paths, `beta_lr` | `beta_lr` is `num_est x k` for `"two-step"` and `num_est x (k*rows(tau))` for `"uecm"`. |
+
+## ECM Estimator Metadata
+
+The ECM-capable APIs use `ecm_type = "two-step"` by default. This preserves
+the historical GAUSS two-stage workflow, where the long-run relation is
+estimated first and then enters the differenced ECM equation as a constructed
+error-correction term.
+
+Set `ecm_type = "uecm"` to estimate the unrestricted ECM equation with lagged
+dependent and lagged level regressors directly in the ECM design. Long-run
+coefficients are derived as `-theta / rho` from the unrestricted lagged-level
+terms. `ardlECM`, `qardlECM`, `nardlECM`, `csardlECM`, and the matching ECM
+workflows store the ECM estimates in dedicated ECM structures.
 
 ## NARDL Decomposition Metadata
 

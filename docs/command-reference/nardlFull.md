@@ -1,0 +1,65 @@
+# nardlFull
+
+## Purpose
+
+Runs the integrated NARDL workflow: lag selection, levels estimation, and ECM
+estimation.
+
+## Format
+
+```gauss
+nfOut = nardlFull(data);
+nfOut = nardlFull(data, pend, qend, formula, verbose, criterion,
+                  decomp_vars, control_vars, q_control, ecm_type, gets_pval);
+```
+
+## Parameters
+
+- `data` (*matrix or dataframe*) - Matrix input is ordered
+  `[y, x1, x2, ...]`.
+- `pend` (*scalar*) - Maximum AR lag searched. Default is `8`.
+- `qend` (*scalar*) - Maximum decomposed-variable distributed lag searched.
+  Default is `8`.
+- `formula` (*string*) - Optional formula such as `"y ~ x1 + x2"`.
+- `verbose` (*scalar*) - If `1`, print selected lags and estimator output.
+- `criterion` (*string*) - `"bic"`, `"aic"`, `"hq"`, `"hqc"`, or `"gets"`.
+- `decomp_vars`, `control_vars`, `q_control` - Same model-specification
+  controls as `nardl`.
+- `ecm_type` (*string*) - ECM type passed to `nardlECM`; default is
+  `"two-step"`.
+- `gets_pval` (*scalar*) - Wald p-value threshold used when
+  `criterion = "gets"`. Default is `0.1`.
+
+## Returns
+
+`nfOut` is a `nardlFullOut` structure with selected lag orders `pst` and
+`qst`, search bounds, common metadata, a levels output in `.na`, and an ECM
+output in `.ecm`.
+
+## Remarks
+
+`q_control` is fixed across the lag-search grid. `pend` and `qend` define the
+maximum searched values for `p` and the decomposed-variable `q`. GETS starts
+from those maxima and reduces highest-order lag blocks while preserving
+contiguous `p/q` orders.
+
+## Examples
+
+```gauss
+library qardl;
+
+nfOut = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
+                  "x1", "x2", 1, "uecm");
+nfGets = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "gets",
+                   "x1", "x2", 1, "uecm", 0.1);
+printNARDL(nfOut.na);
+printNARDLECM(nfOut.ecm);
+```
+
+## Source
+
+`nardl.src`
+
+## See Also
+
+[nardl](nardl.md), [nardlECM](nardlECM.md), [nardlOrder](nardlOrder.md)
