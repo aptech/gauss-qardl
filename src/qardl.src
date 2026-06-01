@@ -318,13 +318,16 @@ endp;
 **
 **  Format:     acOut = ardlAutoCase(data);
 **              acOut = ardlAutoCase(data, pend, qend, formula, verbose,
-**                                   gets_pval);
+**                                   gets_pval, gets_mode);
 */
 proc (struct ardlAutoCaseOut) = ardlAutoCase(data, pend = 8, qend = 8,
                                              formula = "", verbose = 1,
-                                             gets_pval = 0.05);
+                                             gets_pval = 0.05,
+                                             gets_mode = "hierarchical");
     local pst, qst, depvar, xvars, case_ids, primary_case;
     local det_coef, det_pv, bounds_table;
+    local sparse_keep_cols, sparse_bt, sparse_coef_cov, sparse_fitted;
+    local sparse_resid, sparse_sigma2, selection_criterion;
 
     if verbose /= 0 and verbose /= 1;
         errorlog "ardlAutoCase: verbose must be 0 or 1";
@@ -335,12 +338,31 @@ proc (struct ardlAutoCaseOut) = ardlAutoCase(data, pend = 8, qend = 8,
     data = applyQARDLFormula(data, formula);
     call _qardlValidateSearchInputs(data, pend, qend, { 0.5 }, "ardlAutoCase");
     call _qardlValidateGETSPValue(gets_pval, "ardlAutoCase");
+    gets_mode = _ardlNormalizeGETSMode(gets_mode, "ardlAutoCase");
 
-    { pst, qst } = pqorder(data, pend, qend, "gets", gets_pval);
-    { case_ids, det_coef, det_pv } =
-        _ardlAutoCases(data, pst, qst, gets_pval, "ardlAutoCase");
+    if gets_mode $== "sparse";
+        pst = pend;
+        qst = qend;
+        { case_ids, det_coef, det_pv, sparse_keep_cols, sparse_bt,
+          sparse_coef_cov, sparse_fitted, sparse_resid, sparse_sigma2 } =
+            _ardlSparseAutoCases(data, pst, qst, gets_pval, "ardlAutoCase");
+    else;
+        { pst, qst } = pqorder(data, pend, qend, "gets", gets_pval);
+        { case_ids, det_coef, det_pv } =
+            _ardlAutoCases(data, pst, qst, gets_pval, "ardlAutoCase");
+        sparse_keep_cols = error(0);
+        sparse_bt = error(0);
+        sparse_coef_cov = error(0);
+        sparse_fitted = error(0);
+        sparse_resid = error(0);
+        sparse_sigma2 = 0;
+    endif;
     primary_case = case_ids[rows(case_ids)];
     bounds_table = _ardlAutoBoundsTable(data, pst, qst, case_ids);
+    selection_criterion = "gets";
+    if gets_mode $== "sparse";
+        selection_criterion = "gets-sparse";
+    endif;
 
     if verbose;
         call _ardlPrintAutoCase("ardlAutoCase", pst, qst, case_ids,
@@ -354,12 +376,12 @@ proc (struct ardlAutoCaseOut) = ardlAutoCase(data, pend = 8, qend = 8,
     ar.formula = formula;
     ar.depvar = depvar;
     ar.xvars = xvars;
-    ar.selection_criterion = "gets";
+    ar.selection_criterion = selection_criterion;
     ecm = ardlECM(data, pst, qst, "", 0, "uecm", primary_case);
     ecm.formula = formula;
     ecm.depvar = depvar;
     ecm.xvars = xvars;
-    ecm.selection_criterion = "gets";
+    ecm.selection_criterion = selection_criterion;
 
     acOut.model_family = "ARDL-AutoCase";
     acOut.formula = formula;
@@ -367,7 +389,8 @@ proc (struct ardlAutoCaseOut) = ardlAutoCase(data, pend = 8, qend = 8,
     acOut.xvars = xvars;
     acOut.deterministic = _ardlDeterministicLabel(primary_case);
     acOut.covariance_type = "ols";
-    acOut.selection_criterion = "gets";
+    acOut.selection_criterion = selection_criterion;
+    acOut.gets_mode = gets_mode;
     acOut.pmax = pend;
     acOut.qmax = qend;
     acOut.pst = pst;
@@ -381,6 +404,12 @@ proc (struct ardlAutoCaseOut) = ardlAutoCase(data, pend = 8, qend = 8,
     acOut.case_ids = case_ids;
     acOut.deterministic_coef = det_coef;
     acOut.deterministic_pv = det_pv;
+    acOut.sparse_keep_cols = sparse_keep_cols;
+    acOut.sparse_bt = sparse_bt;
+    acOut.sparse_coef_cov = sparse_coef_cov;
+    acOut.sparse_fitted = sparse_fitted;
+    acOut.sparse_resid = sparse_resid;
+    acOut.sparse_sigma2 = sparse_sigma2;
     acOut.bounds_table = bounds_table;
     acOut.ar = ar;
     acOut.ecm = ecm;
@@ -3912,6 +3941,128 @@ proc (1) = _ardlDetPValues(bt, coef_cov, det_cols);
     endo;
 
     retp(pv);
+endp;
+
+proc (1) = _ardlNormalizeGETSMode(gets_mode, caller);
+    gets_mode = lower(gets_mode);
+
+    if gets_mode $== "hierarchical" or gets_mode $== "lag" or
+       gets_mode $== "lag-block";
+        retp("hierarchical");
+    elseif gets_mode $== "sparse" or gets_mode $== "terms" or
+           gets_mode $== "term";
+        retp("sparse");
+    endif;
+
+    errorlog caller $+ ": gets_mode must be 'hierarchical' or 'sparse'";
+    end;
+endp;
+
+proc (1) = _qardlMaskIndices(mask);
+    local idx, ii, jj;
+
+    idx = zeros(sumc(mask .== 1), 1);
+    jj = 1;
+    ii = 1;
+    do until ii > rows(mask);
+        if mask[ii] == 1;
+            idx[jj] = ii;
+            jj = jj + 1;
+        endif;
+        ii = ii + 1;
+    endo;
+
+    retp(idx);
+endp;
+
+proc (6) = _qardlSparseGETS(Y, X, protect_cols, gets_pval, caller);
+    local kx, keep, protect, ii, jj, idx, Xk, bt, fitted, resid;
+    local coef_cov, sigma2, se, pv, max_pv, drop_col, active_col;
+    local bt_full, cov_full;
+
+    kx = cols(X);
+    keep = ones(kx, 1);
+    protect = zeros(kx, 1);
+    if not scalmiss(protect_cols);
+        ii = 1;
+        do until ii > rows(protect_cols);
+            if protect_cols[ii] >= 1 and protect_cols[ii] <= kx;
+                protect[protect_cols[ii]] = 1;
+            endif;
+            ii = ii + 1;
+        endo;
+    endif;
+
+    do while 1;
+        idx = _qardlMaskIndices(keep);
+        Xk = X[., idx];
+        call _qardlCheckFullColumnRank(Xk, caller, "sparse GETS design matrix");
+        bt = _qardlSafeInv(Xk'*Xk, caller, "sparse GETS moment matrix")*Xk'*Y;
+        fitted = Xk*bt;
+        resid = Y - fitted;
+        { coef_cov, sigma2 } = _ardlOLSCov(Xk, resid, caller);
+
+        max_pv = -1;
+        drop_col = 0;
+        ii = 1;
+        do until ii > rows(idx);
+            active_col = idx[ii];
+            if protect[active_col] == 0;
+                se = sqrt(coef_cov[ii, ii]);
+                pv = 1;
+                if se > 0;
+                    pv = 2*cdfnc(abs(bt[ii] / se));
+                endif;
+                if pv > max_pv;
+                    max_pv = pv;
+                    drop_col = active_col;
+                endif;
+            endif;
+            ii = ii + 1;
+        endo;
+
+        if drop_col == 0 or max_pv <= gets_pval;
+            break;
+        endif;
+
+        keep[drop_col] = 0;
+    endo;
+
+    bt_full = zeros(kx, 1);
+    cov_full = zeros(kx, kx);
+    idx = _qardlMaskIndices(keep);
+    ii = 1;
+    do until ii > rows(idx);
+        bt_full[idx[ii]] = bt[ii];
+        jj = 1;
+        do until jj > rows(idx);
+            cov_full[idx[ii], idx[jj]] = coef_cov[ii, jj];
+            jj = jj + 1;
+        endo;
+        ii = ii + 1;
+    endo;
+
+    retp(keep, bt_full, cov_full, fitted, resid, sigma2);
+endp;
+
+proc (9) = _ardlSparseAutoCases(data, ppp, qqq, gets_pval, caller);
+    local k0, Y, XU, protect_cols, keep, bt, coef_cov, fitted, resid;
+    local sigma2, det_coef, det_pv, case_ids;
+
+    k0 = cols(data) - 1;
+    { Y, XU } =
+        _ardlBuildECMDesignX(data, ppp, qqq*ones(k0, 1), zeros(k0, 1),
+                             "uecm", 5);
+    protect_cols = seqa(3, 1, k0 + 1);
+    { keep, bt, coef_cov, fitted, resid, sigma2 } =
+        _qardlSparseGETS(Y, XU, protect_cols, gets_pval, caller);
+
+    det_coef = bt[1:2];
+    det_pv = _ardlDetPValues(bt, coef_cov, 2);
+    case_ids = _ardlCaseIDs(det_pv, gets_pval);
+
+    retp(case_ids, det_coef, det_pv, keep, bt, coef_cov, fitted, resid,
+         sigma2);
 endp;
 
 proc (1) = _ardlCaseIDs(det_pv, gets_pval);

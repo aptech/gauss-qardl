@@ -38,6 +38,10 @@
   selection, Case V UECM deterministic-term screening, admissible
   Pesaran-Shin-Smith case-set reporting, case-specific bounds rows, and nested
   primary-case UECM outputs.
+- Optional sparse GETS mode for `ardlAutoCase` and `nardlAutoCase` via
+  `gets_mode = "sparse"`, with pruned Case V UECM fit metadata stored in
+  `sparse_*` output fields while preserving the default hierarchical
+  lag-block workflow.
 - Optional CS-ARDL mean-group and poolability diagnostics, plus deterministic
   synthetic NARDL/CS-ARDL benchmark entry points and published-validation
   tracking notes.

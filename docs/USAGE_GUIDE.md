@@ -43,11 +43,16 @@ arCaseV = ardlECM(data, 2, 1, "", 0, "uecm", 5);
 printARDL(arOut);
 afOut = ardlFull(data, verbose = 0, criterion = "bic");
 acOut = ardlAutoCase(data, 4, 4, "", 0, 0.05);
+sparseACOut = ardlAutoCase(data, 4, 4, "", 0, 0.05, "sparse");
 ```
 
 `ardlAutoCase` runs GETS lag selection, estimates a Case V UECM, infers the
 admissible deterministic case set from the intercept/trend p-values, and
 returns case-specific bounds rows.
+Use `gets_mode = "sparse"` when you want individual non-level UECM terms
+pruned from the Case V starting model instead of hierarchical lag-block
+reduction. Sparse selection results are stored in `sparse_*` fields on the
+auto-case output.
 
 Direct estimator calls print GAUSS-style results tables by default. Add
 `print_results = 0` as the final argument when you only want the returned

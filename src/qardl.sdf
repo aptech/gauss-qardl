@@ -310,6 +310,7 @@ struct ardlAutoCaseOut {
     string deterministic;
     string covariance_type;
     string selection_criterion;
+    string gets_mode;
 
     // Search settings and selected lag orders
     scalar pmax;
@@ -329,6 +330,12 @@ struct ardlAutoCaseOut {
     matrix case_ids;
     matrix deterministic_coef;
     matrix deterministic_pv;
+    matrix sparse_keep_cols;
+    matrix sparse_bt;
+    matrix sparse_coef_cov;
+    matrix sparse_fitted;
+    matrix sparse_resid;
+    scalar sparse_sigma2;
 
     // Rows: [case_id, Fstat, tstat, q_restrict, cv10_I0, cv10_I1,
     //        cv5_I0, cv5_I1, cv1_I0, cv1_I1]
@@ -556,6 +563,7 @@ struct nardlAutoCaseOut {
     string deterministic;
     string covariance_type;
     string selection_criterion;
+    string gets_mode;
 
     // Search settings and selected lag orders
     scalar pmax;
@@ -583,6 +591,12 @@ struct nardlAutoCaseOut {
     matrix case_ids;
     matrix deterministic_coef;
     matrix deterministic_pv;
+    matrix sparse_keep_cols;
+    matrix sparse_bt;
+    matrix sparse_coef_cov;
+    matrix sparse_fitted;
+    matrix sparse_resid;
+    scalar sparse_sigma2;
 
     // Rows: [case_id, Fstat, tstat, q_restrict, cv10_I0, cv10_I1,
     //        cv5_I0, cv5_I1, cv1_I0, cv1_I1]

@@ -128,6 +128,7 @@ call assert_true(ac_schema.case_count == rows(ac_schema.case_ids) and
                  rows(ac_schema.bounds_table) == ac_schema.case_count and
                  ac_schema.ecm.ecm_type $== "uecm",
                  "ardlAutoCase case/nested metadata");
+call assert_string(ac_schema.gets_mode, "hierarchical", "ardlAutoCase GETS mode metadata");
 
 struct qardlOut qa_matrix;
 struct qardlOut qa_formula;
@@ -249,6 +250,7 @@ call assert_true(nac_schema.case_count == rows(nac_schema.case_ids) and
                  nac_schema.ecm.ecm_type $== "uecm" and
                  nac_schema.na.ndecomp == 1 and nac_schema.na.ncontrol == 1,
                  "nardlAutoCase case/nested metadata");
+call assert_string(nac_schema.gets_mode, "hierarchical", "nardlAutoCase GETS mode metadata");
 
 nunits = 3;
 TT = 40;

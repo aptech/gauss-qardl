@@ -200,6 +200,13 @@ call assert_true(acOut.primary_case == acOut.case_ids[rows(acOut.case_ids)] and
                  acOut.ecm.ecm_type $== "uecm" and
                  acOut.ecm.deterministic $== _ardlDeterministicLabel(acOut.primary_case),
                  "ardlAutoCase nested ECM metadata invalid");
+acOut = ardlAutoCase(data, 2, 2, "", 0, 0.1, "sparse");
+call assert_true(acOut.selection_criterion $== "gets-sparse" and
+                 acOut.gets_mode $== "sparse" and
+                 rows(acOut.sparse_keep_cols) == 10 and
+                 minc(acOut.sparse_keep_cols[3:5]) == 1 and
+                 acOut.sparse_sigma2 > 0,
+                 "ardlAutoCase sparse GETS metadata invalid");
 
 struct qardlOut qaQ0Out;
 qaQ0Out = qardl(data, 2, 0, tau, "iid", 0, 0);

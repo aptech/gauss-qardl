@@ -72,8 +72,8 @@ Estimates ARDL error-correction models by OLS.
 
 [ardlAutoCase](command-reference/ardlAutoCase.md)
 
-Runs hierarchical GETS lag selection and deterministic-case inference for
-ARDL UECM/bounds workflows.
+Runs hierarchical or sparse GETS selection and deterministic-case inference
+for ARDL UECM/bounds workflows.
 
 [qardl](command-reference/qardl.md)
 
@@ -122,8 +122,8 @@ Estimates NARDL error-correction models.
 
 [nardlAutoCase](command-reference/nardlAutoCase.md)
 
-Runs hierarchical GETS lag selection and deterministic-case inference for
-NARDL UECM/bounds workflows.
+Runs hierarchical or sparse GETS selection and deterministic-case inference
+for NARDL UECM/bounds workflows.
 
 [csardl](command-reference/csardl.md)
 

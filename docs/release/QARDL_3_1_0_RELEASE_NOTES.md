@@ -24,6 +24,9 @@ coverage, and release-verification tooling.
 - Added `ardlAutoCase` and `nardlAutoCase` wrappers for GETS lag selection,
   deterministic-case inference from Case V UECMs, admissible case-set
   reporting, and case-specific bounds rows.
+- Added opt-in sparse GETS mode for `ardlAutoCase` and `nardlAutoCase` through
+  `gets_mode = "sparse"`, storing pruned Case V UECM fit metadata in
+  `sparse_*` output fields.
 - Added scalar GETS lag selection through `criterion = "gets"` and optional
   `gets_pval` in ARDL/QARDL, NARDL, and CS-ARDL order-selection and full
   workflows.

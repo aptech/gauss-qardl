@@ -17,9 +17,13 @@ the levels long-run relation and then using one lagged error-correction term.
 level regressors entered directly. UECM designs accept `case_id = 1` through
 `5` to choose the Pesaran-Shin-Smith deterministic case; the default Case III
 preserves the prior constant-only UECM behavior.
-`ardlAutoCase` selects scalar `p/q` orders by hierarchical GETS, fits a Case V
-UECM, and maps the retained constant/trend evidence to Case I, Cases II/III,
-or Cases IV/V.
+`ardlAutoCase` selects scalar `p/q` orders by hierarchical GETS by default,
+fits a Case V UECM, and maps the retained constant/trend evidence to Case I,
+Cases II/III, or Cases IV/V. `gets_mode = "sparse"` instead starts from the
+Case V UECM at `pend/qend` and prunes individual non-level terms by p-value.
+Lagged level terms are retained so the selected model remains compatible with
+PSS bounds logic; the sparse Case V fit is stored in the auto-case output's
+`sparse_*` fields.
 
 Automatic lag selection uses information criteria over candidate maximum lag
 bounds, or `criterion = "gets"` for general-to-specific backward reduction of
@@ -76,7 +80,8 @@ bounds-style UECM statistic; exact finite-sample critical-value integration
 remains documented separately.
 `nardlAutoCase` applies the same auto-case rule to NARDL UECM designs,
 including named decomposed-variable/control specifications and reset
-thresholds.
+thresholds. It also accepts `gets_mode = "sparse"` to prune individual
+non-level NARDL UECM terms while retaining the lagged level relation.
 
 ## CS-ARDL
 

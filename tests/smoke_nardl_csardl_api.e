@@ -260,6 +260,14 @@ call assert_true(nacOut.primary_case == nacOut.case_ids[rows(nacOut.case_ids)] a
                  nacOut.ecm.deterministic $== _ardlDeterministicLabel(nacOut.primary_case) and
                  nacOut.na.ndecomp == 1 and nacOut.na.ncontrol == 1,
                  "nardlAutoCase nested output metadata invalid");
+nacOut = nardlAutoCase(default_nardl_data, 2, 2, "", 0, "x1", "x2", 1,
+                       0.1, gets_mode = "sparse");
+call assert_true(nacOut.selection_criterion $== "gets-sparse" and
+                 nacOut.gets_mode $== "sparse" and
+                 rows(nacOut.sparse_keep_cols) == 12 and
+                 minc(nacOut.sparse_keep_cols[3:6]) == 1 and
+                 nacOut.sparse_sigma2 > 0,
+                 "nardlAutoCase sparse GETS metadata invalid");
 
 /*
 ** CS-ARDL deterministic checks.  Panel data are balanced and stacked

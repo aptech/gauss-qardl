@@ -46,14 +46,14 @@ decomposition NARDL outputs also store `q_control`, `control_qvec`, and
 | `ardlOut` | ARDL | common metadata, `qvec`, row-index sample metadata | Levels-form OLS output. Use `ardlECM` for ARDL error-correction estimates. |
 | `ardlECMOut` | ARDL-ECM | common metadata, `ecm_type`, `qvec`, row-index sample metadata, `beta_lr`, `rho_ols` | Dedicated ARDL ECM output; supports `"two-step"` and `"uecm"`. |
 | `ardlFullOut` | ARDL | common workflow metadata, `pmax`, `qmax` | Bundles selected ARDL output in `.ar`. |
-| `ardlAutoCaseOut` | ARDL-AutoCase | common workflow metadata, `pmax`, `qmax`, `case_ids`, `primary_case`, `bounds_table` | Bundles GETS-selected ARDL levels output in `.ar` and primary-case UECM output in `.ecm`. |
+| `ardlAutoCaseOut` | ARDL-AutoCase | common workflow metadata, `pmax`, `qmax`, `gets_mode`, `case_ids`, `primary_case`, `bounds_table`, optional `sparse_*` fields | Bundles GETS-selected ARDL levels output in `.ar` and primary-case UECM output in `.ecm`; sparse mode stores the pruned Case V UECM fit separately. |
 | `qardlOut` | QARDL | common metadata, `qvec`, `fitted`, `resid` | `fitted` and `resid` are `nobs x rows(tau)`. |
 | `qardlECMOut` | QARDL-ECM | common metadata, `ecm_type`, `qvec`, `bt`, `fitted`, `resid` | Supports `"two-step"` and `"uecm"`; full covariance is currently exposed through `alpha_cov` and `rho_cov`. |
 | `qardlFullOut` | QARDL | common workflow metadata, `pmax`, `qmax` | Propagates formula/name metadata to `.qa` and `.ecm`. |
 | `nardlOut` | NARDL | common metadata, `qvec`, row-index sample metadata, `decomp_vars`, `control_vars`, `decomp_thresholds` | Includes positive/negative long-run decomposition fields and optional linear-control long-run fields. |
 | `nardlECMOut` | NARDL-ECM | common metadata, `ecm_type`, `qvec`, row-index sample metadata, `decomp_vars`, `control_vars`, `decomp_thresholds` | Includes inherited asymmetric long-run tests and optional linear-control coefficients. |
 | `nardlFullOut` | NARDL | common workflow metadata, `pmax`, `qmax`, `decomp_thresholds` | Propagates formula/name metadata to `.na` and `.ecm`. |
-| `nardlAutoCaseOut` | NARDL-AutoCase | common workflow metadata, `pmax`, `qmax`, `case_ids`, `primary_case`, `bounds_table`, `decomp_thresholds` | Bundles GETS-selected NARDL levels output in `.na` and primary-case UECM output in `.ecm`. |
+| `nardlAutoCaseOut` | NARDL-AutoCase | common workflow metadata, `pmax`, `qmax`, `gets_mode`, `case_ids`, `primary_case`, `bounds_table`, `decomp_thresholds`, optional `sparse_*` fields | Bundles GETS-selected NARDL levels output in `.na` and primary-case UECM output in `.ecm`; sparse mode stores the pruned Case V NARDL UECM fit separately. |
 | `nardlDynMultOut` | NARDL-Dynamic-Multipliers | model family, formula, names, horizon | Contains `pos`, `neg`, and `asymmetry` multiplier matrices. |
 | `csardlOut` | CS-ARDL | common metadata, `unitvar`, `timevar`, `qvec` | `estimation_start/end` are within-unit time indices. |
 | `csardlECMOut` | CS-ARDL-ECM | common metadata, `ecm_type`, `unitvar`, `timevar`, `qvec` | Uses pooled long-run coefficients from CS-ARDL levels estimation for `"two-step"` and derives long-run coefficients directly for `"uecm"`. |

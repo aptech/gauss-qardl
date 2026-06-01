@@ -483,10 +483,13 @@ proc (struct nardlAutoCaseOut) = nardlAutoCase(data, pend = 8, qend = 8,
                                                gets_pval = 0.1,
                                                d = "inf",
                                                thresh1 = error(0),
-                                               thresh2 = error(0));
+                                               thresh2 = error(0),
+                                               gets_mode = "hierarchical");
     local pst, qst, depvar, xvars, raw_data, decomp_idx, control_idx;
     local decomp_names, control_names, decomp_thresholds, case_ids;
     local primary_case, det_coef, det_pv, bounds_table;
+    local sparse_keep_cols, sparse_bt, sparse_coef_cov, sparse_fitted;
+    local sparse_resid, sparse_sigma2, selection_criterion;
 
     if verbose /= 0 and verbose /= 1;
         errorlog "nardlAutoCase: verbose must be 0 or 1";
@@ -500,6 +503,7 @@ proc (struct nardlAutoCaseOut) = nardlAutoCase(data, pend = 8, qend = 8,
     call _qardlValidateLagScalarZero(qend, "nardlAutoCase: qend");
     call _qardlValidateLagScalarZero(q_control, "nardlAutoCase: q_control");
     call _qardlValidateGETSPValue(gets_pval, "nardlAutoCase");
+    gets_mode = _ardlNormalizeGETSMode(gets_mode, "nardlAutoCase");
     { decomp_idx, control_idx, decomp_names, control_names } =
         _nardlResolveSpecSelectors(xvars, decomp_vars, control_vars,
                                    "nardlAutoCase");
@@ -511,18 +515,38 @@ proc (struct nardlAutoCaseOut) = nardlAutoCase(data, pend = 8, qend = 8,
     decomp_thresholds = _nardlResolveThresh(data, decomp_idx, d, thresh1,
                                             thresh2, "nardlAutoCase");
 
-    { pst, qst } = _nardlGETSOrderSpec(data, 1, pend, 0, qend,
-                                       decomp_idx, control_idx, q_control,
-                                       gets_pval, decomp_thresholds,
-                                       "nardlAutoCase");
-    { case_ids, det_coef, det_pv } =
-        _nardlAutoCases(data, pst, qst, decomp_idx, control_idx, q_control,
-                        decomp_thresholds, gets_pval, "nardlAutoCase");
+    if gets_mode $== "sparse";
+        pst = pend;
+        qst = qend;
+        { case_ids, det_coef, det_pv, sparse_keep_cols, sparse_bt,
+          sparse_coef_cov, sparse_fitted, sparse_resid, sparse_sigma2 } =
+            _nardlSparseAutoCases(data, pst, qst, decomp_idx, control_idx,
+                                  q_control, decomp_thresholds, gets_pval,
+                                  "nardlAutoCase");
+    else;
+        { pst, qst } = _nardlGETSOrderSpec(data, 1, pend, 0, qend,
+                                           decomp_idx, control_idx, q_control,
+                                           gets_pval, decomp_thresholds,
+                                           "nardlAutoCase");
+        { case_ids, det_coef, det_pv } =
+            _nardlAutoCases(data, pst, qst, decomp_idx, control_idx, q_control,
+                            decomp_thresholds, gets_pval, "nardlAutoCase");
+        sparse_keep_cols = error(0);
+        sparse_bt = error(0);
+        sparse_coef_cov = error(0);
+        sparse_fitted = error(0);
+        sparse_resid = error(0);
+        sparse_sigma2 = 0;
+    endif;
     primary_case = case_ids[rows(case_ids)];
     bounds_table = _nardlAutoBoundsTable(data, pst, qst, decomp_idx,
                                          control_idx, q_control,
                                          decomp_thresholds, case_ids,
                                          "nardlAutoCase");
+    selection_criterion = "gets";
+    if gets_mode $== "sparse";
+        selection_criterion = "gets-sparse";
+    endif;
 
     if verbose;
         call _ardlPrintAutoCase("nardlAutoCase", pst, qst, case_ids,
@@ -538,7 +562,8 @@ proc (struct nardlAutoCaseOut) = nardlAutoCase(data, pend = 8, qend = 8,
     acOut.control_vars = control_names;
     acOut.deterministic = _ardlDeterministicLabel(primary_case);
     acOut.covariance_type = "ols";
-    acOut.selection_criterion = "gets";
+    acOut.selection_criterion = selection_criterion;
+    acOut.gets_mode = gets_mode;
     acOut.pmax = pend;
     acOut.qmax = qend;
     acOut.pst = pst;
@@ -558,14 +583,20 @@ proc (struct nardlAutoCaseOut) = nardlAutoCase(data, pend = 8, qend = 8,
     acOut.case_ids = case_ids;
     acOut.deterministic_coef = det_coef;
     acOut.deterministic_pv = det_pv;
+    acOut.sparse_keep_cols = sparse_keep_cols;
+    acOut.sparse_bt = sparse_bt;
+    acOut.sparse_coef_cov = sparse_coef_cov;
+    acOut.sparse_fitted = sparse_fitted;
+    acOut.sparse_resid = sparse_resid;
+    acOut.sparse_sigma2 = sparse_sigma2;
     acOut.bounds_table = bounds_table;
     acOut.na = _nardlEstimateLevels(raw_data, pst, qst, formula, 0,
                                     decomp_vars, control_vars, q_control,
-                                    "nardlAutoCase", "gets", d, thresh1,
-                                    thresh2);
+                                    "nardlAutoCase", selection_criterion, d,
+                                    thresh1, thresh2);
     acOut.ecm = _nardlEstimateECM(raw_data, pst, qst, formula, 0,
                                   decomp_vars, control_vars, q_control,
-                                  "nardlAutoCase", "gets", "uecm",
+                                  "nardlAutoCase", selection_criterion, "uecm",
                                   primary_case, d, thresh1, thresh2);
 
     retp(acOut);
@@ -1907,6 +1938,31 @@ proc (3) = _nardlAutoCases(data, ppp, q_decomp, decomp_idx, control_idx,
     case_ids = _ardlCaseIDs(det_pv, gets_pval);
 
     retp(case_ids, det_coef, det_pv);
+endp;
+
+proc (9) = _nardlSparseAutoCases(data, ppp, q_decomp, decomp_idx, control_idx,
+                                 q_control, decomp_thresholds, gets_pval,
+                                 caller);
+    local Y, XU, ndecomp, ncontrol, level_count, protect_cols;
+    local keep, bt, coef_cov, fitted, resid, sigma2;
+    local det_coef, det_pv, case_ids;
+
+    { Y, XU } = _nardlBuildSpecUECMDesign(data, ppp, q_decomp,
+                                          decomp_idx, control_idx, q_control,
+                                          5, decomp_thresholds);
+    ndecomp = rows(decomp_idx);
+    ncontrol = _nardlIndexCount(control_idx);
+    level_count = 1 + 2*ndecomp + ncontrol;
+    protect_cols = seqa(3, 1, level_count);
+    { keep, bt, coef_cov, fitted, resid, sigma2 } =
+        _qardlSparseGETS(Y, XU, protect_cols, gets_pval, caller);
+
+    det_coef = bt[1:2];
+    det_pv = _ardlDetPValues(bt, coef_cov, 2);
+    case_ids = _ardlCaseIDs(det_pv, gets_pval);
+
+    retp(case_ids, det_coef, det_pv, keep, bt, coef_cov, fitted, resid,
+         sigma2);
 endp;
 
 proc (1) = _nardlAutoBoundsTable(data, ppp, q_decomp, decomp_idx, control_idx,

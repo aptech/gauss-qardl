@@ -11,8 +11,8 @@ embedded in every estimator call.
 | ECM workflow | `ardlECM`; two-step or UECM | Yes; two-step or UECM | Yes; two-step or UECM | Yes; two-step or UECM |
 | UECM deterministic cases | Cases I-V | Default Case III | Cases I-V | Default Case III |
 | Formula strings | Yes | Yes | Yes | Yes |
-| Automatic lag selection | IC and GETS | IC and GETS | IC and GETS | IC and GETS |
-| Auto-case workflow | Yes | No | Yes | No |
+| Automatic lag selection | IC, hierarchical GETS, sparse auto-case GETS | IC and GETS | IC, hierarchical GETS, sparse auto-case GETS | IC and GETS |
+| Auto-case workflow | Yes; hierarchical or sparse GETS | No | Yes; hierarchical or sparse GETS | No |
 | Explicit decomposed-variable / linear-control NARDL specs | Not applicable | Not applicable | Yes | Not applicable |
 | NARDL partial-sum reset thresholds | Not applicable | Not applicable | Yes | Not applicable |
 | Default max `p`, `q` when omitted | 8, 8 | 8, 8 | 8, 8 | 8, 8 |
