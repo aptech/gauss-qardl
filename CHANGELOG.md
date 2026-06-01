@@ -6,6 +6,9 @@
 - `ardlResidualDiagnostics` and `printARDLResidualDiagnostics` for
   time-series ARDL-family residual serial-correlation, heteroskedasticity, and
   normality checks.
+- `ardlResidualDiagnostics` now includes R-parity diagnostic rows for BG LM,
+  ARCH LM, RESET, and explicit `ljung_box_*` aliases alongside the existing
+  Ljung-Box `serial_*` fields.
 - Residual CUSUM and CUSUMSQ stability diagnostics in
   `ardlResidualDiagnostics`, with deterministic ARDL/QARDL validation
   fixtures.

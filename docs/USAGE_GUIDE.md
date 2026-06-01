@@ -480,11 +480,12 @@ Bounds testing support is summarized in
 `ardlboundsCase`, `ardlboundsCaseCV`, and the simulation APIs support PSS
 Cases I-V directly.
 
-`ardlResidualDiagnostics` currently covers Ljung-Box serial-correlation,
-Breusch-Pagan-style heteroskedasticity using fitted values, Jarque-Bera
-normality, and residual CUSUM/CUSUMSQ stability checks for ARDL, QARDL,
-QARDL-ECM, NARDL, and NARDL-ECM outputs. Full recursive-residual stability
-tests and unit-aware CS-ARDL panel residual diagnostics are deferred.
+`ardlResidualDiagnostics` currently covers Ljung-Box and BG LM
+serial-correlation diagnostics, Breusch-Pagan-style and ARCH LM
+heteroskedasticity diagnostics, Jarque-Bera normality, RESET, and residual
+CUSUM/CUSUMSQ stability checks for ARDL, QARDL, QARDL-ECM, NARDL, and
+NARDL-ECM outputs. Full recursive-residual stability tests and unit-aware
+CS-ARDL panel residual diagnostics are deferred.
 
 ## Quantile Impulse Responses
 

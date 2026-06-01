@@ -7,9 +7,10 @@
 **
 **  Purpose:    Compute core residual diagnostics for ARDL-family time-series
 **              output structures. The first diagnostic layer includes:
-**              Ljung-Box serial-correlation tests, Breusch-Pagan-style
-**              heteroskedasticity tests using fitted values, Jarque-Bera
-**              normality tests, and residual CUSUM/CUSUMSQ stability tests.
+**              Ljung-Box and Breusch-Godfrey-style serial-correlation tests,
+**              Breusch-Pagan-style and ARCH LM heteroskedasticity tests,
+**              Jarque-Bera normality tests, Ramsey RESET-style tests, and
+**              residual CUSUM/CUSUMSQ stability tests.
 **
 **  Format:     dOut = ardlResidualDiagnostics(modelOut);
 **              dOut = ardlResidualDiagnostics(modelOut, max_lags);
@@ -98,11 +99,20 @@ proc (0) = printARDLResidualDiagnostics(struct ardlResidualDiagOut dOut);
                 label, "Ljung-Box", dOut.serial_stat[ii], dOut.serial_df[ii],
                 dOut.serial_pv[ii], _qardlSignifStars(dOut.serial_pv[ii]));
         sprintf("%-7s %-18s%14.6f%9.0f%14.6f%7s",
+                label, "BG LM", dOut.bg_stat[ii], dOut.bg_df[ii],
+                dOut.bg_pv[ii], _qardlSignifStars(dOut.bg_pv[ii]));
+        sprintf("%-7s %-18s%14.6f%9.0f%14.6f%7s",
                 label, "Breusch-Pagan", dOut.hetero_stat[ii], dOut.hetero_df[ii],
                 dOut.hetero_pv[ii], _qardlSignifStars(dOut.hetero_pv[ii]));
         sprintf("%-7s %-18s%14.6f%9.0f%14.6f%7s",
+                label, "ARCH LM", dOut.arch_stat[ii], dOut.arch_df[ii],
+                dOut.arch_pv[ii], _qardlSignifStars(dOut.arch_pv[ii]));
+        sprintf("%-7s %-18s%14.6f%9.0f%14.6f%7s",
                 label, "Jarque-Bera", dOut.normality_stat[ii], dOut.normality_df[ii],
                 dOut.normality_pv[ii], _qardlSignifStars(dOut.normality_pv[ii]));
+        sprintf("%-7s %-18s%14.6f%9.0f%14.6f%7s",
+                label, "RESET", dOut.reset_stat[ii], dOut.reset_df[ii],
+                dOut.reset_pv[ii], _qardlSignifStars(dOut.reset_pv[ii]));
         if dOut.stability_available;
             sprintf("%-7s %-18s%14.6f%9s%14.6f%7s",
                     label, "CUSUM", dOut.cusum_stat[ii], ".",
@@ -147,12 +157,24 @@ proc (struct ardlResidualDiagOut) = _ardlDiagFromMatrices(resid, fitted, source_
     dOut.serial_stat = zeros(nseries, 1);
     dOut.serial_df = lags*ones(nseries, 1);
     dOut.serial_pv = zeros(nseries, 1);
+    dOut.ljung_box_stat = zeros(nseries, 1);
+    dOut.ljung_box_df = lags*ones(nseries, 1);
+    dOut.ljung_box_pv = zeros(nseries, 1);
+    dOut.bg_stat = zeros(nseries, 1);
+    dOut.bg_df = zeros(nseries, 1);
+    dOut.bg_pv = zeros(nseries, 1);
     dOut.hetero_stat = zeros(nseries, 1);
     dOut.hetero_df = zeros(nseries, 1);
     dOut.hetero_pv = zeros(nseries, 1);
+    dOut.arch_stat = zeros(nseries, 1);
+    dOut.arch_df = zeros(nseries, 1);
+    dOut.arch_pv = zeros(nseries, 1);
     dOut.normality_stat = zeros(nseries, 1);
     dOut.normality_df = 2*ones(nseries, 1);
     dOut.normality_pv = zeros(nseries, 1);
+    dOut.reset_stat = zeros(nseries, 1);
+    dOut.reset_df = zeros(nseries, 1);
+    dOut.reset_pv = zeros(nseries, 1);
     dOut.stability_available = 1;
     dOut.cusum_stat = zeros(nseries, 1);
     dOut.cusum_pv = zeros(nseries, 1);
@@ -167,10 +189,19 @@ proc (struct ardlResidualDiagOut) = _ardlDiagFromMatrices(resid, fitted, source_
     do until ii > nseries;
         { dOut.serial_stat[ii], dOut.serial_pv[ii] } =
             _ardlDiagLjungBox(resid[., ii], lags);
+        dOut.ljung_box_stat[ii] = dOut.serial_stat[ii];
+        dOut.ljung_box_df[ii] = dOut.serial_df[ii];
+        dOut.ljung_box_pv[ii] = dOut.serial_pv[ii];
+        { dOut.bg_stat[ii], dOut.bg_df[ii], dOut.bg_pv[ii] } =
+            _ardlDiagBGLM(resid[., ii], fitted[., minc(ii|cols(fitted))], lags);
         { dOut.hetero_stat[ii], dOut.hetero_df[ii], dOut.hetero_pv[ii] } =
             _ardlDiagBreuschPagan(resid[., ii], fitted[., minc(ii|cols(fitted))]);
+        { dOut.arch_stat[ii], dOut.arch_df[ii], dOut.arch_pv[ii] } =
+            _ardlDiagARCHLM(resid[., ii], lags);
         { dOut.normality_stat[ii], dOut.normality_pv[ii] } =
             _ardlDiagJarqueBera(resid[., ii]);
+        { dOut.reset_stat[ii], dOut.reset_df[ii], dOut.reset_pv[ii] } =
+            _ardlDiagRESET(resid[., ii], fitted[., minc(ii|cols(fitted))]);
         { dOut.cusum_stat[ii], dOut.cusum_pv[ii], dOut.cusumsq_stat[ii],
           dOut.cusumsq_pv[ii], c_path, csq_path } =
             _ardlDiagStability(resid[., ii]);
@@ -249,6 +280,80 @@ proc (2) = _ardlDiagLjungBox(e, lags);
     retp(qstat, cdfchic(qstat, lags));
 endp;
 
+proc (1) = _ardlDiagR2(y, X, caller, label);
+    local bt, yhat, rss, tss, r2;
+
+    bt = pinv(X'*X)*X'*y;
+    yhat = X*bt;
+    rss = (y - yhat)'*(y - yhat);
+    tss = (y - meanc(y))'*(y - meanc(y));
+    if tss <= 1e-14;
+        retp(0);
+    endif;
+    r2 = 1 - rss/tss;
+    if r2 < 0;
+        r2 = 0;
+    elseif r2 > 1;
+        r2 = 1;
+    endif;
+
+    retp(r2);
+endp;
+
+proc (3) = _ardlDiagBGLM(e, fitted, lags);
+    local nobs, N, y, z, lagmat, jj, base, df, stat, r2, rnk_z, rnk_base;
+
+    nobs = rows(e);
+    N = nobs - lags;
+    if N <= lags + 2;
+        retp(0, lags, 1);
+    endif;
+
+    y = e[lags+1:nobs];
+    lagmat = zeros(N, lags);
+    jj = 1;
+    do until jj > lags;
+        lagmat[., jj] = e[lags+1-jj:nobs-jj];
+        jj = jj + 1;
+    endo;
+    base = ones(N, 1)~fitted[lags+1:nobs];
+    z = base~lagmat;
+    rnk_z = rank(z);
+    rnk_base = rank(base);
+    df = rnk_z - rnk_base;
+    if df < 1;
+        retp(0, 1, 1);
+    endif;
+    r2 = _ardlDiagR2(y, z, "ardlResidualDiagnostics", "BG LM");
+    stat = N*r2;
+
+    retp(stat, df, cdfchic(stat, df));
+endp;
+
+proc (3) = _ardlDiagARCHLM(e, lags);
+    local nobs, N, y, z, lagmat, e2, jj, stat, r2;
+
+    nobs = rows(e);
+    N = nobs - lags;
+    if N <= lags + 1;
+        retp(0, lags, 1);
+    endif;
+
+    e2 = e .* e;
+    y = e2[lags+1:nobs];
+    lagmat = zeros(N, lags);
+    jj = 1;
+    do until jj > lags;
+        lagmat[., jj] = e2[lags+1-jj:nobs-jj];
+        jj = jj + 1;
+    endo;
+    z = ones(N, 1)~lagmat;
+    r2 = _ardlDiagR2(y, z, "ardlResidualDiagnostics", "ARCH LM");
+    stat = N*r2;
+
+    retp(stat, lags, cdfchic(stat, lags));
+endp;
+
 proc (3) = _ardlDiagBreuschPagan(e, fitted);
     local nobs, y, z, z_inv, rnk, bt, yhat, rss, tss, r2, stat, df;
 
@@ -276,6 +381,25 @@ proc (3) = _ardlDiagBreuschPagan(e, fitted);
     if r2 < 0;
         r2 = 0;
     endif;
+    stat = nobs*r2;
+
+    retp(stat, df, cdfchic(stat, df));
+endp;
+
+proc (3) = _ardlDiagRESET(e, fitted);
+    local nobs, y, base, z, rnk_z, rnk_base, df, r2, stat;
+
+    nobs = rows(e);
+    y = e;
+    base = ones(nobs, 1)~fitted;
+    z = base~(fitted.^2)~(fitted.^3);
+    rnk_z = rank(z);
+    rnk_base = rank(base);
+    df = rnk_z - rnk_base;
+    if df < 1;
+        retp(0, 1, 1);
+    endif;
+    r2 = _ardlDiagR2(y, z, "ardlResidualDiagnostics", "RESET");
     stat = nobs*r2;
 
     retp(stat, df, cdfchic(stat, df));

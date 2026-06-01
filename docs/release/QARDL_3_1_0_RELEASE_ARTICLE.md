@@ -169,8 +169,9 @@ saveARDLLaTeX(qfOut, latex_path, 4, 1, 0.95);
 
 Version 3.1.0 makes diagnostic testing more visible and consistent:
 
-- ARDL-family residual diagnostics include Ljung-Box, Breusch-Pagan,
-  Jarque-Bera, CUSUM, and CUSUMSQ where applicable.
+- ARDL-family residual diagnostics include Ljung-Box, BG LM,
+  Breusch-Pagan, ARCH LM, Jarque-Bera, RESET, CUSUM, and CUSUMSQ where
+  applicable.
 - CS-ARDL diagnostics include mean-group and poolability diagnostics, long-run
   slope heterogeneity, Pesaran-Yamagata Delta diagnostics, Pesaran CD/CD(p),
   and average residual correlation.

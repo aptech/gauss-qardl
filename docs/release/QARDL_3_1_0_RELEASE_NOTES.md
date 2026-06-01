@@ -40,6 +40,8 @@ coverage, and release-verification tooling.
 - Preserved backward-compatible `predictQARDL` and `forecastQARDL` wrappers.
 - Added ARDL-family residual diagnostics for serial correlation,
   heteroskedasticity, normality, CUSUM, and CUSUMSQ where supported.
+- Expanded ARDL-family residual diagnostics with BG LM, ARCH LM, RESET, and
+  explicit Ljung-Box output aliases for R-package parity.
 - Added CS-ARDL Pesaran CD/CD(p), Pesaran-Yamagata slope homogeneity,
   mean-group, poolability Wald, and long-run slope heterogeneity diagnostics.
 - Added `ardlLongRun` for extracting stored long-run coefficients and

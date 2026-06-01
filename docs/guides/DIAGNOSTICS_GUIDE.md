@@ -18,14 +18,19 @@ Current checks include:
 | Diagnostic | Purpose | Status |
 | --- | --- | --- |
 | Ljung-Box | residual serial correlation | Implemented |
+| Breusch-Godfrey-style LM | residual serial correlation | Implemented |
 | Breusch-Pagan-style auxiliary regression | heteroskedasticity | Implemented |
+| ARCH LM | autoregressive conditional heteroskedasticity | Implemented |
 | Jarque-Bera | residual normality | Implemented |
+| Ramsey RESET-style LM | functional-form screening | Implemented |
 | Residual CUSUM and CUSUMSQ | residual stability screening | Implemented |
 | Recursive-residual CUSUM/CUSUMSQ | structural stability | Deferred |
 
 The residual CUSUM paths are screening diagnostics. Full recursive-residual
 stability tests remain deferred until model outputs retain standardized
 design-matrix metadata for all supported families.
+BG LM, ARCH LM, and RESET use the stored fitted values and residuals so they
+are available uniformly across ARDL, QARDL, NARDL, and ECM outputs.
 
 ## CS-ARDL Panel Diagnostics
 

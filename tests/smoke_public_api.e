@@ -110,6 +110,11 @@ rdiagOut = ardlResidualDiagnostics(qaOut, 4);
 call assert_true(rdiagOut.nobs == qaOut.nobs and rdiagOut.nseries == rows(tau) and
                  rows(rdiagOut.serial_stat) == rows(tau) and rdiagOut.lags == 4,
                  "ardlResidualDiagnostics QARDL output shape changed");
+call assert_true(rows(rdiagOut.bg_stat) == rows(tau) and
+                 rows(rdiagOut.arch_stat) == rows(tau) and
+                 rows(rdiagOut.reset_stat) == rows(tau) and
+                 maxc(abs(rdiagOut.ljung_box_stat - rdiagOut.serial_stat)) < 1e-12,
+                 "ardlResidualDiagnostics QARDL parity diagnostic shape changed");
 call assert_true(rdiagOut.stability_available == 1 and
                  rows(rdiagOut.cusum_stat) == rows(tau) and
                  rows(rdiagOut.cusum_path) == qaOut.nobs and
@@ -142,8 +147,11 @@ call assert_true(rows(forecastARDL(arOut, data, 3)) == 3 and cols(forecastARDL(a
 rdiagOut = ardlResidualDiagnostics(arOut, 4);
 call assert_true(rdiagOut.nobs == arOut.nobs and rdiagOut.nseries == 1 and
                  rdiagOut.serial_pv[1] >= 0 and rdiagOut.serial_pv[1] <= 1 and
+                 rdiagOut.bg_pv[1] >= 0 and rdiagOut.bg_pv[1] <= 1 and
                  rdiagOut.hetero_pv[1] >= 0 and rdiagOut.hetero_pv[1] <= 1 and
+                 rdiagOut.arch_pv[1] >= 0 and rdiagOut.arch_pv[1] <= 1 and
                  rdiagOut.normality_pv[1] >= 0 and rdiagOut.normality_pv[1] <= 1 and
+                 rdiagOut.reset_pv[1] >= 0 and rdiagOut.reset_pv[1] <= 1 and
                  rdiagOut.cusum_pv[1] >= 0 and rdiagOut.cusum_pv[1] <= 1 and
                  rdiagOut.cusumsq_pv[1] >= 0 and rdiagOut.cusumsq_pv[1] <= 1,
                  "ardlResidualDiagnostics ARDL output invalid");

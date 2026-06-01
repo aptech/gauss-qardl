@@ -59,7 +59,7 @@ decomposition NARDL outputs also store `q_control`, `control_qvec`, and
 | `csardlECMOut` | CS-ARDL-ECM | common metadata, `ecm_type`, `unitvar`, `timevar`, `qvec` | Uses pooled long-run coefficients from CS-ARDL levels estimation for `"two-step"` and derives long-run coefficients directly for `"uecm"`. |
 | `csardlDiagOut` | CS-ARDL diagnostics | common metadata, `unitvar`, `timevar`, `qvec`, `cd_stat`, `py_delta`, `py_lr_delta`, `slope_hetero_wald` | Covers mean-group, poolability, long-run slope heterogeneity, Pesaran-Yamagata slope homogeneity, and Pesaran CD residual cross-sectional dependence diagnostics. |
 | `csardlFullOut` | CS-ARDL | common workflow metadata, `unitvar`, `timevar`, `pmax`, `qmax` | Propagates formula/name metadata to `.csa` and `.ecm`. |
-| `ardlResidualDiagOut` | ARDL-family residual diagnostics | `source_model_family`, `nobs`, `nseries`, `lags`, `stability_available` | Covers Ljung-Box, Breusch-Pagan-style, Jarque-Bera, and residual CUSUM/CUSUMSQ diagnostics for time-series outputs. |
+| `ardlResidualDiagOut` | ARDL-family residual diagnostics | `source_model_family`, `nobs`, `nseries`, `lags`, `stability_available`, Ljung-Box/BG/ARCH/RESET fields | Covers Ljung-Box, BG LM, Breusch-Pagan-style, ARCH LM, Jarque-Bera, RESET, and residual CUSUM/CUSUMSQ diagnostics for time-series outputs. |
 | `rollingQardlECMOut` | Rolling QARDL-ECM | `ecm_type`, rolling alpha/rho paths, `beta_lr` | `beta_lr` is `num_est x k` for `"two-step"` and `num_est x (k*rows(tau))` for `"uecm"`. |
 
 ## ECM Estimator Metadata

@@ -43,9 +43,9 @@ table export, and validation infrastructure.
 | NARDL long-run and short-run asymmetry tests | `nardl_uecm()` / GETS outputs include long-run and short-run asymmetry tests. | `nardl()` / `nardlECM()` report long-run and short-run asymmetry Wald tests. | Broad match | Exact finite-sample/sample-convention parity still depends on model parameterization. |
 | NARDL symmetry-restricted estimation | `nardl_uecm_sym()` estimates SRSR and LRSR restrictions. | `nardl`, `nardlECM`, and `nardlFull` accept `symmetry = "SRSR"`, `"LRSR"`, or `"both"` to impose short-run and/or long-run symmetry restrictions. | Broad match | GAUSS exposes the restrictions through existing procedures rather than a separate function; exact R printed-list parity remains deferred. |
 | NARDL dynamic multipliers | Not a primary exported command in `ardl.nardl` 1.3.0. | `nardlDynamicMultipliers()`. | GAUSS-only | Useful GAUSS extension beyond the R package surface. |
-| Residual diagnostics | Estimator outputs include BG serial-correlation, ARCH LM, Jarque-Bera, RESET, and Ljung-Box diagnostics. | `ardlResidualDiagnostics()` includes residual diagnostics and CUSUM/CUSUMSQ stability; CS-ARDL has separate panel diagnostics. | Partial | GAUSS lacks direct BG LM, ARCH LM, and RESET parity rows. |
+| Residual diagnostics | Estimator outputs include BG serial-correlation, ARCH LM, Jarque-Bera, RESET, and Ljung-Box diagnostics. | `ardlResidualDiagnostics()` includes Ljung-Box, BG LM, Breusch-Pagan-style, ARCH LM, Jarque-Bera, RESET, and CUSUM/CUSUMSQ stability diagnostics; CS-ARDL has separate panel diagnostics. | Broad match | GAUSS exposes diagnostics through a helper rather than embedding them in every estimator output; BG/RESET use stored fitted values because full design matrices are not retained uniformly. |
 | Stability plots/tests | Imports/help entries for `cusum` and `cumsq`; `graph_save` can display stability plots. | CUSUM/CUSUMSQ residual stability diagnostics and QARDL/rolling plot helpers. | Partial | GAUSS has diagnostics and richer QARDL plotting; R integrates stability plots into ARDL/NARDL workflows. |
-| ARCH helper | `ArchTest` help is imported from the R `nardl` package and used in diagnostics. | No direct ARCH LM diagnostic; Breusch-Pagan-style heteroskedasticity diagnostic is present. | Gap | Add ARCH LM for diagnostic parity. |
+| ARCH helper | `ArchTest` help is imported from the R `nardl` package and used in diagnostics. | ARCH LM is available through `ardlResidualDiagnostics()`. | Broad match | GAUSS does not expose a standalone `ArchTest` utility, but the model diagnostic workflow now reports ARCH LM rows. |
 | Matrix lag helper | `lagm()` is exported. | Lag construction is internal, not a public utility. | R-only utility | Low priority unless users need a public helper. |
 | Output renaming helper | `output_ren()` renames NARDL UECM summary rows. | No exact equivalent; generic table export controls output format. | R-only utility | GAUSS may not need this if table exports expose labels sufficiently. |
 | Example datasets | `expectation`, `fuel_price`, `ssa`, and `syg_data`. | Synthetic validation fixtures and examples, but no matching public data commands. | R-only | Consider adding optional replication datasets only if licensing/source provenance is clear. |
@@ -70,9 +70,8 @@ table export, and validation infrastructure.
 | Priority | Gap | Why it matters |
 | ---: | --- | --- |
 | 1 | Standalone sparse GETS outputs | Auto-case sparse UECM pruning exists for ARDL/NARDL; standalone `gets_*_uecm`-style public outputs with term labels and exact `gets.lm` parity are still deferred. |
-| 2 | Diagnostic parity | Add BG LM, ARCH LM, RESET, and R-style Ljung-Box reporting where applicable. |
-| 3 | Two-step deterministic-case expansion | Cases I-V are implemented for ARDL/NARDL UECM paths; non-default two-step ECM cases remain intentionally deferred. |
-| 4 | Optional example datasets/replications | Useful for user onboarding, but lower priority than estimator parity. |
+| 2 | Two-step deterministic-case expansion | Cases I-V are implemented for ARDL/NARDL UECM paths; non-default two-step ECM cases remain intentionally deferred. |
+| 3 | Optional example datasets/replications | Useful for user onboarding, but lower priority than estimator parity. |
 
 ## GAUSS Scope Beyond R `ardl.nardl`
 

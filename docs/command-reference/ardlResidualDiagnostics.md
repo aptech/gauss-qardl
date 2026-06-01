@@ -20,14 +20,21 @@ dOut = ardlResidualDiagnostics(modelOut, max_lags);
 
 ## Returns
 
-An `ardlResidualDiagOut` structure with Ljung-Box serial-correlation,
-Breusch-Pagan-style heteroskedasticity, Jarque-Bera normality, and residual
-CUSUM/CUSUMSQ stability diagnostics.
+An `ardlResidualDiagOut` structure with Ljung-Box and Breusch-Godfrey-style
+serial-correlation diagnostics, Breusch-Pagan-style and ARCH LM
+heteroskedasticity diagnostics, Jarque-Bera normality, Ramsey RESET-style
+functional-form diagnostics, and residual CUSUM/CUSUMSQ stability diagnostics.
 
 ## Remarks
 
-The heteroskedasticity diagnostic regresses squared residuals on an intercept
-and fitted values. QARDL outputs return one diagnostic row per quantile.
+`serial_*` fields are kept for backwards compatibility and mirror the
+`ljung_box_*` fields. The BG LM, ARCH LM, and RESET diagnostics use stored
+residuals and fitted values because full design matrices are not retained by
+all model outputs. QARDL outputs return one diagnostic row per quantile.
+
+The Breusch-Pagan-style diagnostic regresses squared residuals on an intercept
+and fitted values. ARCH LM regresses squared residuals on lagged squared
+residuals. RESET uses fitted-value powers as auxiliary regressors.
 
 The stability diagnostics are residual-bridge CUSUM and CUSUMSQ checks based
 on centered residuals. They do not replace full recursive-residual stability

@@ -22,6 +22,7 @@ embedded in every estimator call.
 | Forecast intervals | Deferred | Deferred | Deferred | Deferred |
 | Bounds tests | Cases I-V | Compatibility path | Bounds-style statistic | Not PSS-integrated |
 | Residual diagnostics | Standalone | Standalone | Standalone | Panel diagnostics separate |
+| BG LM / ARCH LM / RESET diagnostics | Standalone | Standalone | Standalone | No |
 | Robust/HAC covariance | OLS baseline | Yes | OLS baseline | OLS baseline |
 | Bootstrap intervals | Deferred | Yes | Deferred | Deferred |
 | QIRF | No | Yes | No | No |

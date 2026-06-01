@@ -103,6 +103,11 @@ call assert_true(rd_schema.nobs == ar_formula.nobs and rd_schema.nseries == 1 an
 call assert_true(rd_schema.stability_available == 1 and rows(rd_schema.cusum_path) == ar_formula.nobs and
                  cols(rd_schema.cusum_path) == 1 and rd_schema.cusum_crit5[1] > 0,
                  "residual diagnostic stability metadata");
+call assert_true(rows(rd_schema.ljung_box_stat) == 1 and rows(rd_schema.bg_stat) == 1 and
+                 rows(rd_schema.arch_stat) == 1 and rows(rd_schema.reset_stat) == 1 and
+                 rd_schema.bg_df[1] >= 1 and rd_schema.arch_df[1] == rd_schema.lags and
+                 rd_schema.reset_df[1] >= 1,
+                 "residual diagnostic parity metadata");
 
 struct ardlECMOut ar_ecm_matrix;
 struct ardlECMOut ar_ecm_formula;
