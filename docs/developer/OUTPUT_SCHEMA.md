@@ -35,9 +35,9 @@ where applicable:
 
 Lag metadata is stored in the existing scalar fields `p` and `q`, plus `qvec`
 where a per-regressor distributed-lag vector is available. Explicit
-decomposition NARDL outputs also store `q_control` and `control_qvec` for
-linear-control lag blocks. Full workflows also store `pmax` and `qmax` for the
-search bounds.
+decomposition NARDL outputs also store `q_control`, `control_qvec`, and
+`decomp_thresholds` for partial-sum reset thresholds. Full workflows also store
+`pmax` and `qmax` for the search bounds.
 
 ## Model Output Map
 
@@ -46,12 +46,14 @@ search bounds.
 | `ardlOut` | ARDL | common metadata, `qvec`, row-index sample metadata | Levels-form OLS output. Use `ardlECM` for ARDL error-correction estimates. |
 | `ardlECMOut` | ARDL-ECM | common metadata, `ecm_type`, `qvec`, row-index sample metadata, `beta_lr`, `rho_ols` | Dedicated ARDL ECM output; supports `"two-step"` and `"uecm"`. |
 | `ardlFullOut` | ARDL | common workflow metadata, `pmax`, `qmax` | Bundles selected ARDL output in `.ar`. |
+| `ardlAutoCaseOut` | ARDL-AutoCase | common workflow metadata, `pmax`, `qmax`, `case_ids`, `primary_case`, `bounds_table` | Bundles GETS-selected ARDL levels output in `.ar` and primary-case UECM output in `.ecm`. |
 | `qardlOut` | QARDL | common metadata, `qvec`, `fitted`, `resid` | `fitted` and `resid` are `nobs x rows(tau)`. |
 | `qardlECMOut` | QARDL-ECM | common metadata, `ecm_type`, `qvec`, `bt`, `fitted`, `resid` | Supports `"two-step"` and `"uecm"`; full covariance is currently exposed through `alpha_cov` and `rho_cov`. |
 | `qardlFullOut` | QARDL | common workflow metadata, `pmax`, `qmax` | Propagates formula/name metadata to `.qa` and `.ecm`. |
-| `nardlOut` | NARDL | common metadata, `qvec`, row-index sample metadata, `decomp_vars`, `control_vars` | Includes positive/negative long-run decomposition fields and optional linear-control long-run fields. |
-| `nardlECMOut` | NARDL-ECM | common metadata, `ecm_type`, `qvec`, row-index sample metadata, `decomp_vars`, `control_vars` | Includes inherited asymmetric long-run tests and optional linear-control coefficients. |
-| `nardlFullOut` | NARDL | common workflow metadata, `pmax`, `qmax` | Propagates formula/name metadata to `.na` and `.ecm`. |
+| `nardlOut` | NARDL | common metadata, `qvec`, row-index sample metadata, `decomp_vars`, `control_vars`, `decomp_thresholds` | Includes positive/negative long-run decomposition fields and optional linear-control long-run fields. |
+| `nardlECMOut` | NARDL-ECM | common metadata, `ecm_type`, `qvec`, row-index sample metadata, `decomp_vars`, `control_vars`, `decomp_thresholds` | Includes inherited asymmetric long-run tests and optional linear-control coefficients. |
+| `nardlFullOut` | NARDL | common workflow metadata, `pmax`, `qmax`, `decomp_thresholds` | Propagates formula/name metadata to `.na` and `.ecm`. |
+| `nardlAutoCaseOut` | NARDL-AutoCase | common workflow metadata, `pmax`, `qmax`, `case_ids`, `primary_case`, `bounds_table`, `decomp_thresholds` | Bundles GETS-selected NARDL levels output in `.na` and primary-case UECM output in `.ecm`. |
 | `nardlDynMultOut` | NARDL-Dynamic-Multipliers | model family, formula, names, horizon | Contains `pos`, `neg`, and `asymmetry` multiplier matrices. |
 | `csardlOut` | CS-ARDL | common metadata, `unitvar`, `timevar`, `qvec` | `estimation_start/end` are within-unit time indices. |
 | `csardlECMOut` | CS-ARDL-ECM | common metadata, `ecm_type`, `unitvar`, `timevar`, `qvec` | Uses pooled long-run coefficients from CS-ARDL levels estimation for `"two-step"` and derives long-run coefficients directly for `"uecm"`. |
@@ -73,6 +75,12 @@ coefficients are derived as `-theta / rho` from the unrestricted lagged-level
 terms. `ardlECM`, `qardlECM`, `nardlECM`, `csardlECM`, and the matching ECM
 workflows store the ECM estimates in dedicated ECM structures.
 
+Auto-case outputs use `case_ids` for the admissible Pesaran-Shin-Smith case
+set inferred from Case V UECM constant/trend p-values. When the admissible set
+has two entries, `primary_case` stores the unrestricted member used for the
+nested UECM estimator. `bounds_table` rows are `[case_id, Fstat, tstat,
+q_restrict, cv10_I0, cv10_I1, cv5_I0, cv5_I1, cv1_I0, cv1_I1]`.
+
 ## NARDL Decomposition Metadata
 
 `nardl` remains the compatibility path where every RHS regressor is
@@ -87,6 +95,9 @@ decomposed-variable and control arguments. Their nested NARDL outputs store:
 - `control_vars`, `control_indices`, `ncontrol`: variables kept in linear form.
 - `q`: distributed-lag order for decomposed variables.
 - `q_control`: distributed-lag order for controls.
+- `decomp_thresholds`: numeric reset threshold for each decomposed variable.
+  Values larger than `1e200` indicate the default ordinary cumulative-sum
+  case (`d = "inf"`).
 - `beta_pos`, `beta_neg`: long-run coefficients for decomposed variables.
 - `beta_control`: long-run coefficients for controls.
 - `bigbt`: stacked as `[beta_pos; beta_neg; beta_control]`.

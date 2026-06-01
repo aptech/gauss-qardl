@@ -12,6 +12,9 @@ naOut = nardl(data, ppp, qqq);
 naOut = nardl(data, ppp, qqq, formula, print_results);
 naOut = nardl(data, ppp, qqq, formula, print_results,
               decomp_vars, control_vars, q_decomp, q_control);
+naOut = nardl(data, ppp, qqq, formula, print_results,
+              decomp_vars, control_vars, q_decomp, q_control,
+              d, thresh1, thresh2);
 ```
 
 ## Parameters
@@ -31,6 +34,13 @@ naOut = nardl(data, ppp, qqq, formula, print_results,
 - `q_decomp` (*scalar*) - Optional alias for the decomposed-variable lag
   order. If nonnegative, it overrides `qqq`.
 - `q_control` (*scalar*) - Distributed-lag order for linear controls.
+- `d` (*string or numeric*) - Partial-sum reset threshold. Default is
+  `"inf"`, which gives the standard cumulative positive and negative partial
+  sums. Use `"mean"`, a scalar such as `0`, or a vector with one value per
+  decomposed variable.
+- `thresh1`, `thresh2` (*string or numeric*) - R-compatible aliases for the
+  first and second decomposed-variable reset thresholds. If supplied, these
+  override the corresponding entries implied by `d`.
 
 ## Returns
 
@@ -44,8 +54,8 @@ naOut = nardl(data, ppp, qqq, formula, print_results,
   Long-run and short-run asymmetry diagnostics.
 - `bounds_fstat` - Bounds-style F-statistic from the NARDL UECM design.
 - `fitted`, `resid`, `sigma2`, `coef_cov` - OLS diagnostics.
-- Metadata fields including `decomp_vars`, `control_vars`, `qvec`, and
-  `control_qvec`.
+- Metadata fields including `decomp_vars`, `control_vars`, `qvec`,
+  `control_qvec`, and `decomp_thresholds`.
 
 ## Remarks
 
@@ -57,6 +67,11 @@ To decompose only selected RHS variables, pass `decomp_vars` and optionally
 Use `nardlECM` for the corresponding error-correction estimator and
 `nardlFull` for lag selection plus levels and ECM estimation.
 
+Thresholds follow the CRAN `ardl.nardl` convention: the variables are still
+split into positive and negative changes by sign, and the threshold controls
+when the running partial sum is reset. The default `"inf"` is ordinary
+cumulative-sum behavior.
+
 ## Examples
 
 ```gauss
@@ -66,6 +81,12 @@ library qardl;
 naOut = nardl(df, 2, 2, formula = "y ~ x1 + x2",
               print_results = 0, decomp_vars = "x1",
               control_vars = "x2", q_control = 1);
+
+// R-style reset threshold for the decomposed variable.
+naThresh = nardl(df, 2, 2, formula = "y ~ x1 + x2",
+                 print_results = 0, decomp_vars = "x1",
+                 control_vars = "x2", q_control = 1,
+                 d = 0);
 
 printNARDL(naOut);
 ```

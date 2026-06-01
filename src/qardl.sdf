@@ -301,6 +301,44 @@ struct ardlFullOut {
     struct ardlOut ar;
 };
 
+struct ardlAutoCaseOut {
+    // Standardized workflow metadata
+    string model_family;
+    string formula;
+    string depvar;
+    string array xvars;
+    string deterministic;
+    string covariance_type;
+    string selection_criterion;
+
+    // Search settings and selected lag orders
+    scalar pmax;
+    scalar qmax;
+    scalar pst;
+    scalar qst;
+    scalar gets_pval;
+
+    // Sample metadata
+    scalar sample_start;
+    scalar sample_end;
+    scalar nobs;
+
+    // Auto-case selection metadata
+    scalar primary_case;
+    scalar case_count;
+    matrix case_ids;
+    matrix deterministic_coef;
+    matrix deterministic_pv;
+
+    // Rows: [case_id, Fstat, tstat, q_restrict, cv10_I0, cv10_I1,
+    //        cv5_I0, cv5_I1, cv1_I0, cv1_I1]
+    matrix bounds_table;
+
+    // Nested estimates
+    struct ardlOut ar;
+    struct ardlECMOut ecm;
+};
+
 struct nardlOut {
     // Standardized model metadata
     string model_family;
@@ -338,6 +376,7 @@ struct nardlOut {
     scalar ncontrol;
     matrix decomp_indices;
     matrix control_indices;
+    matrix decomp_thresholds;
 
     // Numerical diagnostics for the estimation design matrix
     scalar design_rank;
@@ -440,6 +479,7 @@ struct nardlECMOut {
     scalar ncontrol;
     matrix decomp_indices;
     matrix control_indices;
+    matrix decomp_thresholds;
 
     // Numerical diagnostics for the ECM design matrix
     scalar design_rank;
@@ -498,8 +538,57 @@ struct nardlFullOut {
 
     // Number of observations in the input sample
     scalar nobs;
+    matrix decomp_thresholds;
 
     // Levels and ECM estimates
+    struct nardlOut na;
+    struct nardlECMOut ecm;
+};
+
+struct nardlAutoCaseOut {
+    // Standardized workflow metadata
+    string model_family;
+    string formula;
+    string depvar;
+    string array xvars;
+    string array decomp_vars;
+    string array control_vars;
+    string deterministic;
+    string covariance_type;
+    string selection_criterion;
+
+    // Search settings and selected lag orders
+    scalar pmax;
+    scalar qmax;
+    scalar pst;
+    scalar qst;
+    scalar q_control;
+    scalar gets_pval;
+
+    // Sample metadata
+    scalar sample_start;
+    scalar sample_end;
+    scalar nobs;
+
+    // NARDL decomposition metadata
+    scalar ndecomp;
+    scalar ncontrol;
+    matrix decomp_indices;
+    matrix control_indices;
+    matrix decomp_thresholds;
+
+    // Auto-case selection metadata
+    scalar primary_case;
+    scalar case_count;
+    matrix case_ids;
+    matrix deterministic_coef;
+    matrix deterministic_pv;
+
+    // Rows: [case_id, Fstat, tstat, q_restrict, cv10_I0, cv10_I1,
+    //        cv5_I0, cv5_I1, cv1_I0, cv1_I1]
+    matrix bounds_table;
+
+    // Nested estimates
     struct nardlOut na;
     struct nardlECMOut ecm;
 };

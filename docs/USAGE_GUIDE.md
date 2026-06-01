@@ -42,7 +42,12 @@ arUECMOut = ardlECM(data, 2, 1, "", 0, "uecm");
 arCaseV = ardlECM(data, 2, 1, "", 0, "uecm", 5);
 printARDL(arOut);
 afOut = ardlFull(data, verbose = 0, criterion = "bic");
+acOut = ardlAutoCase(data, 4, 4, "", 0, 0.05);
 ```
+
+`ardlAutoCase` runs GETS lag selection, estimates a Case V UECM, infers the
+admissible deterministic case set from the intercept/trend p-values, and
+returns case-specific bounds rows.
 
 Direct estimator calls print GAUSS-style results tables by default. Add
 `print_results = 0` as the final argument when you only want the returned
@@ -203,6 +208,8 @@ partial-sum decompositions:
 nfOut = nardlFull(data, verbose = 0, criterion = "bic");
 nfGets = nardlFull(data, verbose = 0, criterion = "gets");
 nfOut = nardlFull(df, formula = "y ~ x1 + x2", verbose = 0, criterion = "bic");
+nacOut = nardlAutoCase(df, 4, 4, "y ~ x1 + x2", 0,
+                       "x1", "x2", 1, 0.1);
 printNARDL(nfOut.na);
 printNARDLECM(nfOut.ecm);
 
@@ -246,6 +253,19 @@ nfSpec = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
 If `control_vars` is `""`, all RHS variables not named in `decomp_vars` are
 treated as controls. The legacy `nardl(data, p, q)` shortcut still decomposes
 every RHS regressor.
+
+NARDL partial sums also accept R-style reset thresholds. The default
+`d = "inf"` is the standard cumulative positive/negative partial-sum
+construction. Use `d = "mean"`, `d = 0`, a custom scalar, a threshold vector,
+or the aliases `thresh1` and `thresh2` for the first two decomposed variables:
+
+```gauss
+naThresh = nardl(df, 2, 2, formula = "y ~ x1 + x2", print_results = 0,
+                 decomp_vars = "x1", control_vars = "x2",
+                 q_control = 1, d = 0);
+nfThresh = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
+                     "x1", "x2", 1, "uecm", 0.1, 3, 0);
+```
 
 Use `csardlFull` for pooled cross-sectionally augmented ARDL panels:
 

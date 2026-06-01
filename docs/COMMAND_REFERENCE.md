@@ -29,8 +29,10 @@ sections.
 ## Core Workflow
 
 - [ardlFull](command-reference/ardlFull.md)
+- [ardlAutoCase](command-reference/ardlAutoCase.md)
 - [qardlFull](command-reference/qardlFull.md)
 - [nardlFull](command-reference/nardlFull.md)
+- [nardlAutoCase](command-reference/nardlAutoCase.md)
 - [csardlFull](command-reference/csardlFull.md)
 - [applyQARDLFormula](command-reference/applyQARDLFormula.md)
 - [applyNARDLFormula](command-reference/applyNARDLFormula.md)

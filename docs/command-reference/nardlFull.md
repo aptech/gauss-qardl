@@ -11,7 +11,7 @@ estimation.
 nfOut = nardlFull(data);
 nfOut = nardlFull(data, pend, qend, formula, verbose, criterion,
                   decomp_vars, control_vars, q_control, ecm_type, gets_pval,
-                  case_id);
+                  case_id, d, thresh1, thresh2);
 ```
 
 ## Parameters
@@ -33,6 +33,9 @@ nfOut = nardlFull(data, pend, qend, formula, verbose, criterion,
 - `case_id` (*scalar*) - Pesaran-Shin-Smith deterministic case passed to the
   NARDL ECM when `ecm_type = "uecm"`. Default is `3`. Cases other than `3`
   require `ecm_type = "uecm"`.
+- `d`, `thresh1`, `thresh2` - Partial-sum reset threshold controls shared
+  with `nardl`. The selected threshold vector is stored in
+  `nfOut.decomp_thresholds` and nested estimator outputs.
 
 ## Returns
 
@@ -49,6 +52,8 @@ contiguous `p/q` orders.
 `case_id` controls deterministic terms in the ECM stored in `.ecm`; the
 levels estimator stored in `.na` remains the standard constant-only NARDL
 levels model.
+When thresholds are supplied, lag selection, the levels estimator, and the ECM
+all use the same partial-sum reset rule.
 
 ## Examples
 
@@ -61,6 +66,8 @@ nfGets = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "gets",
                    "x1", "x2", 1, "uecm", 0.1);
 nfCaseI = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
                     "x1", "x2", 1, "uecm", 0.1, 1);
+nfThresh = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
+                     "x1", "x2", 1, "uecm", 0.1, 3, 0);
 printNARDL(nfOut.na);
 printNARDLECM(nfOut.ecm);
 ```
@@ -71,4 +78,5 @@ printNARDLECM(nfOut.ecm);
 
 ## See Also
 
-[nardl](nardl.md), [nardlECM](nardlECM.md), [nardlOrder](nardlOrder.md)
+[nardl](nardl.md), [nardlECM](nardlECM.md), [nardlAutoCase](nardlAutoCase.md),
+[nardlOrder](nardlOrder.md)

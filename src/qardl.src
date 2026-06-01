@@ -309,6 +309,85 @@ proc (struct ardlFullOut) = ardlFull(data, pend = 8, qend = 8, formula = "",
     retp(afOut);
 endp;
 
+/*
+**> ardlAutoCase
+**
+**  Purpose:    Select ARDL lag orders by hierarchical GETS, infer the
+**              admissible Pesaran-Shin-Smith deterministic case set from a
+**              Case V UECM, and report case-specific bounds rows.
+**
+**  Format:     acOut = ardlAutoCase(data);
+**              acOut = ardlAutoCase(data, pend, qend, formula, verbose,
+**                                   gets_pval);
+*/
+proc (struct ardlAutoCaseOut) = ardlAutoCase(data, pend = 8, qend = 8,
+                                             formula = "", verbose = 1,
+                                             gets_pval = 0.05);
+    local pst, qst, depvar, xvars, case_ids, primary_case;
+    local det_coef, det_pv, bounds_table;
+
+    if verbose /= 0 and verbose /= 1;
+        errorlog "ardlAutoCase: verbose must be 0 or 1";
+        end;
+    endif;
+
+    { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
+    data = applyQARDLFormula(data, formula);
+    call _qardlValidateSearchInputs(data, pend, qend, { 0.5 }, "ardlAutoCase");
+    call _qardlValidateGETSPValue(gets_pval, "ardlAutoCase");
+
+    { pst, qst } = pqorder(data, pend, qend, "gets", gets_pval);
+    { case_ids, det_coef, det_pv } =
+        _ardlAutoCases(data, pst, qst, gets_pval, "ardlAutoCase");
+    primary_case = case_ids[rows(case_ids)];
+    bounds_table = _ardlAutoBoundsTable(data, pst, qst, case_ids);
+
+    if verbose;
+        call _ardlPrintAutoCase("ardlAutoCase", pst, qst, case_ids,
+                                det_pv, bounds_table);
+    endif;
+
+    struct ardlAutoCaseOut acOut;
+    struct ardlOut ar;
+    struct ardlECMOut ecm;
+    ar = ardl(data, pst, qst, "", 0);
+    ar.formula = formula;
+    ar.depvar = depvar;
+    ar.xvars = xvars;
+    ar.selection_criterion = "gets";
+    ecm = ardlECM(data, pst, qst, "", 0, "uecm", primary_case);
+    ecm.formula = formula;
+    ecm.depvar = depvar;
+    ecm.xvars = xvars;
+    ecm.selection_criterion = "gets";
+
+    acOut.model_family = "ARDL-AutoCase";
+    acOut.formula = formula;
+    acOut.depvar = depvar;
+    acOut.xvars = xvars;
+    acOut.deterministic = _ardlDeterministicLabel(primary_case);
+    acOut.covariance_type = "ols";
+    acOut.selection_criterion = "gets";
+    acOut.pmax = pend;
+    acOut.qmax = qend;
+    acOut.pst = pst;
+    acOut.qst = qst;
+    acOut.gets_pval = gets_pval;
+    acOut.sample_start = 1;
+    acOut.sample_end = rows(data);
+    acOut.nobs = rows(data);
+    acOut.primary_case = primary_case;
+    acOut.case_count = rows(case_ids);
+    acOut.case_ids = case_ids;
+    acOut.deterministic_coef = det_coef;
+    acOut.deterministic_pv = det_pv;
+    acOut.bounds_table = bounds_table;
+    acOut.ar = ar;
+    acOut.ecm = ecm;
+
+    retp(acOut);
+endp;
+
 proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_type = "iid", hac_lags = 0, print_results = 1);
 
     local za, nn, yy, xx, mm, ee, Y, X, ONEX, bigbt, psu, midbt,
@@ -3804,6 +3883,94 @@ proc (1) = _ardlNormalizeECMType(ecm_type, caller, allow_none);
         errorlog caller $+ ": ecm_type must be 'two-step' or 'uecm'";
     endif;
     end;
+endp;
+
+proc (3) = _ardlAutoCases(data, ppp, qqq, gets_pval, caller);
+    local det_coef, det_pv, case_ids;
+    struct ardlECMOut ecm5;
+
+    ecm5 = ardlECM(data, ppp, qqq, "", 0, "uecm", 5);
+    det_coef = ecm5.bt[1:2];
+    det_pv = _ardlDetPValues(ecm5.bt, ecm5.coef_cov, 2);
+    case_ids = _ardlCaseIDs(det_pv, gets_pval);
+
+    retp(case_ids, det_coef, det_pv);
+endp;
+
+proc (1) = _ardlDetPValues(bt, coef_cov, det_cols);
+    local pv, se, z, ii;
+
+    pv = ones(det_cols, 1);
+    ii = 1;
+    do until ii > det_cols;
+        se = sqrt(coef_cov[ii, ii]);
+        if se > 0;
+            z = bt[ii] / se;
+            pv[ii] = 2*cdfnc(abs(z));
+        endif;
+        ii = ii + 1;
+    endo;
+
+    retp(pv);
+endp;
+
+proc (1) = _ardlCaseIDs(det_pv, gets_pval);
+    local keep_const, keep_trend;
+
+    keep_const = det_pv[1] <= gets_pval;
+    keep_trend = det_pv[2] <= gets_pval;
+
+    if keep_trend and not keep_const;
+        keep_const = 1;
+    endif;
+
+    if not keep_const and not keep_trend;
+        retp({ 1 });
+    elseif keep_const and not keep_trend;
+        retp({ 2, 3 });
+    endif;
+
+    retp({ 4, 5 });
+endp;
+
+proc (1) = _ardlAutoBoundsTable(data, ppp, qqq, case_ids);
+    local out, ii, Fstat, tstat, cv, used_case, q_restrict;
+
+    out = zeros(rows(case_ids), 10);
+    ii = 1;
+    do until ii > rows(case_ids);
+        { Fstat, tstat, cv, used_case, q_restrict } =
+            ardlboundsCase(data, ppp, qqq, case_ids[ii]);
+        out[ii, .] = used_case~Fstat~tstat~q_restrict~
+                     cv[1, 1]~cv[1, 2]~cv[2, 1]~cv[2, 2]~
+                     cv[3, 1]~cv[3, 2];
+        ii = ii + 1;
+    endo;
+
+    retp(out);
+endp;
+
+proc (0) = _ardlPrintAutoCase(caller, pst, qst, case_ids, det_pv, bounds_table);
+    local ii;
+
+    print caller $+ ": GETS-selected p = " $+ ntos(pst) $+ ", q = " $+ ntos(qst);
+    print caller $+ ": deterministic-term p-values from Case V UECM";
+    sprintf("  %-12s%12.6f", "intercept", det_pv[1]);
+    sprintf("  %-12s%12.6f", "trend", det_pv[2]);
+    print caller $+ ": admissible PSS case set";
+    ii = 1;
+    do until ii > rows(case_ids);
+        print "  Case " $+ ntos(case_ids[ii]) $+ " - " $+ _ardlDeterministicLabel(case_ids[ii]);
+        ii = ii + 1;
+    endo;
+    print caller $+ ": bounds rows [case, F, t, q_restrict]";
+    ii = 1;
+    do until ii > rows(bounds_table);
+        sprintf("  %4.0f%14.6f%14.6f%10.0f",
+                bounds_table[ii, 1], bounds_table[ii, 2],
+                bounds_table[ii, 3], bounds_table[ii, 4]);
+        ii = ii + 1;
+    endo;
 endp;
 
 proc (0) = _ardlValidateCaseID(case_id, caller);

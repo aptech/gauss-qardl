@@ -17,6 +17,9 @@ the levels long-run relation and then using one lagged error-correction term.
 level regressors entered directly. UECM designs accept `case_id = 1` through
 `5` to choose the Pesaran-Shin-Smith deterministic case; the default Case III
 preserves the prior constant-only UECM behavior.
+`ardlAutoCase` selects scalar `p/q` orders by hierarchical GETS, fits a Case V
+UECM, and maps the retained constant/trend evidence to Case I, Cases II/III,
+or Cases IV/V.
 
 Automatic lag selection uses information criteria over candidate maximum lag
 bounds, or `criterion = "gets"` for general-to-specific backward reduction of
@@ -54,6 +57,13 @@ then estimates asymmetric long-run and short-run responses. The compatibility
 `nardlFull` let users name decomposed variables and keep other RHS variables as
 linear controls.
 
+The default decomposition is the standard cumulative positive/negative partial
+sum. Optional `d`, `thresh1`, and `thresh2` arguments follow the CRAN
+`ardl.nardl` threshold convention: changes are still split by sign, and the
+threshold controls when the running partial sum is reset. `d = "inf"` is the
+default cumulative-sum case; `d = "mean"`, `d = 0`, custom scalars, and
+per-decomposed-variable threshold vectors are supported.
+
 The package stores positive and negative long-run effects, optional
 linear-control long-run effects, and long-run asymmetry tests where the output
 structure contains the required statistics.
@@ -64,6 +74,9 @@ the same `case_id = 1` through `5` deterministic-case option. Dynamic
 multiplier paths are available through `nardlDynamicMultipliers`. NARDL bounds output is a
 bounds-style UECM statistic; exact finite-sample critical-value integration
 remains documented separately.
+`nardlAutoCase` applies the same auto-case rule to NARDL UECM designs,
+including named decomposed-variable/control specifications and reset
+thresholds.
 
 ## CS-ARDL
 

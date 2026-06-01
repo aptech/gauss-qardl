@@ -79,5 +79,5 @@ printARDL(afOut.ar);
 
 ## See Also
 
-[ardl](ardl.md), [ardlECM](ardlECM.md), [ardlbounds](ardlbounds.md),
-[pqorder](pqorder.md), [qardlFull](qardlFull.md)
+[ardl](ardl.md), [ardlECM](ardlECM.md), [ardlAutoCase](ardlAutoCase.md),
+[ardlbounds](ardlbounds.md), [pqorder](pqorder.md), [qardlFull](qardlFull.md)

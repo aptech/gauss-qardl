@@ -120,6 +120,15 @@ call assert_string(ar_ecm_formula.ecm_type, "uecm", "ARDL-ECM ecm_type metadata"
 call assert_true(rows(ar_ecm_formula.qvec) == 2 and ar_ecm_formula.nobs == ar_formula.nobs - 1,
                  "ARDL-ECM lag/sample metadata");
 
+struct ardlAutoCaseOut ac_schema;
+ac_schema = ardlAutoCase(df, 1, 1, formula, 0, 0.1);
+call assert_string(ac_schema.model_family, "ARDL-AutoCase", "ardlAutoCase model_family metadata");
+call assert_string(ac_schema.formula, formula, "ardlAutoCase formula metadata");
+call assert_true(ac_schema.case_count == rows(ac_schema.case_ids) and
+                 rows(ac_schema.bounds_table) == ac_schema.case_count and
+                 ac_schema.ecm.ecm_type $== "uecm",
+                 "ardlAutoCase case/nested metadata");
+
 struct qardlOut qa_matrix;
 struct qardlOut qa_formula;
 qa_matrix = qardl(data, 1, 1, tau, "iid", 0, 0);
@@ -172,6 +181,9 @@ call assert_common_metadata(na_formula.model_family, na_formula.formula, na_form
                             "NARDL", formula, "ols", n, 2, n);
 call assert_true(rows(na_formula.qvec) == 2 and rows(na_formula.fitted) == na_formula.nobs,
                  "NARDL qvec/fitted metadata");
+call assert_true(rows(na_formula.decomp_thresholds) == 2 and
+                 minc(na_formula.decomp_thresholds .> 1e200),
+                 "NARDL default threshold metadata");
 call assert_true(na_formula.design_rank == na_formula.design_cols and na_formula.design_condition >= 1,
                  "NARDL design rank/condition metadata");
 struct nardlOut na_spec;
@@ -200,6 +212,9 @@ call assert_common_metadata(necm.model_family, necm.formula, necm.depvar,
                             "NARDL-ECM", formula, "ols", n, 3, n);
 call assert_true(rows(necm.qvec) == 2 and rows(necm.fitted) == necm.nobs,
                  "NARDL-ECM qvec/fitted metadata");
+call assert_true(rows(necm.decomp_thresholds) == 2 and
+                 minc(necm.decomp_thresholds .> 1e200),
+                 "NARDL-ECM default threshold metadata");
 call assert_true(necm.design_rank == necm.design_cols and necm.design_condition >= 1,
                  "NARDL-ECM design rank/condition metadata");
 struct nardlECMOut necm_spec;
@@ -217,10 +232,23 @@ call assert_true(nf.pmax == 1 and nf.qmax == 1 and nf.sample_end == n,
                  "nardlFull search/sample metadata");
 call assert_string(nf.na.formula, formula, "nardlFull nested NARDL formula metadata");
 call assert_string(nf.ecm.formula, formula, "nardlFull nested ECM formula metadata");
+call assert_true(rows(nf.decomp_thresholds) == 2 and
+                 minc(nf.decomp_thresholds .> 1e200),
+                 "nardlFull default threshold metadata");
 nf = nardlFull(df, 1, 1, formula, 0, "bic", "x1", "x2", 1);
 call assert_true(nf.na.ndecomp == 1 and nf.ecm.ncontrol == 1 and
                  nf.na.decomp_vars[1] $== "x1" and nf.na.control_vars[1] $== "x2",
                  "nardlFull optional spec metadata");
+
+struct nardlAutoCaseOut nac_schema;
+nac_schema = nardlAutoCase(df, 1, 1, formula, 0, "x1", "x2", 1, 0.1);
+call assert_string(nac_schema.model_family, "NARDL-AutoCase", "nardlAutoCase model_family metadata");
+call assert_string(nac_schema.formula, formula, "nardlAutoCase formula metadata");
+call assert_true(nac_schema.case_count == rows(nac_schema.case_ids) and
+                 rows(nac_schema.bounds_table) == nac_schema.case_count and
+                 nac_schema.ecm.ecm_type $== "uecm" and
+                 nac_schema.na.ndecomp == 1 and nac_schema.na.ncontrol == 1,
+                 "nardlAutoCase case/nested metadata");
 
 nunits = 3;
 TT = 40;

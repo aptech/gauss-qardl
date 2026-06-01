@@ -75,7 +75,8 @@ xsmall = { 1 10,
 ysmall = seqa(1, 1, rows(xsmall));
 dsmall = ysmall~xsmall;
 
-{ x_pos, x_neg, dx_pos, dx_neg } = _nardlPartialSumsWithDiffs(dsmall);
+{ x_pos, x_neg, dx_pos, dx_neg } =
+    _nardlPartialSumsWithDiffs(dsmall, _nardlInfThresh(cols(dsmall) - 1));
 call assert_close(x_pos, read_expected("synthetic/decompositions/nardl_partial_sums_pos.csv"),
                   tol, "NARDL positive partial sums changed");
 call assert_close(x_neg, read_expected("synthetic/decompositions/nardl_partial_sums_neg.csv"),
@@ -117,4 +118,3 @@ call assert_close(dmOut.asymmetry, read_expected("synthetic/multipliers/nardl_dy
                   tol, "NARDL asymmetric dynamic multipliers changed");
 
 print "synthetic/nardl_validation.e: PASS";
-

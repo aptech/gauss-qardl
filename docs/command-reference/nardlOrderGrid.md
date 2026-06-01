@@ -9,6 +9,7 @@ Returns the full NARDL information-criterion lag-search table.
 ```gauss
 grid = nardlOrderGrid(data);
 grid = nardlOrderGrid(data, pend, qend, criterion);
+grid = nardlOrderGrid(data, pend, qend, criterion, d, thresh1, thresh2);
 ```
 
 ## Parameters
@@ -17,6 +18,9 @@ grid = nardlOrderGrid(data, pend, qend, criterion);
 - `pend` (*scalar*) - Maximum AR lag searched. Default is `8`.
 - `qend` (*scalar*) - Maximum distributed-lag order searched. Default is `8`.
 - `criterion` (*string*) - `"bic"` (default), `"aic"`, `"hq"`, or `"hqc"`.
+- `d`, `thresh1`, `thresh2` - Optional NARDL partial-sum reset threshold
+  controls. Default `"inf"` gives ordinary cumulative positive and negative
+  partial sums.
 
 ## Returns
 
@@ -25,12 +29,14 @@ grid = nardlOrderGrid(data, pend, qend, criterion);
 ## Remarks
 
 The row with the smallest third column is the lag order returned by
-`nardlOrder`.
+`nardlOrder`. Non-default thresholds are applied before each candidate
+information criterion is evaluated.
 
 ## Examples
 
 ```gauss
 grid = nardlOrderGrid(data, 4, 4, "aic");
+grid_thresh = nardlOrderGrid(data, 4, 4, "bic", 0);
 ```
 
 ## Source

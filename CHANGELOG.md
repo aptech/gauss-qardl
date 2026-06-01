@@ -28,6 +28,16 @@
   This includes decomposition metadata, control long-run coefficients,
   prediction/forecast dispatch, dynamic multiplier support for decomposed
   variables, and source smoke coverage.
+- NARDL partial-sum reset thresholds now match the CRAN `ardl.nardl`
+  convention through optional `d`, `thresh1`, and `thresh2` arguments on
+  `nardl`, `nardlECM`, `nardlFull`, `nardlOrder`, `nardlOrderGrid`, and
+  `nardlICMean`. Default `d = "inf"` preserves the standard cumulative-sum
+  decomposition; `"mean"`, `0`, custom scalars, and threshold vectors are
+  supported.
+- `ardlAutoCase` and `nardlAutoCase` workflows for hierarchical GETS lag
+  selection, Case V UECM deterministic-term screening, admissible
+  Pesaran-Shin-Smith case-set reporting, case-specific bounds rows, and nested
+  primary-case UECM outputs.
 - Optional CS-ARDL mean-group and poolability diagnostics, plus deterministic
   synthetic NARDL/CS-ARDL benchmark entry points and published-validation
   tracking notes.

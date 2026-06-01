@@ -10,7 +10,7 @@ Estimates NARDL error-correction models.
 nECMOut = nardlECM(data, ppp, qqq);
 nECMOut = nardlECM(data, ppp, qqq, formula, print_results,
                    decomp_vars, control_vars, q_decomp, q_control,
-                   ecm_type, case_id);
+                   ecm_type, case_id, d, thresh1, thresh2);
 ```
 
 ## Parameters
@@ -27,13 +27,16 @@ nECMOut = nardlECM(data, ppp, qqq, formula, print_results,
 - `case_id` (*scalar*) - Pesaran-Shin-Smith deterministic case `1` through
   `5` for unrestricted ECM designs. Default is `3`. Cases other than `3`
   require `ecm_type = "uecm"`.
+- `d`, `thresh1`, `thresh2` - Partial-sum reset threshold controls shared
+  with `nardl`. Default `"inf"` gives ordinary cumulative positive and
+  negative partial sums.
 
 ## Returns
 
 `nECMOut` is a `nardlECMOut` structure containing long-run positive,
 negative, and optional control effects, ECM `alpha` and `rho`, their scalar
 covariance entries, OLS ECM coefficients, fitted values, residuals, and NARDL
-decomposition metadata.
+decomposition metadata including `decomp_thresholds`.
 
 ## Remarks
 
@@ -45,6 +48,8 @@ For unrestricted ECMs, `case_id` controls deterministic terms in the
 differenced equation: Case I has no intercept/trend, Cases II-III include an
 intercept, and Cases IV-V include intercept and trend. Any trend coefficient
 is stored in `bt`.
+The same threshold settings are used in the long-run levels relation and the
+ECM design so two-step and unrestricted fits remain internally consistent.
 
 ## Examples
 
@@ -57,6 +62,8 @@ nUECMOut = nardlECM(df, 2, 2, "y ~ x1 + x2", 0,
                     "x1", "x2", 2, 1, "uecm");
 nCaseI = nardlECM(df, 2, 2, "y ~ x1 + x2", 0,
                   "x1", "x2", 2, 1, "uecm", 1);
+nThresh = nardlECM(df, 2, 2, "y ~ x1 + x2", 0,
+                   "x1", "x2", 2, 1, "uecm", 3, 0);
 ```
 
 ## Source

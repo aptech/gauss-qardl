@@ -18,6 +18,12 @@ coverage, and release-verification tooling.
 - Added explicit NARDL decomposed-variable and linear-control specifications
   through optional arguments on `nardl`, `nardlECM`, and `nardlFull` while
   preserving the legacy all-RHS-decomposed `nardl` shortcut.
+- Added R-style NARDL partial-sum reset thresholds through `d`, `thresh1`,
+  and `thresh2`, with default standard cumulative sums plus `"mean"`, `0`,
+  custom scalar, and per-variable threshold support.
+- Added `ardlAutoCase` and `nardlAutoCase` wrappers for GETS lag selection,
+  deterministic-case inference from Case V UECMs, admissible case-set
+  reporting, and case-specific bounds rows.
 - Added scalar GETS lag selection through `criterion = "gets"` and optional
   `gets_pval` in ARDL/QARDL, NARDL, and CS-ARDL order-selection and full
   workflows.

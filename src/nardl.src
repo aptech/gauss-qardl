@@ -12,6 +12,7 @@
 **              naOut = nardl(data, ppp, qqq, formula, print_results);
 **              naOut = nardl(data, ppp, qqq, formula, print_results,
 **                            decomp_vars, control_vars, q_decomp, q_control);
+**              naOut = nardl(data, ppp, qqq, ..., d, thresh1, thresh2);
 **
 **  Input:      data      matrix or dataframe. Matrix order is [y, x1, x2, ...].
 **              ppp       scalar, AR lag order.
@@ -23,12 +24,19 @@
 **              q_decomp optional alias for the decomposed-variable lag order.
 **                       If omitted, qqq is used.
 **              q_control optional distributed-lag order for controls.
+**              d         optional partial-sum reset threshold: "inf" (default),
+**                        "mean", scalar, or one value per decomposed variable.
+**              thresh1   optional R-compatible alias for the first decomposed
+**                        variable threshold. Overrides d[1].
+**              thresh2   optional R-compatible alias for the second decomposed
+**                        variable threshold. Overrides d[2].
 **
 **  Output:     naOut     struct nardlOut.
 */
 proc (struct nardlOut) = nardl(data, ppp, qqq, formula = "", print_results = 1,
                               decomp_vars = "", control_vars = "",
-                              q_decomp = -1, q_control = 0);
+                              q_decomp = -1, q_control = 0, d = "inf",
+                              thresh1 = error(0), thresh2 = error(0));
     local q_eff;
     struct nardlOut naOut;
 
@@ -39,7 +47,7 @@ proc (struct nardlOut) = nardl(data, ppp, qqq, formula = "", print_results = 1,
 
     naOut = _nardlEstimateLevels(data, ppp, q_eff, formula, print_results,
                                  decomp_vars, control_vars, q_control,
-                                 "nardl", "none");
+                                 "nardl", "none", d, thresh1, thresh2);
     retp(naOut);
 endp;
 
@@ -49,14 +57,15 @@ endp;
 proc (struct nardlOut) = _nardlEstimateLevels(data, ppp, q_decomp, formula,
                                              print_results, decomp_vars,
                                              control_vars, q_control, caller,
-                                             selection_criterion);
+                                             selection_criterion, d, thresh1,
+                                             thresh2);
     local Y, ONEX, x_pos, x_neg, bt, denom, k0, ndecomp, ncontrol;
     local decomp_idx, control_idx, decomp_names, control_names;
     local theta_pos, theta_neg, theta_control, phi, beta_pos, beta_neg, beta_control;
     local theta_neg_start, theta_control_start, phi_start;
     local fitted, resid, coef_cov, sigma2, bigbt_cov, phi_cov, gamma_cov;
     local asym_wald, asym_pv, sr_wald, sr_pv, bounds_fstat;
-    local depvar, xvars, qvec;
+    local depvar, xvars, qvec, decomp_thresholds;
 
     { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
     data = applyNARDLFormula(data, formula);
@@ -72,9 +81,12 @@ proc (struct nardlOut) = _nardlEstimateLevels(data, ppp, q_decomp, formula,
 
     call _nardlValidateSpecInputs(data, ppp, q_decomp, q_control,
                                   decomp_idx, control_idx, caller);
+    decomp_thresholds = _nardlResolveThresh(data, decomp_idx, d, thresh1,
+                                            thresh2, caller);
 
     { Y, ONEX, x_pos, x_neg } =
-        _nardlBuildSpecDesign(data, ppp, q_decomp, decomp_idx, control_idx, q_control);
+        _nardlBuildSpecDesign(data, ppp, q_decomp, decomp_idx, control_idx,
+                              q_control, decomp_thresholds);
     call _qardlCheckFullColumnRank(ONEX, caller, "levels design matrix");
 
     bt = _qardlSafeInv(ONEX'*ONEX, caller, "levels moment matrix")*ONEX'*Y;
@@ -112,7 +124,8 @@ proc (struct nardlOut) = _nardlEstimateLevels(data, ppp, q_decomp, formula,
                                                      q_decomp, ndecomp, ncontrol);
     bounds_fstat = _nardlBoundsFstatForSelectors(data, ppp, q_decomp,
                                                  decomp_idx, control_idx,
-                                                 q_control, caller);
+                                                 q_control, decomp_thresholds,
+                                                 caller);
     qvec = _nardlQVecForSelectors(k0, decomp_idx, control_idx, q_decomp,
                                   q_control);
 
@@ -146,6 +159,7 @@ proc (struct nardlOut) = _nardlEstimateLevels(data, ppp, q_decomp, formula,
     naOut.ncontrol = ncontrol;
     naOut.decomp_indices = decomp_idx;
     naOut.control_indices = control_idx;
+    naOut.decomp_thresholds = decomp_thresholds;
     naOut.design_rank = rank(ONEX);
     naOut.design_cols = cols(ONEX);
     naOut.design_condition = sqrt(_qardlConditionNumber(ONEX'ONEX));
@@ -201,7 +215,8 @@ proc (struct nardlECMOut) = nardlECM(data, ppp, qqq, formula = "",
                                     print_results = 1, decomp_vars = "",
                                     control_vars = "", q_decomp = -1,
                                     q_control = 0, ecm_type = "two-step",
-                                    case_id = 3);
+                                    case_id = 3, d = "inf",
+                                    thresh1 = error(0), thresh2 = error(0));
     local q_eff;
     struct nardlECMOut nECMOut;
 
@@ -212,7 +227,8 @@ proc (struct nardlECMOut) = nardlECM(data, ppp, qqq, formula = "",
 
     nECMOut = _nardlEstimateECM(data, ppp, q_eff, formula, print_results,
                                 decomp_vars, control_vars, q_control,
-                                "nardlECM", "none", ecm_type, case_id);
+                                "nardlECM", "none", ecm_type, case_id,
+                                d, thresh1, thresh2);
     retp(nECMOut);
 endp;
 
@@ -223,13 +239,13 @@ proc (struct nardlECMOut) = _nardlEstimateECM(data, ppp, q_decomp, formula,
                                              print_results, decomp_vars,
                                              control_vars, q_control, caller,
                                              selection_criterion, ecm_type,
-                                             case_id);
+                                             case_id, d, thresh1, thresh2);
     local Y_ecm, ONEX_ecm, bt_ecm, fitted, resid, coef_cov, sigma2;
     local depvar, xvars, decomp_idx, control_idx, decomp_names, control_names;
     local raw_data;
     local ndecomp, ncontrol, pos_start, neg_start, ctrl_start, lr_cov;
     local beta_pos_ecm, beta_neg_ecm, beta_control_ecm, asym_wald_ecm, asym_pv_ecm;
-    local det_cols, rho_pos;
+    local det_cols, rho_pos, decomp_thresholds;
 
     raw_data = data;
     { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
@@ -244,21 +260,25 @@ proc (struct nardlECMOut) = _nardlEstimateECM(data, ppp, q_decomp, formula,
     call _ardlValidateECMCase(ecm_type, case_id, caller);
     call _nardlValidateSpecInputs(data, ppp, q_decomp, q_control,
                                   decomp_idx, control_idx, caller);
+    decomp_thresholds = _nardlResolveThresh(data, decomp_idx, d, thresh1,
+                                            thresh2, caller);
 
     struct nardlOut naOut;
     naOut = _nardlEstimateLevels(raw_data, ppp, q_decomp, formula, 0,
                                  decomp_vars, control_vars, q_control,
-                                 caller, selection_criterion);
+                                 caller, selection_criterion, d, thresh1,
+                                 thresh2);
 
     if ecm_type $== "uecm";
         { Y_ecm, ONEX_ecm } =
             _nardlBuildSpecUECMDesign(data, ppp, q_decomp, decomp_idx,
-                                      control_idx, q_control, case_id);
+                                      control_idx, q_control, case_id,
+                                      decomp_thresholds);
     else;
         { Y_ecm, ONEX_ecm } =
             _nardlBuildSpecECMDesign(data, ppp, q_decomp, decomp_idx, control_idx,
                                      q_control, naOut.beta_pos, naOut.beta_neg,
-                                     naOut.beta_control);
+                                     naOut.beta_control, decomp_thresholds);
     endif;
     call _qardlCheckFullColumnRank(ONEX_ecm, caller, "ECM design matrix");
 
@@ -320,6 +340,7 @@ proc (struct nardlECMOut) = _nardlEstimateECM(data, ppp, q_decomp, formula,
     nECMOut.ncontrol = naOut.ncontrol;
     nECMOut.decomp_indices = naOut.decomp_indices;
     nECMOut.control_indices = naOut.control_indices;
+    nECMOut.decomp_thresholds = decomp_thresholds;
     nECMOut.design_rank = rank(ONEX_ecm);
     nECMOut.design_cols = cols(ONEX_ecm);
     nECMOut.design_condition = sqrt(_qardlConditionNumber(ONEX_ecm'ONEX_ecm));
@@ -360,7 +381,8 @@ endp;
 **  Format:     nfOut = nardlFull(data);
 **              nfOut = nardlFull(data, pend, qend, formula, verbose, criterion,
 **                                decomp_vars, control_vars, q_control,
-**                                ecm_type, gets_pval, case_id);
+**                                ecm_type, gets_pval, case_id, d,
+**                                thresh1, thresh2);
 **
 **  Note:       If omitted, pend and qend default to 8.
 */
@@ -368,9 +390,12 @@ proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "",
                                       verbose = 1, criterion = "bic",
                                       decomp_vars = "", control_vars = "",
                                       q_control = 0, ecm_type = "two-step",
-                                      gets_pval = 0.1, case_id = 3);
+                                      gets_pval = 0.1, case_id = 3,
+                                      d = "inf", thresh1 = error(0),
+                                      thresh2 = error(0));
     local pst, qst, depvar, xvars, raw_data, grid, idx;
     local decomp_idx, control_idx, decomp_names, control_names;
+    local decomp_thresholds;
 
     call _qardlValidateLagScalar(pend, "nardlFull: pend");
     call _qardlValidateLagScalarZero(qend, "nardlFull: qend");
@@ -390,13 +415,17 @@ proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "",
     if _nardlIndexCount(control_idx) == 0;
         q_control = 0;
     endif;
+    decomp_thresholds = _nardlResolveThresh(data, decomp_idx, d, thresh1,
+                                            thresh2, "nardlFull");
     if _qardlCriterionIsGETS(criterion);
         { pst, qst } = _nardlGETSOrderSpec(data, 1, pend, 0, qend,
                                            decomp_idx, control_idx,
-                                           q_control, gets_pval, "nardlFull");
+                                           q_control, gets_pval,
+                                           decomp_thresholds, "nardlFull");
     else;
         grid = _nardlOrderGridSpec(data, pend, qend, criterion, decomp_idx,
-                                   control_idx, q_control, "nardlFull");
+                                   control_idx, q_control, decomp_thresholds,
+                                   "nardlFull");
         idx = minindc(grid[., 3]);
         pst = grid[idx, 1];
         qst = grid[idx, 2];
@@ -421,12 +450,15 @@ proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "",
     nfOut.pst = pst;
     nfOut.qst = qst;
     nfOut.nobs = rows(data);
+    nfOut.decomp_thresholds = decomp_thresholds;
     nfOut.na = _nardlEstimateLevels(raw_data, pst, qst, formula, 0,
                                     decomp_vars, control_vars, q_control,
-                                    "nardlFull", criterion);
+                                    "nardlFull", criterion, d, thresh1,
+                                    thresh2);
     nfOut.ecm = _nardlEstimateECM(raw_data, pst, qst, formula, 0,
                                   decomp_vars, control_vars, q_control,
-                                  "nardlFull", criterion, ecm_type, case_id);
+                                  "nardlFull", criterion, ecm_type, case_id,
+                                  d, thresh1, thresh2);
 
     if verbose;
         call printNARDL(nfOut.na);
@@ -437,30 +469,137 @@ proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "",
 endp;
 
 /*
+**> nardlAutoCase
+**
+**  Purpose:    Select NARDL lag orders by hierarchical GETS, infer the
+**              admissible Pesaran-Shin-Smith deterministic case set from a
+**              Case V NARDL UECM, and report case-specific bounds rows.
+*/
+proc (struct nardlAutoCaseOut) = nardlAutoCase(data, pend = 8, qend = 8,
+                                               formula = "", verbose = 1,
+                                               decomp_vars = "",
+                                               control_vars = "",
+                                               q_control = 0,
+                                               gets_pval = 0.1,
+                                               d = "inf",
+                                               thresh1 = error(0),
+                                               thresh2 = error(0));
+    local pst, qst, depvar, xvars, raw_data, decomp_idx, control_idx;
+    local decomp_names, control_names, decomp_thresholds, case_ids;
+    local primary_case, det_coef, det_pv, bounds_table;
+
+    if verbose /= 0 and verbose /= 1;
+        errorlog "nardlAutoCase: verbose must be 0 or 1";
+        end;
+    endif;
+
+    raw_data = data;
+    { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
+    data = applyNARDLFormula(data, formula);
+    call _qardlValidateLagScalar(pend, "nardlAutoCase: pend");
+    call _qardlValidateLagScalarZero(qend, "nardlAutoCase: qend");
+    call _qardlValidateLagScalarZero(q_control, "nardlAutoCase: q_control");
+    call _qardlValidateGETSPValue(gets_pval, "nardlAutoCase");
+    { decomp_idx, control_idx, decomp_names, control_names } =
+        _nardlResolveSpecSelectors(xvars, decomp_vars, control_vars,
+                                   "nardlAutoCase");
+    if _nardlIndexCount(control_idx) == 0;
+        q_control = 0;
+    endif;
+    call _nardlValidateSpecInputs(data, pend, qend, q_control,
+                                  decomp_idx, control_idx, "nardlAutoCase");
+    decomp_thresholds = _nardlResolveThresh(data, decomp_idx, d, thresh1,
+                                            thresh2, "nardlAutoCase");
+
+    { pst, qst } = _nardlGETSOrderSpec(data, 1, pend, 0, qend,
+                                       decomp_idx, control_idx, q_control,
+                                       gets_pval, decomp_thresholds,
+                                       "nardlAutoCase");
+    { case_ids, det_coef, det_pv } =
+        _nardlAutoCases(data, pst, qst, decomp_idx, control_idx, q_control,
+                        decomp_thresholds, gets_pval, "nardlAutoCase");
+    primary_case = case_ids[rows(case_ids)];
+    bounds_table = _nardlAutoBoundsTable(data, pst, qst, decomp_idx,
+                                         control_idx, q_control,
+                                         decomp_thresholds, case_ids,
+                                         "nardlAutoCase");
+
+    if verbose;
+        call _ardlPrintAutoCase("nardlAutoCase", pst, qst, case_ids,
+                                det_pv, bounds_table);
+    endif;
+
+    struct nardlAutoCaseOut acOut;
+    acOut.model_family = "NARDL-AutoCase";
+    acOut.formula = formula;
+    acOut.depvar = depvar;
+    acOut.xvars = xvars;
+    acOut.decomp_vars = decomp_names;
+    acOut.control_vars = control_names;
+    acOut.deterministic = _ardlDeterministicLabel(primary_case);
+    acOut.covariance_type = "ols";
+    acOut.selection_criterion = "gets";
+    acOut.pmax = pend;
+    acOut.qmax = qend;
+    acOut.pst = pst;
+    acOut.qst = qst;
+    acOut.q_control = q_control;
+    acOut.gets_pval = gets_pval;
+    acOut.sample_start = 1;
+    acOut.sample_end = rows(data);
+    acOut.nobs = rows(data);
+    acOut.ndecomp = rows(decomp_idx);
+    acOut.ncontrol = _nardlIndexCount(control_idx);
+    acOut.decomp_indices = decomp_idx;
+    acOut.control_indices = control_idx;
+    acOut.decomp_thresholds = decomp_thresholds;
+    acOut.primary_case = primary_case;
+    acOut.case_count = rows(case_ids);
+    acOut.case_ids = case_ids;
+    acOut.deterministic_coef = det_coef;
+    acOut.deterministic_pv = det_pv;
+    acOut.bounds_table = bounds_table;
+    acOut.na = _nardlEstimateLevels(raw_data, pst, qst, formula, 0,
+                                    decomp_vars, control_vars, q_control,
+                                    "nardlAutoCase", "gets", d, thresh1,
+                                    thresh2);
+    acOut.ecm = _nardlEstimateECM(raw_data, pst, qst, formula, 0,
+                                  decomp_vars, control_vars, q_control,
+                                  "nardlAutoCase", "gets", "uecm",
+                                  primary_case, d, thresh1, thresh2);
+
+    retp(acOut);
+endp;
+
+/*
 **> nardlOrder
 **
 **  Purpose:    Select scalar NARDL p and q orders by IC or GETS.
 */
 proc (2) = nardlOrder(data, pend = 8, qend = 8, criterion = "bic",
-                      gets_pval = 0.1);
-    local grid, idx, decomp_idx, control_idx, pst, qst;
+                      gets_pval = 0.1, d = "inf",
+                      thresh1 = error(0), thresh2 = error(0));
+    local grid, idx, decomp_idx, control_idx, pst, qst, decomp_thresholds;
 
     call _qardlValidateLagScalar(pend, "nardlOrder: pend");
     call _qardlValidateLagScalarZero(qend, "nardlOrder: qend");
     criterion = lower(criterion);
     call _qardlValidateSelectionCriterion(criterion, "nardlOrder");
     call _qardlValidateGETSPValue(gets_pval, "nardlOrder");
+    decomp_idx = seqa(1, 1, cols(data) - 1);
+    control_idx = error(0);
+    decomp_thresholds = _nardlResolveThresh(data, decomp_idx, d, thresh1,
+                                            thresh2, "nardlOrder");
 
     if _qardlCriterionIsGETS(criterion);
-        decomp_idx = seqa(1, 1, cols(data) - 1);
-        control_idx = error(0);
         { pst, qst } = _nardlGETSOrderSpec(data, 1, pend, 0, qend,
                                            decomp_idx, control_idx, 0,
-                                           gets_pval, "nardlOrder");
+                                           gets_pval, decomp_thresholds,
+                                           "nardlOrder");
         retp(pst, qst);
     endif;
 
-    grid = nardlOrderGrid(data, pend, qend, criterion);
+    grid = nardlOrderGrid(data, pend, qend, criterion, d, thresh1, thresh2);
     idx = minindc(grid[., 3]);
 
     retp(grid[idx, 1], grid[idx, 2]);
@@ -471,13 +610,18 @@ endp;
 **
 **  Purpose:    Return the full NARDL p/q information-criterion table.
 */
-proc (1) = nardlOrderGrid(data, pend = 8, qend = 8, criterion = "bic");
-    local p, q, grid, row, ic;
+proc (1) = nardlOrderGrid(data, pend = 8, qend = 8, criterion = "bic",
+                          d = "inf", thresh1 = error(0),
+                          thresh2 = error(0));
+    local p, q, grid, row, ic, decomp_idx, decomp_thresholds;
 
     call _qardlValidateLagScalar(pend, "nardlOrderGrid: pend");
     call _qardlValidateLagScalarZero(qend, "nardlOrderGrid: qend");
     criterion = lower(criterion);
     call _qardlValidateICCriterion(criterion, "nardlOrderGrid");
+    decomp_idx = seqa(1, 1, cols(data) - 1);
+    decomp_thresholds = _nardlResolveThresh(data, decomp_idx, d, thresh1,
+                                            thresh2, "nardlOrderGrid");
 
     grid = zeros(pend*(qend+1), 3);
     row = 1;
@@ -485,7 +629,8 @@ proc (1) = nardlOrderGrid(data, pend = 8, qend = 8, criterion = "bic");
     do until p > pend;
         q = 0;
         do until q > qend;
-            ic = _nardlICMeanUnchecked(data, p, q, criterion, "nardlOrderGrid");
+            ic = _nardlICMeanUnchecked(data, p, q, criterion,
+                                       decomp_thresholds, "nardlOrderGrid");
             grid[row, .] = p~q~ic;
             row = row + 1;
             q = q + 1;
@@ -497,7 +642,8 @@ proc (1) = nardlOrderGrid(data, pend = 8, qend = 8, criterion = "bic");
 endp;
 
 proc (1) = _nardlOrderGridSpec(data, pend, qend, criterion, decomp_idx,
-                               control_idx, q_control, caller);
+                               control_idx, q_control, decomp_thresholds,
+                               caller);
     local p, q, grid, row, ic;
 
     call _qardlValidateLagScalar(pend, caller $+ ": pend");
@@ -514,7 +660,8 @@ proc (1) = _nardlOrderGridSpec(data, pend, qend, criterion, decomp_idx,
         do until q > qend;
             ic = _nardlICMeanSpecUnchecked(data, p, q, q_control,
                                            decomp_idx, control_idx,
-                                           criterion, caller);
+                                           criterion, decomp_thresholds,
+                                           caller);
             grid[row, .] = p~q~ic;
             row = row + 1;
             q = q + 1;
@@ -526,7 +673,8 @@ proc (1) = _nardlOrderGridSpec(data, pend, qend, criterion, decomp_idx,
 endp;
 
 proc (2) = _nardlGETSOrderSpec(data, pstart, pend, qstart, qend, decomp_idx,
-                               control_idx, q_control, gets_pval, caller);
+                               control_idx, q_control, gets_pval,
+                               decomp_thresholds, caller);
     local pst, qst, p_pv, q_pv;
 
     call _nardlValidateSpecInputs(data, pend, qend, q_control, decomp_idx,
@@ -541,11 +689,13 @@ proc (2) = _nardlGETSOrderSpec(data, pstart, pend, qstart, qend, decomp_idx,
 
         if pst > pstart;
             p_pv = _nardlGETSBoundaryPValue(data, pst, qst, decomp_idx,
-                                            control_idx, q_control, 1, caller);
+                                            control_idx, q_control,
+                                            decomp_thresholds, 1, caller);
         endif;
         if qst > qstart;
             q_pv = _nardlGETSBoundaryPValue(data, pst, qst, decomp_idx,
-                                            control_idx, q_control, 0, caller);
+                                            control_idx, q_control,
+                                            decomp_thresholds, 0, caller);
         endif;
 
         if p_pv <= gets_pval and q_pv <= gets_pval;
@@ -565,13 +715,14 @@ proc (2) = _nardlGETSOrderSpec(data, pstart, pend, qstart, qend, decomp_idx,
 endp;
 
 proc (1) = _nardlGETSBoundaryPValue(data, ppp, q_decomp, decomp_idx,
-                                    control_idx, q_control, is_p_lag, caller);
+                                    control_idx, q_control, decomp_thresholds,
+                                    is_p_lag, caller);
     local Y, ONEX, x_pos, x_neg, ndecomp, ncontrol, y_start;
     local dx_pos_start, dx_neg_start, test_cols, ii;
 
     { Y, ONEX, x_pos, x_neg } =
         _nardlBuildSpecDesign(data, ppp, q_decomp, decomp_idx, control_idx,
-                              q_control);
+                              q_control, decomp_thresholds);
 
     ndecomp = rows(decomp_idx);
     ncontrol = _nardlIndexCount(control_idx);
@@ -600,18 +751,26 @@ endp;
 **
 **  Purpose:    Compute AIC/BIC/HQ/HQC for a specified NARDL lag order.
 */
-proc (1) = nardlICMean(data, ppp, qqq, criterion = "bic");
+proc (1) = nardlICMean(data, ppp, qqq, criterion = "bic", d = "inf",
+                       thresh1 = error(0), thresh2 = error(0));
+    local decomp_idx, decomp_thresholds;
     call _nardlValidateEstimatorInputs(data, ppp, qqq, "nardlICMean");
     criterion = lower(criterion);
     call _qardlValidateICCriterion(criterion, "nardlICMean");
+    decomp_idx = seqa(1, 1, cols(data) - 1);
+    decomp_thresholds = _nardlResolveThresh(data, decomp_idx, d, thresh1,
+                                            thresh2, "nardlICMean");
 
-    retp(_nardlICMeanUnchecked(data, ppp, qqq, criterion, "nardlICMean"));
+    retp(_nardlICMeanUnchecked(data, ppp, qqq, criterion,
+                               decomp_thresholds, "nardlICMean"));
 endp;
 
-proc (1) = _nardlICMeanUnchecked(data, ppp, qqq, criterion, caller);
+proc (1) = _nardlICMeanUnchecked(data, ppp, qqq, criterion,
+                                 decomp_thresholds, caller);
     local Y, ONEX, x_pos, x_neg, bt, resid, N, K, s2, ic;
 
-    { Y, ONEX, x_pos, x_neg } = _nardlBuildDesign(data, ppp, qqq);
+    { Y, ONEX, x_pos, x_neg } =
+        _nardlBuildDesign(data, ppp, qqq, decomp_thresholds);
     call _qardlCheckFullColumnRank(ONEX, caller, "levels design matrix");
 
     bt = _qardlSafeInv(ONEX'*ONEX, caller, "levels moment matrix")*ONEX'*Y;
@@ -633,7 +792,7 @@ endp;
 
 proc (1) = _nardlICMeanSpecUnchecked(data, ppp, q_decomp, q_control,
                                      decomp_idx, control_idx, criterion,
-                                     caller);
+                                     decomp_thresholds, caller);
     local Y, ONEX, x_pos, x_neg, bt, resid, N, K, s2, ic;
 
     call _nardlValidateSpecInputs(data, ppp, q_decomp, q_control,
@@ -641,7 +800,7 @@ proc (1) = _nardlICMeanSpecUnchecked(data, ppp, q_decomp, q_control,
 
     { Y, ONEX, x_pos, x_neg } =
         _nardlBuildSpecDesign(data, ppp, q_decomp, decomp_idx, control_idx,
-                              q_control);
+                              q_control, decomp_thresholds);
     call _qardlCheckFullColumnRank(ONEX, caller, "levels design matrix");
 
     bt = _qardlSafeInv(ONEX'*ONEX, caller, "levels moment matrix")*ONEX'*Y;
@@ -698,6 +857,15 @@ proc (0) = printNARDL(struct nardlOut naOut);
             "DL lags (q):", naOut.q);
     if ncontrol > 0;
         sprintf("%-26s%12.0f", "Control DL lags:", naOut.q_control);
+    endif;
+    if _nardlUsesThresh(naOut.decomp_thresholds);
+        print "Partial-sum reset thresholds:";
+        ii = 1;
+        do until ii > ndecomp;
+            sprintf("  %-24s%12.6f", naOut.decomp_vars[ii],
+                    naOut.decomp_thresholds[ii]);
+            ii = ii + 1;
+        endo;
     endif;
     sprintf("%-26s%12.4f", "Bounds F-stat:", naOut.bounds_fstat);
     print "Covariance: " $+ naOut.covariance_type;
@@ -840,9 +1008,10 @@ proc (1) = _predictNARDLLevels(struct nardlOut naOut, data, formula = "");
         { Y, ONEX, x_pos, x_neg } =
             _nardlBuildSpecDesign(data, naOut.p, naOut.q,
                                   naOut.decomp_indices, naOut.control_indices,
-                                  naOut.q_control);
+                                  naOut.q_control, naOut.decomp_thresholds);
     else;
-        { Y, ONEX, x_pos, x_neg } = _nardlBuildDesign(data, naOut.p, naOut.q);
+        { Y, ONEX, x_pos, x_neg } =
+            _nardlBuildDesign(data, naOut.p, naOut.q, naOut.decomp_thresholds);
     endif;
     retp(ONEX*naOut.bt);
 endp;
@@ -875,13 +1044,16 @@ proc (1) = _forecastNARDLLevels(struct nardlOut naOut, data, h = 1, formula = ""
     y_placeholder = zeros(rows(xall), 1);
     if naOut.ncontrol > 0 or naOut.ndecomp /= naOut.k;
         { x_pos, x_neg, dx_pos, dx_neg } =
-            _nardlPartialSumsWithDiffs(y_placeholder~xall[., naOut.decomp_indices]);
+            _nardlPartialSumsWithDiffs(y_placeholder~xall[., naOut.decomp_indices],
+                                       naOut.decomp_thresholds);
         if naOut.ncontrol > 0;
             x_ctrl = xall[., naOut.control_indices];
             dx_ctrl = _nardlDiffMatrix(x_ctrl);
         endif;
     else;
-        { x_pos, x_neg, dx_pos, dx_neg } = _nardlPartialSumsWithDiffs(y_placeholder~xall);
+        { x_pos, x_neg, dx_pos, dx_neg } =
+            _nardlPartialSumsWithDiffs(y_placeholder~xall,
+                                       naOut.decomp_thresholds);
     endif;
     yall = yy|zeros(h, 1);
     ndecomp = rows(naOut.beta_pos);
@@ -1288,7 +1460,7 @@ proc (0) = _nardlValidateEstimatorInputs(data, ppp, qqq, caller);
     endif;
 endp;
 
-proc (4) = _nardlBuildDesign(data, ppp, qqq);
+proc (4) = _nardlBuildDesign(data, ppp, qqq, decomp_thresholds);
     local nn, k0, max_lag, N, yy, Y, ONEX;
     local x_pos, x_neg, dx_pos, dx_neg;
     local pos_level, neg_level, y_lags, dx_pos_lags, dx_neg_lags;
@@ -1300,7 +1472,8 @@ proc (4) = _nardlBuildDesign(data, ppp, qqq);
     N = nn - max_lag;
     yy = data[., 1];
 
-    { x_pos, x_neg, dx_pos, dx_neg } = _nardlPartialSumsWithDiffs(data);
+    { x_pos, x_neg, dx_pos, dx_neg } =
+        _nardlPartialSumsWithDiffs(data, decomp_thresholds);
 
     Y = yy[max_lag+1:nn];
     pos_level = zeros(N, k0);
@@ -1342,7 +1515,8 @@ proc (4) = _nardlBuildDesign(data, ppp, qqq);
     retp(Y, ONEX, x_pos, x_neg);
 endp;
 
-proc (4) = _nardlBuildSpecDesign(data, ppp, q_decomp, decomp_idx, control_idx, q_control);
+proc (4) = _nardlBuildSpecDesign(data, ppp, q_decomp, decomp_idx, control_idx,
+                                 q_control, decomp_thresholds);
     local nn, ndecomp, ncontrol, max_lag, N, yy, Y, ONEX;
     local x_pos, x_neg, dx_pos, dx_neg, x_ctrl, dx_ctrl;
     local pos_level, neg_level, ctrl_level, y_lags;
@@ -1357,7 +1531,8 @@ proc (4) = _nardlBuildSpecDesign(data, ppp, q_decomp, decomp_idx, control_idx, q
     yy = data[., 1];
 
     { x_pos, x_neg, dx_pos, dx_neg } =
-        _nardlPartialSumsWithDiffs(data[., 1]~data[., 1 + decomp_idx]);
+        _nardlPartialSumsWithDiffs(data[., 1]~data[., 1 + decomp_idx],
+                                   decomp_thresholds);
 
     if ncontrol > 0;
         x_ctrl = data[., 1 + control_idx];
@@ -1433,7 +1608,8 @@ proc (4) = _nardlBuildSpecDesign(data, ppp, q_decomp, decomp_idx, control_idx, q
     retp(Y, ONEX, x_pos, x_neg);
 endp;
 
-proc (2) = _nardlBuildECMDesign(data, ppp, qqq, beta_pos, beta_neg);
+proc (2) = _nardlBuildECMDesign(data, ppp, qqq, beta_pos, beta_neg,
+                                decomp_thresholds);
     local nn, k0, max_lag, N, yy, x_pos, x_neg, dx_pos, dx_neg;
     local Y, ec_lag, ONEX, dy_lags, dx_pos_lags, dx_neg_lags;
     local ii, jj, src, col;
@@ -1443,7 +1619,8 @@ proc (2) = _nardlBuildECMDesign(data, ppp, qqq, beta_pos, beta_neg);
     max_lag = maxc(ppp|qqq);
     N = nn - max_lag - 1;
     yy = data[., 1];
-    { x_pos, x_neg, dx_pos, dx_neg } = _nardlPartialSumsWithDiffs(data);
+    { x_pos, x_neg, dx_pos, dx_neg } =
+        _nardlPartialSumsWithDiffs(data, decomp_thresholds);
 
     Y = zeros(N, 1);
     ec_lag = zeros(N, 1);
@@ -1494,7 +1671,8 @@ proc (2) = _nardlBuildECMDesign(data, ppp, qqq, beta_pos, beta_neg);
 endp;
 
 proc (2) = _nardlBuildSpecECMDesign(data, ppp, q_decomp, decomp_idx, control_idx,
-                                    q_control, beta_pos, beta_neg, beta_control);
+                                    q_control, beta_pos, beta_neg, beta_control,
+                                    decomp_thresholds);
     local nn, ndecomp, ncontrol, max_lag, N, yy, x_pos, x_neg, dx_pos, dx_neg;
     local x_ctrl, dx_ctrl, Y, ec_lag, ONEX, dy_lags;
     local dx_pos_lags, dx_neg_lags, dx_ctrl_lags;
@@ -1507,7 +1685,8 @@ proc (2) = _nardlBuildSpecECMDesign(data, ppp, q_decomp, decomp_idx, control_idx
     N = nn - max_lag - 1;
     yy = data[., 1];
     { x_pos, x_neg, dx_pos, dx_neg } =
-        _nardlPartialSumsWithDiffs(data[., 1]~data[., 1 + decomp_idx]);
+        _nardlPartialSumsWithDiffs(data[., 1]~data[., 1 + decomp_idx],
+                                   decomp_thresholds);
 
     if ncontrol > 0;
         x_ctrl = data[., 1 + control_idx];
@@ -1587,7 +1766,8 @@ proc (1) = _nardlBoundsFstat(data, ppp, qqq);
     local Y, XU, XR, bt_u, bt_r, resid_u, resid_r, rss_u, rss_r;
     local k0, q_restrict, N, K_total, rest_start;
 
-    { Y, XU } = _nardlBuildUECMDesign(data, ppp, qqq);
+    { Y, XU } =
+        _nardlBuildUECMDesign(data, ppp, qqq, _nardlInfThresh(cols(data) - 1));
     call _qardlCheckFullColumnRank(XU, "nardl", "UECM bounds design matrix");
 
     k0 = cols(data) - 1;
@@ -1612,7 +1792,7 @@ proc (1) = _nardlBoundsFstat(data, ppp, qqq);
     retp(((rss_r - rss_u) / q_restrict) / (rss_u / (N - K_total)));
 endp;
 
-proc (2) = _nardlBuildUECMDesign(data, ppp, qqq);
+proc (2) = _nardlBuildUECMDesign(data, ppp, qqq, decomp_thresholds);
     local nn, k0, max_lag, N, yy, x_pos, x_neg, dx_pos, dx_neg;
     local Y, y_lag, pos_lag, neg_lag, ONEX, dy_lags, dx_pos_lags, dx_neg_lags;
     local ii, jj, src, col;
@@ -1622,7 +1802,8 @@ proc (2) = _nardlBuildUECMDesign(data, ppp, qqq);
     max_lag = maxc(ppp|qqq);
     N = nn - max_lag - 1;
     yy = data[., 1];
-    { x_pos, x_neg, dx_pos, dx_neg } = _nardlPartialSumsWithDiffs(data);
+    { x_pos, x_neg, dx_pos, dx_neg } =
+        _nardlPartialSumsWithDiffs(data, decomp_thresholds);
 
     Y = zeros(N, 1);
     y_lag = zeros(N, 1);
@@ -1677,12 +1858,14 @@ proc (2) = _nardlBuildUECMDesign(data, ppp, qqq);
 endp;
 
 proc (1) = _nardlBoundsFstatForSelectors(data, ppp, q_decomp, decomp_idx,
-                                         control_idx, q_control, caller);
+                                         control_idx, q_control,
+                                         decomp_thresholds, caller);
     local Y, XU, XR, bt_u, bt_r, resid_u, resid_r, rss_u, rss_r;
     local ndecomp, ncontrol, q_restrict, N, K_total, rest_start;
 
     { Y, XU } = _nardlBuildSpecUECMDesign(data, ppp, q_decomp,
-                                          decomp_idx, control_idx, q_control, 3);
+                                          decomp_idx, control_idx, q_control,
+                                          3, decomp_thresholds);
     call _qardlCheckFullColumnRank(XU, caller, "UECM bounds design matrix");
 
     ndecomp = rows(decomp_idx);
@@ -1708,8 +1891,117 @@ proc (1) = _nardlBoundsFstatForSelectors(data, ppp, q_decomp, decomp_idx,
     retp(((rss_r - rss_u) / q_restrict) / (rss_u / (N - K_total)));
 endp;
 
+proc (3) = _nardlAutoCases(data, ppp, q_decomp, decomp_idx, control_idx,
+                           q_control, decomp_thresholds, gets_pval, caller);
+    local Y, XU, bt, resid, coef_cov, sigma2, det_coef, det_pv, case_ids;
+
+    { Y, XU } = _nardlBuildSpecUECMDesign(data, ppp, q_decomp,
+                                          decomp_idx, control_idx, q_control,
+                                          5, decomp_thresholds);
+    call _qardlCheckFullColumnRank(XU, caller, "Case V auto-case UECM design matrix");
+    bt = _qardlSafeInv(XU'*XU, caller, "Case V auto-case UECM moment matrix")*XU'*Y;
+    resid = Y - XU*bt;
+    { coef_cov, sigma2 } = _nardlOLSCov(XU, resid, caller);
+    det_coef = bt[1:2];
+    det_pv = _ardlDetPValues(bt, coef_cov, 2);
+    case_ids = _ardlCaseIDs(det_pv, gets_pval);
+
+    retp(case_ids, det_coef, det_pv);
+endp;
+
+proc (1) = _nardlAutoBoundsTable(data, ppp, q_decomp, decomp_idx, control_idx,
+                                 q_control, decomp_thresholds, case_ids,
+                                 caller);
+    local out, ii, Fstat, tstat, cv, used_case, q_restrict;
+
+    out = zeros(rows(case_ids), 10);
+    ii = 1;
+    do until ii > rows(case_ids);
+        { Fstat, tstat, cv, used_case, q_restrict } =
+            _nardlBoundsCase(data, ppp, q_decomp, decomp_idx, control_idx,
+                             q_control, decomp_thresholds, case_ids[ii],
+                             caller);
+        out[ii, .] = used_case~Fstat~tstat~q_restrict~
+                     cv[1, 1]~cv[1, 2]~cv[2, 1]~cv[2, 2]~
+                     cv[3, 1]~cv[3, 2];
+        ii = ii + 1;
+    endo;
+
+    retp(out);
+endp;
+
+proc (5) = _nardlBoundsCase(data, ppp, q_decomp, decomp_idx, control_idx,
+                            q_control, decomp_thresholds, case_id, caller);
+    local Y, XU, XR, bt_u, bt_r, resid_u, resid_r, rss_u, rss_r;
+    local coef_cov, sigma2, ndecomp, ncontrol, k_bounds, det_cols;
+    local level_start, level_end, drop_start, drop_end, q_restrict;
+    local keep_cols, N, K_total, Fstat, tstat, cv, has_restricted;
+
+    call _ardlValidateCaseID(case_id, caller);
+    { Y, XU } = _nardlBuildSpecUECMDesign(data, ppp, q_decomp,
+                                          decomp_idx, control_idx, q_control,
+                                          case_id, decomp_thresholds);
+    call _qardlCheckFullColumnRank(XU, caller, "NARDL auto-case bounds design matrix");
+
+    ndecomp = rows(decomp_idx);
+    ncontrol = _nardlIndexCount(control_idx);
+    k_bounds = 2*ndecomp + ncontrol;
+    det_cols = _ardlDeterministicColumnCount(case_id);
+    level_start = det_cols + 1;
+    level_end = det_cols + k_bounds + 1;
+
+    if case_id == 2;
+        drop_start = 1;
+        drop_end = level_end;
+    elseif case_id == 4;
+        drop_start = 2;
+        drop_end = level_end;
+    else;
+        drop_start = level_start;
+        drop_end = level_end;
+    endif;
+
+    q_restrict = drop_end - drop_start + 1;
+    K_total = cols(XU);
+
+    has_restricted = not (drop_start == 1 and drop_end == K_total);
+
+    if not has_restricted;
+        rss_r = sumc(Y.^2);
+    elseif drop_start == 1;
+        XR = XU[., drop_end+1:K_total];
+    elseif drop_end == K_total;
+        XR = XU[., 1:drop_start-1];
+    else;
+        XR = XU[., 1:drop_start-1]~XU[., drop_end+1:K_total];
+    endif;
+
+    bt_u = _qardlSafeInv(XU'*XU, caller, "NARDL auto-case bounds moment matrix")*XU'*Y;
+    resid_u = Y - XU*bt_u;
+    rss_u = resid_u'*resid_u;
+    N = rows(Y);
+    sigma2 = rss_u / (N - K_total);
+    coef_cov = sigma2*_qardlSafeInv(XU'*XU, caller,
+                                    "NARDL auto-case bounds covariance moment matrix");
+
+    if has_restricted;
+        call _qardlCheckFullColumnRank(XR, caller, "NARDL auto-case restricted bounds design matrix");
+        bt_r = _qardlSafeInv(XR'*XR, caller,
+                             "NARDL auto-case restricted bounds moment matrix")*XR'*Y;
+        resid_r = Y - XR*bt_r;
+        rss_r = resid_r'*resid_r;
+    endif;
+
+    Fstat = ((rss_r - rss_u) / q_restrict) / (rss_u / (N - K_total));
+    tstat = bt_u[level_start] / sqrt(coef_cov[level_start, level_start]);
+    cv = ardlboundsCaseCV(k_bounds, case_id, 1000, 0, 0);
+
+    retp(Fstat, tstat, cv, case_id, q_restrict);
+endp;
+
 proc (2) = _nardlBuildSpecUECMDesign(data, ppp, q_decomp, decomp_idx,
-                                     control_idx, q_control, case_id = 3);
+                                     control_idx, q_control, case_id,
+                                     decomp_thresholds);
     local nn, ndecomp, ncontrol, max_lag, N, yy, x_pos, x_neg, dx_pos, dx_neg;
     local x_ctrl, dx_ctrl, Y, y_lag, pos_lag, neg_lag, ctrl_lag;
     local ONEX, dy_lags, dx_pos_lags, dx_neg_lags, dx_ctrl_lags;
@@ -1723,7 +2015,8 @@ proc (2) = _nardlBuildSpecUECMDesign(data, ppp, q_decomp, decomp_idx,
     N = nn - max_lag - 1;
     yy = data[., 1];
     { x_pos, x_neg, dx_pos, dx_neg } =
-        _nardlPartialSumsWithDiffs(data[., 1]~data[., 1 + decomp_idx]);
+        _nardlPartialSumsWithDiffs(data[., 1]~data[., 1 + decomp_idx],
+                                   decomp_thresholds);
 
     if ncontrol > 0;
         x_ctrl = data[., 1 + control_idx];
@@ -1820,7 +2113,8 @@ endp;
 
 proc (2) = _nardlPartialSums(data);
     local x_pos, x_neg, dx_pos, dx_neg;
-    { x_pos, x_neg, dx_pos, dx_neg } = _nardlPartialSumsWithDiffs(data);
+    { x_pos, x_neg, dx_pos, dx_neg } =
+        _nardlPartialSumsWithDiffs(data, _nardlInfThresh(cols(data) - 1));
     retp(x_pos, x_neg);
 endp;
 
@@ -1837,12 +2131,14 @@ proc (1) = _nardlDiffMatrix(xx);
     retp(dx);
 endp;
 
-proc (4) = _nardlPartialSumsWithDiffs(data);
+proc (4) = _nardlPartialSumsWithDiffs(data, decomp_thresholds);
     local nn, k0, xx, x_pos, x_neg, dx_pos, dx_neg, delta, ii, jj;
 
     nn = rows(data);
     k0 = cols(data) - 1;
     xx = data[., 2:cols(data)];
+    call _nardlValidateThreshVec(decomp_thresholds, k0,
+                                 "_nardlPartialSumsWithDiffs");
     x_pos = zeros(nn, k0);
     x_neg = zeros(nn, k0);
     dx_pos = zeros(nn, k0);
@@ -1867,7 +2163,161 @@ proc (4) = _nardlPartialSumsWithDiffs(data);
         ii = ii + 1;
     endo;
 
+    jj = 1;
+    do until jj > k0;
+        x_pos[., jj] = _nardlResetCumsum(dx_pos[., jj], decomp_thresholds[jj]);
+        x_neg[., jj] = _nardlResetCumsum(dx_neg[., jj], decomp_thresholds[jj]);
+        jj = jj + 1;
+    endo;
+
     retp(x_pos, x_neg, dx_pos, dx_neg);
+endp;
+
+proc (1) = _nardlResetCumsum(dx, threshold);
+    local out, ii;
+
+    out = zeros(rows(dx), 1);
+    out[1] = dx[1];
+    ii = 2;
+    do until ii > rows(dx);
+        if out[ii-1] >= threshold;
+            out[ii] = dx[ii];
+        else;
+            out[ii] = out[ii-1] + dx[ii];
+        endif;
+        ii = ii + 1;
+    endo;
+
+    retp(out);
+endp;
+
+proc (1) = _nardlInfThresh(k);
+    retp(1e256*ones(k, 1));
+endp;
+
+proc (1) = _nardlIsUnset(x);
+    if type(x) == 6;
+        if rows(x) == 1 and cols(x) == 1 and scalmiss(x);
+            retp(1);
+        endif;
+    endif;
+    retp(0);
+endp;
+
+proc (0) = _nardlValidateThreshVec(thresh, ndecomp, caller);
+    if type(thresh) /= 6;
+        errorlog caller $+ ": thresholds must resolve to a numeric matrix";
+        end;
+    endif;
+    if rows(thresh) /= ndecomp or cols(thresh) /= 1;
+        errorlog caller $+ ": threshold vector length must equal the number of decomposed variables";
+        end;
+    endif;
+    if ismiss(thresh);
+        errorlog caller $+ ": threshold values must not be missing";
+        end;
+    endif;
+endp;
+
+proc (1) = _nardlResolveThresh(data, decomp_idx, d, thresh1, thresh2, caller);
+    local ndecomp, out, ii;
+
+    ndecomp = rows(decomp_idx);
+    if type(d) == 6 and not _nardlIsUnset(d);
+        if rows(d) == 1 and cols(d) == 1;
+            out = d*ones(ndecomp, 1);
+        elseif rows(d) == ndecomp and cols(d) == 1;
+            out = d;
+        elseif rows(d) == 1 and cols(d) == ndecomp;
+            out = d';
+        else;
+            errorlog caller $+ ": d must be scalar or one value per decomposed variable";
+            end;
+        endif;
+    elseif type(d) == 13;
+        out = zeros(ndecomp, 1);
+        ii = 1;
+        do until ii > ndecomp;
+            out[ii] = _nardlOneThresh(data, decomp_idx[ii], d, caller);
+            ii = ii + 1;
+        endo;
+    elseif type(d) == 15;
+        if rows(d) == 1 and cols(d) == 1;
+            out = zeros(ndecomp, 1);
+            ii = 1;
+            do until ii > ndecomp;
+                out[ii] = _nardlOneThresh(data, decomp_idx[ii], d[1], caller);
+                ii = ii + 1;
+            endo;
+        elseif rows(d) == ndecomp or cols(d) == ndecomp;
+            out = zeros(ndecomp, 1);
+            ii = 1;
+            do until ii > ndecomp;
+                out[ii] = _nardlOneThresh(data, decomp_idx[ii], d[ii], caller);
+                ii = ii + 1;
+            endo;
+        else;
+            errorlog caller $+ ": string-array d must be scalar or one entry per decomposed variable";
+            end;
+        endif;
+    else;
+        errorlog caller $+ ": d must be numeric, \"inf\", \"mean\", or a string array";
+        end;
+    endif;
+
+    if not _nardlIsUnset(thresh1);
+        out[1] = _nardlOneThresh(data, decomp_idx[1], thresh1, caller);
+    endif;
+    if not _nardlIsUnset(thresh2);
+        if ndecomp < 2;
+            errorlog caller $+ ": thresh2 was supplied but fewer than two variables are decomposed";
+            end;
+        endif;
+        out[2] = _nardlOneThresh(data, decomp_idx[2], thresh2, caller);
+    endif;
+
+    call _nardlValidateThreshVec(out, ndecomp, caller);
+    retp(out);
+endp;
+
+proc (1) = _nardlOneThresh(data, xidx, spec, caller);
+    local th_key;
+
+    if type(spec) == 6;
+        if rows(spec) == 1 and cols(spec) == 1 and not scalmiss(spec);
+            retp(spec);
+        endif;
+        errorlog caller $+ ": threshold overrides must be numeric scalars";
+        end;
+    elseif type(spec) == 13;
+        th_key = lower(spec);
+        if th_key $== "inf" or th_key $== "infinity";
+            retp(1e256);
+        elseif th_key $== "mean";
+            retp(_nardlMeanDiff(data, xidx));
+        else;
+            errorlog caller $+ ": threshold strings must be \"inf\" or \"mean\"";
+            end;
+        endif;
+    endif;
+
+    errorlog caller $+ ": threshold overrides must be numeric, \"inf\", or \"mean\"";
+    end;
+endp;
+
+proc (1) = _nardlMeanDiff(data, xidx);
+    local xx, dx;
+
+    xx = data[., 1 + xidx];
+    dx = xx[2:rows(xx)] - xx[1:rows(xx)-1];
+    retp(meanc(dx));
+endp;
+
+proc (1) = _nardlUsesThresh(thresh);
+    if type(thresh) == 6;
+        retp(maxc(thresh .< 1e200));
+    endif;
+    retp(0);
 endp;
 
 proc (2) = _nardlOLSCov(X, resid, caller);

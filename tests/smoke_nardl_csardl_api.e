@@ -75,7 +75,8 @@ nardl_data = y~x1~x2;
 struct nardlOut naOut;
 naOut = nardl(nardl_data, 1, 1, "", 0);
 
-{ nY, nX, npos, nneg } = _nardlBuildDesign(nardl_data, 1, 1);
+{ nY, nX, npos, nneg } =
+    _nardlBuildDesign(nardl_data, 1, 1, _nardlInfThresh(2));
 expected_bt = _qardlSafeInv(nX'*nX, "smoke_nardl", "expected NARDL moment matrix")*nX'*nY;
 expected_resid = nY - nX*expected_bt;
 { expected_cov, expected_sigma2 } = _nardlOLSCov(nX, expected_resid, "smoke_nardl");
@@ -98,6 +99,8 @@ call assert_true(naOut.bounds_fstat > 0 and naOut.sigma2 > 0,
                  "nardl diagnostics invalid");
 call assert_true(naOut.nobs == rows(nY) and naOut.k == 2 and naOut.p == 1 and naOut.q == 1,
                  "nardl metadata invalid");
+call assert_true(rows(naOut.decomp_thresholds) == 2 and minc(naOut.decomp_thresholds .> 1e200),
+                 "nardl default threshold metadata invalid");
 
 nardl_fit = predictNARDL(naOut, nardl_data);
 call assert_close(nardl_fit, nX*expected_bt, 1e-10, "predictNARDL did not use stored design");
@@ -123,7 +126,9 @@ call assert_close(dmOut.asymmetry, dmOut.pos - dmOut.neg, 1e-12,
 struct nardlOut nsOut;
 nsOut = nardl(nardl_data, 1, 0, print_results = 0, decomp_vars = "x1",
               control_vars = "x2", q_decomp = 1, q_control = 1);
-{ nY, nX, npos, nneg } = _nardlBuildSpecDesign(nardl_data, 1, 1, { 1 }, { 2 }, 1);
+{ nY, nX, npos, nneg } =
+    _nardlBuildSpecDesign(nardl_data, 1, 1, { 1 }, { 2 }, 1,
+                          _nardlInfThresh(1));
 expected_bt = _qardlSafeInv(nX'*nX, "smoke_nardl_spec", "expected NARDL spec moment matrix")*nX'*nY;
 expected_resid = nY - nX*expected_bt;
 { expected_cov, expected_sigma2 } = _nardlOLSCov(nX, expected_resid, "smoke_nardl_spec");
@@ -147,6 +152,22 @@ call assert_close(predictNARDL(nsOut, nardl_data), nX*expected_bt, 1e-10,
                   "predictNARDL optional spec output changed");
 call assert_true(rows(forecastNARDL(nsOut, nardl_data, 2)) == 2,
                  "forecastNARDL optional spec output shape invalid");
+
+struct nardlOut nthOut;
+nthOut = nardl(nardl_data, 1, 0, "", 0, "x1", "x2", 1, 1, 0.50);
+call assert_true(rows(nthOut.decomp_thresholds) == 1 and nthOut.decomp_thresholds[1] == 0.50,
+                 "nardl scalar threshold metadata invalid");
+{ nY, nX, npos, nneg } =
+    _nardlBuildSpecDesign(nardl_data, 1, 1, { 1 }, { 2 }, 1, 0.50);
+call assert_close(nthOut.bt,
+                  _qardlSafeInv(nX'*nX, "smoke_nardl_thresh", "threshold moment matrix")*nX'*nY,
+                  1e-10, "nardl threshold bt does not match threshold design");
+
+struct nardlECMOut nthECM;
+nthECM = nardlECM(nardl_data, 1, 0, "", 0, "x1", "x2", 1, 1,
+                  "uecm", 3, 0.50);
+call assert_true(nthECM.decomp_thresholds[1] == 0.50 and nthECM.ecm_type $== "uecm",
+                 "nardlECM threshold metadata invalid");
 
 struct nardlOut nsAutoControl;
 nsAutoControl = nardl(nardl_data, 1, 1, "", 0, "x1", "", -1, 1);
@@ -224,6 +245,21 @@ call assert_true(nfOut.selection_criterion $== "gets" and nfOut.pst >= 1 and
                  nfOut.pst <= 2 and nfOut.qst >= 0 and nfOut.qst <= 2 and
                  nfOut.ecm.ecm_type $== "uecm",
                  "nardlFull GETS output invalid");
+
+struct nardlAutoCaseOut nacOut;
+nacOut = nardlAutoCase(default_nardl_data, 2, 2, "", 0, "x1", "x2", 1, 0.1);
+call assert_true(nacOut.selection_criterion $== "gets" and nacOut.pst >= 1 and
+                 nacOut.pst <= 2 and nacOut.qst >= 0 and nacOut.qst <= 2,
+                 "nardlAutoCase lag metadata invalid");
+call assert_true(nacOut.case_count == rows(nacOut.case_ids) and
+                 rows(nacOut.bounds_table) == nacOut.case_count and
+                 cols(nacOut.bounds_table) == 10,
+                 "nardlAutoCase case/bounds metadata invalid");
+call assert_true(nacOut.primary_case == nacOut.case_ids[rows(nacOut.case_ids)] and
+                 nacOut.ecm.ecm_type $== "uecm" and
+                 nacOut.ecm.deterministic $== _ardlDeterministicLabel(nacOut.primary_case) and
+                 nacOut.na.ndecomp == 1 and nacOut.na.ncontrol == 1,
+                 "nardlAutoCase nested output metadata invalid");
 
 /*
 ** CS-ARDL deterministic checks.  Panel data are balanced and stacked

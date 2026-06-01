@@ -9,6 +9,7 @@ Computes an information criterion for a specified NARDL lag order.
 ```gauss
 ic = nardlICMean(data, ppp, qqq);
 ic = nardlICMean(data, ppp, qqq, criterion);
+ic = nardlICMean(data, ppp, qqq, criterion, d, thresh1, thresh2);
 ```
 
 ## Parameters
@@ -17,6 +18,9 @@ ic = nardlICMean(data, ppp, qqq, criterion);
 - `ppp` (*scalar*) - AR lag order.
 - `qqq` (*scalar*) - Distributed-lag order.
 - `criterion` (*string*) - `"bic"` (default), `"aic"`, `"hq"`, or `"hqc"`.
+- `d`, `thresh1`, `thresh2` - Optional NARDL partial-sum reset threshold
+  controls. Default `"inf"` gives ordinary cumulative positive and negative
+  partial sums.
 
 ## Returns
 
@@ -26,11 +30,14 @@ ic = nardlICMean(data, ppp, qqq, criterion);
 
 Lower values are preferred. This helper uses the compatibility NARDL
 specification where every RHS regressor is decomposed.
+Non-default thresholds are applied before the candidate design matrix is
+estimated.
 
 ## Examples
 
 ```gauss
 ic = nardlICMean(data, 2, 1, "hq");
+ic_thresh = nardlICMean(data, 2, 1, "bic", 0);
 ```
 
 ## Source

@@ -38,7 +38,10 @@ Stored outputs:
 Source smoke tests also validate mixed decomposition/control models through
 the optional arguments on `nardl`, `nardlECM`, and `nardlFull` by manually
 reproducing the explicit design matrix, long-run coefficients, long-run
-covariance, metadata, prediction, and ECM output shapes.
+covariance, metadata, prediction, and ECM output shapes. Non-default
+partial-sum reset thresholds are covered by checking that `nardl(..., d = ...)`
+matches the explicitly constructed threshold design matrix and that
+`nardlECM` carries the same `decomp_thresholds` metadata.
 
 Run:
 
@@ -65,12 +68,14 @@ Before marking the published NARDL replication complete, add:
 ## Interpretation Notes
 
 The compatibility `nardl` workflow decomposes each RHS regressor into
-cumulative positive and negative changes. Optional `decomp_vars` and
-`control_vars` allow users to decompose selected variables while keeping other
-variables as linear controls. The positive and negative long-run coefficients
-are reported separately as `beta_pos` and `beta_neg`; linear-control long-run
-coefficients are reported as `beta_control`. Long-run asymmetry tests compare
-positive and negative paths for decomposed variables only.
+cumulative positive and negative changes by default. Optional `d`, `thresh1`,
+and `thresh2` arguments implement reset-threshold partial sums, matching the
+CRAN `ardl.nardl` convention. Optional `decomp_vars` and `control_vars` allow
+users to decompose selected variables while keeping other variables as linear
+controls. The positive and negative long-run coefficients are reported
+separately as `beta_pos` and `beta_neg`; linear-control long-run coefficients
+are reported as `beta_control`. Long-run asymmetry tests compare positive and
+negative paths for decomposed variables only.
 
 `nardlDynamicMultipliers` reports the horizon-by-horizon adjustment implied by
 the estimated levels equation. `pos` and `neg` are responses to one-unit changes

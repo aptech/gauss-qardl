@@ -187,6 +187,20 @@ call assert_true(afOut.deterministic $== "case IV: unrestricted intercept, restr
                  rows(afOut.ardl_cv) == 3,
                  "ardlFull Case IV bounds output invalid");
 
+struct ardlAutoCaseOut acOut;
+acOut = ardlAutoCase(data, 2, 2, "", 0, 0.1);
+call assert_true(acOut.selection_criterion $== "gets" and acOut.pst >= 1 and
+                 acOut.pst <= 2 and acOut.qst >= 0 and acOut.qst <= 2,
+                 "ardlAutoCase lag metadata invalid");
+call assert_true(acOut.case_count == rows(acOut.case_ids) and
+                 rows(acOut.bounds_table) == acOut.case_count and
+                 cols(acOut.bounds_table) == 10,
+                 "ardlAutoCase case/bounds metadata invalid");
+call assert_true(acOut.primary_case == acOut.case_ids[rows(acOut.case_ids)] and
+                 acOut.ecm.ecm_type $== "uecm" and
+                 acOut.ecm.deterministic $== _ardlDeterministicLabel(acOut.primary_case),
+                 "ardlAutoCase nested ECM metadata invalid");
+
 struct qardlOut qaQ0Out;
 qaQ0Out = qardl(data, 2, 0, tau, "iid", 0, 0);
 call assert_true(qaQ0Out.q == 0 and rows(qaQ0Out.gamma) == 2*rows(tau),

@@ -12,7 +12,9 @@ embedded in every estimator call.
 | UECM deterministic cases | Cases I-V | Default Case III | Cases I-V | Default Case III |
 | Formula strings | Yes | Yes | Yes | Yes |
 | Automatic lag selection | IC and GETS | IC and GETS | IC and GETS | IC and GETS |
+| Auto-case workflow | Yes | No | Yes | No |
 | Explicit decomposed-variable / linear-control NARDL specs | Not applicable | Not applicable | Yes | Not applicable |
+| NARDL partial-sum reset thresholds | Not applicable | Not applicable | Yes | Not applicable |
 | Default max `p`, `q` when omitted | 8, 8 | 8, 8 | 8, 8 | 8, 8 |
 | Unified prediction | Yes | Yes | Yes | Yes |
 | Unified point forecast | Yes | Yes | Yes | Yes |

@@ -32,11 +32,9 @@ formula = "y ~ x1 + x2";
 
 // Step 3: Run the integrated NARDL workflow. Omitting pend/qend uses the
 //         package default maximum lag search bounds.
-struct nardlFullOut nfOut;
 nfOut = nardlFull(df, formula = formula, verbose = 0, criterion = "bic");
 
 // Step 4: Estimate the matching ECM representation at the selected lag orders.
-struct nardlECMOut nECMOut;
 nECMOut = nardlECM(df, nfOut.pst, nfOut.qst, formula, 0);
 
 // Step 5: Inspect workflow-level fields and model-specific asymmetry output.

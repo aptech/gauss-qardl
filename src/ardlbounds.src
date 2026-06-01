@@ -53,7 +53,7 @@ proc (5) = ardlboundsCase(data, ppp, qqq, case_id);
     local y_lag, x_lag, dy_lags, dx, trend, ONEX, Y, ONEX_R;
     local N, K_total, det_cols, level_start, level_end, q_restrict;
     local bt_ols, cov_ols, sigma2, RSS_U, RSS_R, Fstat, tstat, cv;
-    local keep_cols, drop_start, drop_end, bt_R;
+    local keep_cols, drop_start, drop_end, bt_R, has_restricted;
 
     call _qardlValidateEstimatorInputs(data, ppp, qqq, { 0.5 }, "ardlboundsCase");
     call _ardlboundsValidateCase(case_id);
@@ -137,7 +137,11 @@ proc (5) = ardlboundsCase(data, ppp, qqq, case_id);
 
     q_restrict = drop_end - drop_start + 1;
 
-    if drop_start == 1;
+    has_restricted = not (drop_start == 1 and drop_end == K_total);
+
+    if not has_restricted;
+        RSS_R = sumc(Y.^2);
+    elseif drop_start == 1;
         ONEX_R = ONEX[., drop_end+1:K_total];
     elseif drop_end == K_total;
         ONEX_R = ONEX[., 1:drop_start-1];
@@ -145,9 +149,11 @@ proc (5) = ardlboundsCase(data, ppp, qqq, case_id);
         ONEX_R = ONEX[., 1:drop_start-1]~ONEX[., drop_end+1:K_total];
     endif;
 
-    call _qardlCheckFullColumnRank(ONEX_R, "ardlboundsCase", "restricted bounds-test design matrix");
-    bt_R = _qardlSafeInv(ONEX_R'*ONEX_R, "ardlboundsCase", "restricted bounds-test moment matrix")*ONEX_R'*Y;
-    RSS_R = sumc((Y - ONEX_R*bt_R).^2);
+    if has_restricted;
+        call _qardlCheckFullColumnRank(ONEX_R, "ardlboundsCase", "restricted bounds-test design matrix");
+        bt_R = _qardlSafeInv(ONEX_R'*ONEX_R, "ardlboundsCase", "restricted bounds-test moment matrix")*ONEX_R'*Y;
+        RSS_R = sumc((Y - ONEX_R*bt_R).^2);
+    endif;
 
     Fstat = ((RSS_R - RSS_U) / q_restrict) / (RSS_U / (N - K_total));
     tstat = bt_ols[level_start] / sqrt(cov_ols[level_start, level_start]);
