@@ -272,6 +272,18 @@ nfThresh = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
                      "x1", "x2", 1, "uecm", 0.1, 3, 0);
 ```
 
+NARDL estimators also support R-style short-run and long-run symmetry
+restrictions. Use `symmetry = "SRSR"` to constrain positive and negative
+short-run change coefficients, `symmetry = "LRSR"` to constrain long-run
+positive and negative effects, or `symmetry = "both"`:
+
+```gauss
+nSym = nardlECM(df, 2, 2, formula = "y ~ x1 + x2", print_results = 0,
+                decomp_vars = "x1", control_vars = "x2",
+                q_control = 1, ecm_type = "uecm",
+                symmetry = "both");
+```
+
 Use `csardlFull` for pooled cross-sectionally augmented ARDL panels:
 
 ```gauss

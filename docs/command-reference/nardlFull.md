@@ -11,7 +11,7 @@ estimation.
 nfOut = nardlFull(data);
 nfOut = nardlFull(data, pend, qend, formula, verbose, criterion,
                   decomp_vars, control_vars, q_control, ecm_type, gets_pval,
-                  case_id, d, thresh1, thresh2);
+                  case_id, d, thresh1, thresh2, symmetry);
 ```
 
 ## Parameters
@@ -36,6 +36,8 @@ nfOut = nardlFull(data, pend, qend, formula, verbose, criterion,
 - `d`, `thresh1`, `thresh2` - Partial-sum reset threshold controls shared
   with `nardl`. The selected threshold vector is stored in
   `nfOut.decomp_thresholds` and nested estimator outputs.
+- `symmetry` (*string*) - Optional NARDL symmetry restriction passed to
+  `.na` and `.ecm`: `"none"` (default), `"SRSR"`, `"LRSR"`, or `"both"`.
 
 ## Returns
 
@@ -54,6 +56,9 @@ levels estimator stored in `.na` remains the standard constant-only NARDL
 levels model.
 When thresholds are supplied, lag selection, the levels estimator, and the ECM
 all use the same partial-sum reset rule.
+When `symmetry` is supplied, the selected NARDL levels and ECM outputs both
+store `symmetry_restriction` and apply the requested short-run and/or long-run
+constraints.
 
 ## Examples
 
@@ -68,6 +73,9 @@ nfCaseI = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
                     "x1", "x2", 1, "uecm", 0.1, 1);
 nfThresh = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
                      "x1", "x2", 1, "uecm", 0.1, 3, 0);
+nfSym = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
+                  "x1", "x2", 1, "uecm", 0.1, 3,
+                  "inf", error(0), error(0), "LRSR");
 printNARDL(nfOut.na);
 printNARDLECM(nfOut.ecm);
 ```

@@ -163,6 +163,13 @@ call assert_close(nthOut.bt,
                   _qardlSafeInv(nX'*nX, "smoke_nardl_thresh", "threshold moment matrix")*nX'*nY,
                   1e-10, "nardl threshold bt does not match threshold design");
 
+struct nardlOut nsymOut;
+nsymOut = nardl(nardl_data, 1, 1, print_results = 0, symmetry = "both");
+call assert_true(nsymOut.symmetry_restriction $== "both" and
+                 maxc(abs(nsymOut.beta_pos - nsymOut.beta_neg)) < 1e-10 and
+                 maxc(abs(nsymOut.bt[7:8] - nsymOut.bt[9:10])) < 1e-10,
+                 "nardl symmetry restrictions invalid");
+
 struct nardlECMOut nthECM;
 nthECM = nardlECM(nardl_data, 1, 0, "", 0, "x1", "x2", 1, 1,
                   "uecm", 3, 0.50);
@@ -203,6 +210,16 @@ nECMOut = nardlECM(nardl_data, 1, 1, "", 0, "", "", -1, 0, "uecm", 5);
 call assert_true(nECMOut.deterministic $== "case V: unrestricted intercept, unrestricted trend" and
                  rows(nECMOut.bt) == 11 and rows(nECMOut.beta_pos) == 2,
                  "nardlECM Case V UECM output invalid");
+nECMOut = nardlECM(nardl_data, 1, 1, print_results = 0,
+                   ecm_type = "uecm", symmetry = "both");
+call assert_true(nECMOut.symmetry_restriction $== "both" and
+                 maxc(abs(nECMOut.beta_pos - nECMOut.beta_neg)) < 1e-10 and
+                 maxc(abs(nECMOut.bt[7:8] - nECMOut.bt[9:10])) < 1e-10,
+                 "nardlECM UECM symmetry restrictions invalid");
+nECMOut = nardlECM(nardl_data, 1, 1, print_results = 0, symmetry = "SRSR");
+call assert_true(nECMOut.symmetry_restriction $== "SRSR" and
+                 maxc(abs(nECMOut.bt[3:4] - nECMOut.bt[5:6])) < 1e-10,
+                 "nardlECM two-step SRSR restrictions invalid");
 
 struct nardlFullOut nfOut;
 nfOut = nardlFull(nardl_data, 1, 1, "", 0);
@@ -222,6 +239,12 @@ nfOut = nardlFull(nardl_data, 1, 1, "", 0, "bic", "", "", 0, "uecm", 0.1, 1);
 call assert_true(nfOut.deterministic $== "case I: no intercept, no trend" and
                  rows(nfOut.ecm.bt) == 9,
                  "nardlFull Case I UECM output invalid");
+nfOut = nardlFull(nardl_data, 1, 1, "", 0, "bic", "", "", 0,
+                  "uecm", 0.1, 3, "inf", error(0), error(0), "LRSR");
+call assert_true(nfOut.na.symmetry_restriction $== "LRSR" and
+                 nfOut.ecm.symmetry_restriction $== "LRSR" and
+                 maxc(abs(nfOut.ecm.beta_pos - nfOut.ecm.beta_neg)) < 1e-10,
+                 "nardlFull symmetry metadata invalid");
 
 rndseed 260511;
 n_default = 120;

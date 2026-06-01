@@ -41,7 +41,7 @@ table export, and validation infrastructure.
 | NARDL GETS selection | `gets_nardl_uecm()` and `nardl_auto_case()` perform general-to-specific reduction. | `nardlFull()` and `nardlOrder()` accept `criterion = "gets"` and `gets_pval`; `nardlAutoCase(..., gets_mode = "sparse")` prunes individual non-level Case V NARDL UECM terms. | Partial | GAUSS now covers hierarchical lag-block GETS plus sparse auto-case UECM pruning; standalone sparse `gets_nardl_uecm` output parity remains deferred. |
 | NARDL automatic case workflow | `nardl_auto_case()` combines NARDL, GETS, and case selection. | `nardlAutoCase()` combines hierarchical or sparse GETS, named NARDL decomposition/control specs, threshold reset options, Case V deterministic-term inference, and case-specific bounds rows. | Broad partial | Sparse mode stores the pruned Case V NARDL UECM fit in `sparse_*` fields while retaining dense `.ecm` compatibility output. |
 | NARDL long-run and short-run asymmetry tests | `nardl_uecm()` / GETS outputs include long-run and short-run asymmetry tests. | `nardl()` / `nardlECM()` report long-run and short-run asymmetry Wald tests. | Broad match | Exact finite-sample/sample-convention parity still depends on model parameterization. |
-| NARDL symmetry-restricted estimation | `nardl_uecm_sym()` estimates SRSR and LRSR restrictions. | Wald tests exist; constrained SRSR/LRSR estimators are not public. | Gap | Add constrained NARDL estimators for full parity. |
+| NARDL symmetry-restricted estimation | `nardl_uecm_sym()` estimates SRSR and LRSR restrictions. | `nardl`, `nardlECM`, and `nardlFull` accept `symmetry = "SRSR"`, `"LRSR"`, or `"both"` to impose short-run and/or long-run symmetry restrictions. | Broad match | GAUSS exposes the restrictions through existing procedures rather than a separate function; exact R printed-list parity remains deferred. |
 | NARDL dynamic multipliers | Not a primary exported command in `ardl.nardl` 1.3.0. | `nardlDynamicMultipliers()`. | GAUSS-only | Useful GAUSS extension beyond the R package surface. |
 | Residual diagnostics | Estimator outputs include BG serial-correlation, ARCH LM, Jarque-Bera, RESET, and Ljung-Box diagnostics. | `ardlResidualDiagnostics()` includes residual diagnostics and CUSUM/CUSUMSQ stability; CS-ARDL has separate panel diagnostics. | Partial | GAUSS lacks direct BG LM, ARCH LM, and RESET parity rows. |
 | Stability plots/tests | Imports/help entries for `cusum` and `cumsq`; `graph_save` can display stability plots. | CUSUM/CUSUMSQ residual stability diagnostics and QARDL/rolling plot helpers. | Partial | GAUSS has diagnostics and richer QARDL plotting; R integrates stability plots into ARDL/NARDL workflows. |
@@ -70,10 +70,9 @@ table export, and validation infrastructure.
 | Priority | Gap | Why it matters |
 | ---: | --- | --- |
 | 1 | Standalone sparse GETS outputs | Auto-case sparse UECM pruning exists for ARDL/NARDL; standalone `gets_*_uecm`-style public outputs with term labels and exact `gets.lm` parity are still deferred. |
-| 2 | Symmetry-restricted NARDL estimators | GAUSS has asymmetry tests, but not public constrained SRSR/LRSR estimators like `nardl_uecm_sym()`. |
-| 3 | Diagnostic parity | Add BG LM, ARCH LM, RESET, and R-style Ljung-Box reporting where applicable. |
-| 4 | Two-step deterministic-case expansion | Cases I-V are implemented for ARDL/NARDL UECM paths; non-default two-step ECM cases remain intentionally deferred. |
-| 5 | Optional example datasets/replications | Useful for user onboarding, but lower priority than estimator parity. |
+| 2 | Diagnostic parity | Add BG LM, ARCH LM, RESET, and R-style Ljung-Box reporting where applicable. |
+| 3 | Two-step deterministic-case expansion | Cases I-V are implemented for ARDL/NARDL UECM paths; non-default two-step ECM cases remain intentionally deferred. |
+| 4 | Optional example datasets/replications | Useful for user onboarding, but lower priority than estimator parity. |
 
 ## GAUSS Scope Beyond R `ardl.nardl`
 

@@ -15,6 +15,7 @@ embedded in every estimator call.
 | Auto-case workflow | Yes; hierarchical or sparse GETS | No | Yes; hierarchical or sparse GETS | No |
 | Explicit decomposed-variable / linear-control NARDL specs | Not applicable | Not applicable | Yes | Not applicable |
 | NARDL partial-sum reset thresholds | Not applicable | Not applicable | Yes | Not applicable |
+| NARDL SRSR/LRSR symmetry restrictions | Not applicable | Not applicable | Yes | Not applicable |
 | Default max `p`, `q` when omitted | 8, 8 | 8, 8 | 8, 8 | 8, 8 |
 | Unified prediction | Yes | Yes | Yes | Yes |
 | Unified point forecast | Yes | Yes | Yes | Yes |

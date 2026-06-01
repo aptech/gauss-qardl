@@ -185,6 +185,7 @@ call assert_true(rows(na_formula.qvec) == 2 and rows(na_formula.fitted) == na_fo
 call assert_true(rows(na_formula.decomp_thresholds) == 2 and
                  minc(na_formula.decomp_thresholds .> 1e200),
                  "NARDL default threshold metadata");
+call assert_string(na_formula.symmetry_restriction, "none", "NARDL symmetry metadata");
 call assert_true(na_formula.design_rank == na_formula.design_cols and na_formula.design_condition >= 1,
                  "NARDL design rank/condition metadata");
 struct nardlOut na_spec;
@@ -216,6 +217,7 @@ call assert_true(rows(necm.qvec) == 2 and rows(necm.fitted) == necm.nobs,
 call assert_true(rows(necm.decomp_thresholds) == 2 and
                  minc(necm.decomp_thresholds .> 1e200),
                  "NARDL-ECM default threshold metadata");
+call assert_string(necm.symmetry_restriction, "none", "NARDL-ECM symmetry metadata");
 call assert_true(necm.design_rank == necm.design_cols and necm.design_condition >= 1,
                  "NARDL-ECM design rank/condition metadata");
 struct nardlECMOut necm_spec;

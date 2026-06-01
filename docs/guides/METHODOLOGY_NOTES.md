@@ -71,6 +71,11 @@ per-decomposed-variable threshold vectors are supported.
 The package stores positive and negative long-run effects, optional
 linear-control long-run effects, and long-run asymmetry tests where the output
 structure contains the required statistics.
+Optional `symmetry` restrictions on `nardl`, `nardlECM`, and `nardlFull`
+support the R-package SRSR/LRSR workflow: `"SRSR"` constrains positive and
+negative short-run partial-sum change coefficients to be equal, `"LRSR"`
+constrains positive and negative long-run level effects to be equal, and
+`"both"` imposes both restrictions.
 
 `nardlECM` defaults to the same restricted two-step ECM pattern and can run a
 direct unrestricted ECM with `ecm_type = "uecm"`. NARDL UECM designs accept

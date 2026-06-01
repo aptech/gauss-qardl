@@ -358,6 +358,7 @@ struct nardlOut {
     string covariance_type;
     string selection_criterion;
     string ecm_type;
+    string symmetry_restriction;
 
     // Row-index sample metadata
     scalar sample_start;
@@ -461,6 +462,7 @@ struct nardlECMOut {
     string covariance_type;
     string selection_criterion;
     string ecm_type;
+    string symmetry_restriction;
 
     // Row-index sample metadata
     scalar sample_start;

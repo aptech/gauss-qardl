@@ -11,6 +11,9 @@ nECMOut = nardlECM(data, ppp, qqq);
 nECMOut = nardlECM(data, ppp, qqq, formula, print_results,
                    decomp_vars, control_vars, q_decomp, q_control,
                    ecm_type, case_id, d, thresh1, thresh2);
+nECMOut = nardlECM(data, ppp, qqq, formula, print_results,
+                   decomp_vars, control_vars, q_decomp, q_control,
+                   ecm_type, case_id, d, thresh1, thresh2, symmetry);
 ```
 
 ## Parameters
@@ -30,13 +33,17 @@ nECMOut = nardlECM(data, ppp, qqq, formula, print_results,
 - `d`, `thresh1`, `thresh2` - Partial-sum reset threshold controls shared
   with `nardl`. Default `"inf"` gives ordinary cumulative positive and
   negative partial sums.
+- `symmetry` (*string*) - Optional symmetry restriction: `"none"` (default),
+  `"SRSR"` for short-run symmetry, `"LRSR"` for long-run symmetry, or
+  `"both"`.
 
 ## Returns
 
 `nECMOut` is a `nardlECMOut` structure containing long-run positive,
 negative, and optional control effects, ECM `alpha` and `rho`, their scalar
 covariance entries, OLS ECM coefficients, fitted values, residuals, and NARDL
-decomposition metadata including `decomp_thresholds`.
+decomposition metadata including `decomp_thresholds` and
+`symmetry_restriction`.
 
 ## Remarks
 
@@ -50,6 +57,10 @@ intercept, and Cases IV-V include intercept and trend. Any trend coefficient
 is stored in `bt`.
 The same threshold settings are used in the long-run levels relation and the
 ECM design so two-step and unrestricted fits remain internally consistent.
+`symmetry = "SRSR"` imposes equality on positive and negative short-run
+partial-sum change coefficients. `symmetry = "LRSR"` imposes equality on the
+positive and negative long-run level effects. `symmetry = "both"` applies both
+restrictions.
 
 ## Examples
 
@@ -64,6 +75,9 @@ nCaseI = nardlECM(df, 2, 2, "y ~ x1 + x2", 0,
                   "x1", "x2", 2, 1, "uecm", 1);
 nThresh = nardlECM(df, 2, 2, "y ~ x1 + x2", 0,
                    "x1", "x2", 2, 1, "uecm", 3, 0);
+nSym = nardlECM(df, 2, 2, "y ~ x1 + x2", 0,
+                "x1", "x2", 2, 1, "uecm", 3,
+                "inf", error(0), error(0), "both");
 ```
 
 ## Source

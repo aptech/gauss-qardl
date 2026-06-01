@@ -21,6 +21,8 @@ coverage, and release-verification tooling.
 - Added R-style NARDL partial-sum reset thresholds through `d`, `thresh1`,
   and `thresh2`, with default standard cumulative sums plus `"mean"`, `0`,
   custom scalar, and per-variable threshold support.
+- Added NARDL SRSR/LRSR symmetry-restricted estimation through the optional
+  `symmetry` argument on `nardl`, `nardlECM`, and `nardlFull`.
 - Added `ardlAutoCase` and `nardlAutoCase` wrappers for GETS lag selection,
   deterministic-case inference from Case V UECMs, admissible case-set
   reporting, and case-specific bounds rows.

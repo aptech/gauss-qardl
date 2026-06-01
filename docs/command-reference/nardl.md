@@ -15,6 +15,9 @@ naOut = nardl(data, ppp, qqq, formula, print_results,
 naOut = nardl(data, ppp, qqq, formula, print_results,
               decomp_vars, control_vars, q_decomp, q_control,
               d, thresh1, thresh2);
+naOut = nardl(data, ppp, qqq, formula, print_results,
+              decomp_vars, control_vars, q_decomp, q_control,
+              d, thresh1, thresh2, symmetry);
 ```
 
 ## Parameters
@@ -41,6 +44,9 @@ naOut = nardl(data, ppp, qqq, formula, print_results,
 - `thresh1`, `thresh2` (*string or numeric*) - R-compatible aliases for the
   first and second decomposed-variable reset thresholds. If supplied, these
   override the corresponding entries implied by `d`.
+- `symmetry` (*string*) - Optional symmetry restriction: `"none"` (default),
+  `"SRSR"` for short-run symmetry, `"LRSR"` for long-run symmetry, or
+  `"both"`.
 
 ## Returns
 
@@ -55,7 +61,7 @@ naOut = nardl(data, ppp, qqq, formula, print_results,
 - `bounds_fstat` - Bounds-style F-statistic from the NARDL UECM design.
 - `fitted`, `resid`, `sigma2`, `coef_cov` - OLS diagnostics.
 - Metadata fields including `decomp_vars`, `control_vars`, `qvec`,
-  `control_qvec`, and `decomp_thresholds`.
+  `control_qvec`, `decomp_thresholds`, and `symmetry_restriction`.
 
 ## Remarks
 
@@ -72,6 +78,11 @@ split into positive and negative changes by sign, and the threshold controls
 when the running partial sum is reset. The default `"inf"` is ordinary
 cumulative-sum behavior.
 
+`symmetry = "SRSR"` imposes equality on positive and negative short-run
+partial-sum change coefficients. `symmetry = "LRSR"` imposes equality on the
+positive and negative long-run level effects. `symmetry = "both"` applies both
+restrictions.
+
 ## Examples
 
 ```gauss
@@ -87,6 +98,10 @@ naThresh = nardl(df, 2, 2, formula = "y ~ x1 + x2",
                  print_results = 0, decomp_vars = "x1",
                  control_vars = "x2", q_control = 1,
                  d = 0);
+naSym = nardl(df, 2, 2, formula = "y ~ x1 + x2",
+              print_results = 0, decomp_vars = "x1",
+              control_vars = "x2", q_control = 1,
+              symmetry = "LRSR");
 
 printNARDL(naOut);
 ```

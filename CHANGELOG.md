@@ -34,6 +34,9 @@
   `nardlICMean`. Default `d = "inf"` preserves the standard cumulative-sum
   decomposition; `"mean"`, `0`, custom scalars, and threshold vectors are
   supported.
+- NARDL short-run and long-run symmetry-restricted estimation through optional
+  `symmetry = "SRSR"`, `"LRSR"`, or `"both"` arguments on `nardl`,
+  `nardlECM`, and `nardlFull`.
 - `ardlAutoCase` and `nardlAutoCase` workflows for hierarchical GETS lag
   selection, Case V UECM deterministic-term screening, admissible
   Pesaran-Shin-Smith case-set reporting, case-specific bounds rows, and nested

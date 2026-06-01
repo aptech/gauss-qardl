@@ -36,7 +36,8 @@
 proc (struct nardlOut) = nardl(data, ppp, qqq, formula = "", print_results = 1,
                               decomp_vars = "", control_vars = "",
                               q_decomp = -1, q_control = 0, d = "inf",
-                              thresh1 = error(0), thresh2 = error(0));
+                              thresh1 = error(0), thresh2 = error(0),
+                              symmetry = "none");
     local q_eff;
     struct nardlOut naOut;
 
@@ -47,7 +48,8 @@ proc (struct nardlOut) = nardl(data, ppp, qqq, formula = "", print_results = 1,
 
     naOut = _nardlEstimateLevels(data, ppp, q_eff, formula, print_results,
                                  decomp_vars, control_vars, q_control,
-                                 "nardl", "none", d, thresh1, thresh2);
+                                 "nardl", "none", d, thresh1, thresh2,
+                                 symmetry);
     retp(naOut);
 endp;
 
@@ -58,14 +60,14 @@ proc (struct nardlOut) = _nardlEstimateLevels(data, ppp, q_decomp, formula,
                                              print_results, decomp_vars,
                                              control_vars, q_control, caller,
                                              selection_criterion, d, thresh1,
-                                             thresh2);
+                                             thresh2, symmetry);
     local Y, ONEX, x_pos, x_neg, bt, denom, k0, ndecomp, ncontrol;
     local decomp_idx, control_idx, decomp_names, control_names;
     local theta_pos, theta_neg, theta_control, phi, beta_pos, beta_neg, beta_control;
     local theta_neg_start, theta_control_start, phi_start;
     local fitted, resid, coef_cov, sigma2, bigbt_cov, phi_cov, gamma_cov;
     local asym_wald, asym_pv, sr_wald, sr_pv, bounds_fstat;
-    local depvar, xvars, qvec, decomp_thresholds;
+    local depvar, xvars, qvec, decomp_thresholds, R_sym;
 
     { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
     data = applyNARDLFormula(data, formula);
@@ -83,16 +85,17 @@ proc (struct nardlOut) = _nardlEstimateLevels(data, ppp, q_decomp, formula,
                                   decomp_idx, control_idx, caller);
     decomp_thresholds = _nardlResolveThresh(data, decomp_idx, d, thresh1,
                                             thresh2, caller);
+    symmetry = _nardlNormalizeSymmetry(symmetry, caller);
 
     { Y, ONEX, x_pos, x_neg } =
         _nardlBuildSpecDesign(data, ppp, q_decomp, decomp_idx, control_idx,
                               q_control, decomp_thresholds);
     call _qardlCheckFullColumnRank(ONEX, caller, "levels design matrix");
 
-    bt = _qardlSafeInv(ONEX'*ONEX, caller, "levels moment matrix")*ONEX'*Y;
-    fitted = ONEX*bt;
-    resid = Y - fitted;
-    { coef_cov, sigma2 } = _nardlOLSCov(ONEX, resid, caller);
+    R_sym = _nardlSymRestrLvl(ppp, q_decomp, ndecomp, ncontrol,
+                              q_control, symmetry);
+    { bt, fitted, resid, coef_cov, sigma2 } =
+        _nardlRestrictedOLS(Y, ONEX, R_sym, caller, "levels");
 
     theta_neg_start = 2 + ndecomp;
     theta_control_start = 2 + 2*ndecomp;
@@ -140,6 +143,7 @@ proc (struct nardlOut) = _nardlEstimateLevels(data, ppp, q_decomp, formula,
     naOut.covariance_type = "ols";
     naOut.selection_criterion = selection_criterion;
     naOut.ecm_type = "none";
+    naOut.symmetry_restriction = symmetry;
     naOut.sample_start = 1;
     naOut.sample_end = rows(data);
     naOut.estimation_start = rows(data) - rows(Y) + 1;
@@ -216,7 +220,8 @@ proc (struct nardlECMOut) = nardlECM(data, ppp, qqq, formula = "",
                                     control_vars = "", q_decomp = -1,
                                     q_control = 0, ecm_type = "two-step",
                                     case_id = 3, d = "inf",
-                                    thresh1 = error(0), thresh2 = error(0));
+                                    thresh1 = error(0), thresh2 = error(0),
+                                    symmetry = "none");
     local q_eff;
     struct nardlECMOut nECMOut;
 
@@ -228,7 +233,7 @@ proc (struct nardlECMOut) = nardlECM(data, ppp, qqq, formula = "",
     nECMOut = _nardlEstimateECM(data, ppp, q_eff, formula, print_results,
                                 decomp_vars, control_vars, q_control,
                                 "nardlECM", "none", ecm_type, case_id,
-                                d, thresh1, thresh2);
+                                d, thresh1, thresh2, symmetry);
     retp(nECMOut);
 endp;
 
@@ -239,13 +244,14 @@ proc (struct nardlECMOut) = _nardlEstimateECM(data, ppp, q_decomp, formula,
                                              print_results, decomp_vars,
                                              control_vars, q_control, caller,
                                              selection_criterion, ecm_type,
-                                             case_id, d, thresh1, thresh2);
+                                             case_id, d, thresh1, thresh2,
+                                             symmetry);
     local Y_ecm, ONEX_ecm, bt_ecm, fitted, resid, coef_cov, sigma2;
     local depvar, xvars, decomp_idx, control_idx, decomp_names, control_names;
     local raw_data;
     local ndecomp, ncontrol, pos_start, neg_start, ctrl_start, lr_cov;
     local beta_pos_ecm, beta_neg_ecm, beta_control_ecm, asym_wald_ecm, asym_pv_ecm;
-    local det_cols, rho_pos, decomp_thresholds;
+    local det_cols, rho_pos, decomp_thresholds, R_sym;
 
     raw_data = data;
     { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
@@ -256,6 +262,7 @@ proc (struct nardlECMOut) = _nardlEstimateECM(data, ppp, q_decomp, formula,
         q_control = 0;
     endif;
     ecm_type = _ardlNormalizeECMType(ecm_type, caller, 0);
+    symmetry = _nardlNormalizeSymmetry(symmetry, caller);
     call _ardlValidateCaseID(case_id, caller);
     call _ardlValidateECMCase(ecm_type, case_id, caller);
     call _nardlValidateSpecInputs(data, ppp, q_decomp, q_control,
@@ -267,7 +274,7 @@ proc (struct nardlECMOut) = _nardlEstimateECM(data, ppp, q_decomp, formula,
     naOut = _nardlEstimateLevels(raw_data, ppp, q_decomp, formula, 0,
                                  decomp_vars, control_vars, q_control,
                                  caller, selection_criterion, d, thresh1,
-                                 thresh2);
+                                 thresh2, symmetry);
 
     if ecm_type $== "uecm";
         { Y_ecm, ONEX_ecm } =
@@ -282,15 +289,20 @@ proc (struct nardlECMOut) = _nardlEstimateECM(data, ppp, q_decomp, formula,
     endif;
     call _qardlCheckFullColumnRank(ONEX_ecm, caller, "ECM design matrix");
 
-    bt_ecm = _qardlSafeInv(ONEX_ecm'*ONEX_ecm, caller, "ECM moment matrix")*ONEX_ecm'*Y_ecm;
-    fitted = ONEX_ecm*bt_ecm;
-    resid = Y_ecm - fitted;
-    { coef_cov, sigma2 } = _nardlOLSCov(ONEX_ecm, resid, caller);
-
     ndecomp = rows(decomp_idx);
     ncontrol = _nardlIndexCount(control_idx);
     det_cols = _ardlDeterministicColumnCount(case_id);
     rho_pos = det_cols + 1;
+    if ecm_type $== "uecm";
+        R_sym = _nardlSymRestrUECM(ppp, q_decomp, ndecomp, ncontrol,
+                                   q_control, case_id, symmetry);
+    else;
+        R_sym = _nardlSymRestrECM(ppp, q_decomp, ndecomp, ncontrol,
+                                  q_control, symmetry);
+    endif;
+    { bt_ecm, fitted, resid, coef_cov, sigma2 } =
+        _nardlRestrictedOLS(Y_ecm, ONEX_ecm, R_sym, caller, "ECM");
+
     if ecm_type $== "uecm";
         pos_start = rho_pos + 1;
         neg_start = pos_start + ndecomp;
@@ -325,6 +337,7 @@ proc (struct nardlECMOut) = _nardlEstimateECM(data, ppp, q_decomp, formula,
     nECMOut.covariance_type = "ols";
     nECMOut.selection_criterion = selection_criterion;
     nECMOut.ecm_type = ecm_type;
+    nECMOut.symmetry_restriction = symmetry;
     nECMOut.sample_start = 1;
     nECMOut.sample_end = rows(data);
     nECMOut.estimation_start = rows(data) - rows(Y_ecm) + 1;
@@ -382,7 +395,7 @@ endp;
 **              nfOut = nardlFull(data, pend, qend, formula, verbose, criterion,
 **                                decomp_vars, control_vars, q_control,
 **                                ecm_type, gets_pval, case_id, d,
-**                                thresh1, thresh2);
+**                                thresh1, thresh2, symmetry);
 **
 **  Note:       If omitted, pend and qend default to 8.
 */
@@ -392,7 +405,8 @@ proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "",
                                       q_control = 0, ecm_type = "two-step",
                                       gets_pval = 0.1, case_id = 3,
                                       d = "inf", thresh1 = error(0),
-                                      thresh2 = error(0));
+                                      thresh2 = error(0),
+                                      symmetry = "none");
     local pst, qst, depvar, xvars, raw_data, grid, idx;
     local decomp_idx, control_idx, decomp_names, control_names;
     local decomp_thresholds;
@@ -404,6 +418,7 @@ proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "",
     call _qardlValidateSelectionCriterion(criterion, "nardlFull");
     call _qardlValidateGETSPValue(gets_pval, "nardlFull");
     ecm_type = _ardlNormalizeECMType(ecm_type, "nardlFull", 0);
+    symmetry = _nardlNormalizeSymmetry(symmetry, "nardlFull");
     call _ardlValidateCaseID(case_id, "nardlFull");
     call _ardlValidateECMCase(ecm_type, case_id, "nardlFull");
 
@@ -454,11 +469,11 @@ proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "",
     nfOut.na = _nardlEstimateLevels(raw_data, pst, qst, formula, 0,
                                     decomp_vars, control_vars, q_control,
                                     "nardlFull", criterion, d, thresh1,
-                                    thresh2);
+                                    thresh2, symmetry);
     nfOut.ecm = _nardlEstimateECM(raw_data, pst, qst, formula, 0,
                                   decomp_vars, control_vars, q_control,
                                   "nardlFull", criterion, ecm_type, case_id,
-                                  d, thresh1, thresh2);
+                                  d, thresh1, thresh2, symmetry);
 
     if verbose;
         call printNARDL(nfOut.na);
@@ -593,11 +608,11 @@ proc (struct nardlAutoCaseOut) = nardlAutoCase(data, pend = 8, qend = 8,
     acOut.na = _nardlEstimateLevels(raw_data, pst, qst, formula, 0,
                                     decomp_vars, control_vars, q_control,
                                     "nardlAutoCase", selection_criterion, d,
-                                    thresh1, thresh2);
+                                    thresh1, thresh2, "none");
     acOut.ecm = _nardlEstimateECM(raw_data, pst, qst, formula, 0,
                                   decomp_vars, control_vars, q_control,
                                   "nardlAutoCase", selection_criterion, "uecm",
-                                  primary_case, d, thresh1, thresh2);
+                                  primary_case, d, thresh1, thresh2, "none");
 
     retp(acOut);
 endp;
@@ -2482,12 +2497,195 @@ proc (2) = _nardlLongRunAsymmetry(beta_pos, beta_neg, bigbt_cov);
         R[1, k0+ii] = -1;
         diff = R*param;
         V = R*bigbt_cov*R';
-        wald[ii] = (diff^2) / V;
-        pv[ii] = cdfchic(wald[ii], 1);
+        if V <= 1e-14;
+            wald[ii] = 0;
+            pv[ii] = 1;
+        else;
+            wald[ii] = (diff^2) / V;
+            pv[ii] = cdfchic(wald[ii], 1);
+        endif;
         ii = ii + 1;
     endo;
 
     retp(wald, pv);
+endp;
+
+proc (1) = _nardlNormalizeSymmetry(symmetry, caller);
+    symmetry = lower(symmetry);
+
+    if symmetry $== "none" or symmetry $== "";
+        retp("none");
+    elseif symmetry $== "srsr" or symmetry $== "short-run" or
+           symmetry $== "short_run" or symmetry $== "short run";
+        retp("SRSR");
+    elseif symmetry $== "lrsr" or symmetry $== "long-run" or
+           symmetry $== "long_run" or symmetry $== "long run";
+        retp("LRSR");
+    elseif symmetry $== "both" or symmetry $== "all";
+        retp("both");
+    endif;
+
+    errorlog caller $+ ": symmetry must be 'none', 'SRSR', 'LRSR', or 'both'";
+    end;
+endp;
+
+proc (1) = _nardlHasSRSR(symmetry);
+    retp(symmetry $== "SRSR" or symmetry $== "both");
+endp;
+
+proc (1) = _nardlHasLRSR(symmetry);
+    retp(symmetry $== "LRSR" or symmetry $== "both");
+endp;
+
+proc (5) = _nardlRestrictedOLS(Y, X, R, caller, design_label);
+    local M, bt, fitted, resid, sigma2, coef_cov, A, adj, rnk;
+    local N, K, df_eff;
+
+    call _qardlCheckFullColumnRank(X, caller, design_label $+ " design matrix");
+    M = _qardlSafeInv(X'*X, caller, design_label $+ " moment matrix");
+    bt = M*X'*Y;
+    coef_cov = M;
+    rnk = 0;
+
+    if not (rows(R) == 1 and cols(R) == 1 and scalmiss(R));
+        rnk = rank(R);
+        if rnk > 0;
+            A = _qardlSafeInv(R*M*R', caller,
+                              design_label $+ " restriction moment matrix");
+            adj = M*R'*A*(R*bt);
+            bt = bt - adj;
+            coef_cov = M - M*R'*A*R*M;
+        endif;
+    endif;
+
+    fitted = X*bt;
+    resid = Y - fitted;
+    N = rows(Y);
+    K = cols(X);
+    df_eff = N - (K - rnk);
+    if df_eff <= 0;
+        errorlog caller $+ ": insufficient degrees of freedom after symmetry restrictions";
+        end;
+    endif;
+    sigma2 = (resid'*resid) / df_eff;
+    coef_cov = sigma2*coef_cov;
+
+    retp(bt, fitted, resid, coef_cov, sigma2);
+endp;
+
+proc (1) = _nardlAppendRestriction(R, row);
+    if rows(R) == 1 and cols(R) == 1 and scalmiss(R);
+        retp(row);
+    endif;
+    retp(R|row);
+endp;
+
+proc (1) = _nardlSymRestrLvl(ppp, q_decomp, ndecomp, ncontrol,
+                             q_control, symmetry);
+    local K, R, row, ii, jj, pos_start, neg_start;
+
+    K = 1 + 2*ndecomp + ncontrol + ppp +
+        2*q_decomp*ndecomp + q_control*ncontrol;
+    R = error(0);
+
+    if _nardlHasLRSR(symmetry);
+        ii = 1;
+        do until ii > ndecomp;
+            row = zeros(1, K);
+            row[1, 1+ii] = 1;
+            row[1, 1+ndecomp+ii] = -1;
+            R = _nardlAppendRestriction(R, row);
+            ii = ii + 1;
+        endo;
+    endif;
+
+    if _nardlHasSRSR(symmetry) and q_decomp > 0;
+        pos_start = 2 + 2*ndecomp + ncontrol + ppp;
+        neg_start = pos_start + q_decomp*ndecomp;
+        ii = 1;
+        do until ii > ndecomp;
+            jj = 0;
+            do until jj > q_decomp-1;
+                row = zeros(1, K);
+                row[1, pos_start + (ii-1)*q_decomp + jj] = 1;
+                row[1, neg_start + (ii-1)*q_decomp + jj] = -1;
+                R = _nardlAppendRestriction(R, row);
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+    endif;
+
+    retp(R);
+endp;
+
+proc (1) = _nardlSymRestrUECM(ppp, q_decomp, ndecomp, ncontrol,
+                              q_control, case_id, symmetry);
+    local det_cols, level_count, K, R, row, ii, jj, pos_start, neg_start;
+
+    det_cols = _ardlDeterministicColumnCount(case_id);
+    level_count = 1 + 2*ndecomp + ncontrol;
+    K = det_cols + level_count + (ppp-1) +
+        2*q_decomp*ndecomp + q_control*ncontrol;
+    R = error(0);
+
+    if _nardlHasLRSR(symmetry);
+        pos_start = det_cols + 2;
+        neg_start = pos_start + ndecomp;
+        ii = 1;
+        do until ii > ndecomp;
+            row = zeros(1, K);
+            row[1, pos_start + ii - 1] = 1;
+            row[1, neg_start + ii - 1] = -1;
+            R = _nardlAppendRestriction(R, row);
+            ii = ii + 1;
+        endo;
+    endif;
+
+    if _nardlHasSRSR(symmetry) and q_decomp > 0;
+        pos_start = det_cols + level_count + (ppp-1) + 1;
+        neg_start = pos_start + q_decomp*ndecomp;
+        ii = 1;
+        do until ii > ndecomp;
+            jj = 0;
+            do until jj > q_decomp-1;
+                row = zeros(1, K);
+                row[1, pos_start + (ii-1)*q_decomp + jj] = 1;
+                row[1, neg_start + (ii-1)*q_decomp + jj] = -1;
+                R = _nardlAppendRestriction(R, row);
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+    endif;
+
+    retp(R);
+endp;
+
+proc (1) = _nardlSymRestrECM(ppp, q_decomp, ndecomp, ncontrol,
+                             q_control, symmetry);
+    local K, R, row, ii, jj, pos_start, neg_start;
+
+    K = 2 + (ppp-1) + 2*q_decomp*ndecomp + q_control*ncontrol;
+    R = error(0);
+    if _nardlHasSRSR(symmetry) and q_decomp > 0;
+        pos_start = 2 + (ppp-1) + 1;
+        neg_start = pos_start + q_decomp*ndecomp;
+        ii = 1;
+        do until ii > ndecomp;
+            jj = 0;
+            do until jj > q_decomp-1;
+                row = zeros(1, K);
+                row[1, pos_start + (ii-1)*q_decomp + jj] = 1;
+                row[1, neg_start + (ii-1)*q_decomp + jj] = -1;
+                R = _nardlAppendRestriction(R, row);
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+    endif;
+
+    retp(R);
 endp;
 
 proc (2) = _nardlShortRunAsymmetry(bt, coef_cov, ppp, qqq, k0);
@@ -2517,8 +2715,13 @@ proc (2) = _nardlShortRunAsymmetrySpec(bt, coef_cov, ppp, qqq, ndecomp, ncontrol
         endo;
         diff = R*bt;
         V = R*coef_cov*R';
-        wald[ii] = (diff^2) / V;
-        pv[ii] = cdfchic(wald[ii], 1);
+        if V <= 1e-14;
+            wald[ii] = 0;
+            pv[ii] = 1;
+        else;
+            wald[ii] = (diff^2) / V;
+            pv[ii] = cdfchic(wald[ii], 1);
+        endif;
         ii = ii + 1;
     endo;
 
