@@ -1,0 +1,169 @@
+#ifndef QARDL_SDF_INCLUDED
+#include qardl.sdf
+#endif
+
+proc (struct ardlSelectOut) = ardlSelect(data, model = "ardl", pend = 8,
+                                         qend = 8, criterion = "bic",
+                                         q_mode = "scalar",
+                                         return_type = "best",
+                                         pstart = 1, qstart = 0,
+                                         cs_lags = 0, gets_pval = 0.1,
+                                         d = "inf",
+                                         thresh1 = error(0),
+                                         thresh2 = error(0));
+    local family, qmode, rtype, best, grid, pst, qst, k0, idx;
+    struct ardlSelectOut sel;
+
+    family = _ardlSelectNormalizeModel(model);
+    qmode = _ardlSelectNormalizeQMode(q_mode);
+    rtype = _ardlSelectNormalizeReturnType(return_type);
+    criterion = lower(criterion);
+
+    call _qardlValidateGETSPValue(gets_pval, "ardlSelect");
+    call _qardlValidateLagRange(pstart, pend, "ardlSelect: pstart/pend");
+    call _qardlValidateLagRangeZero(qstart, qend, "ardlSelect: qstart/qend");
+
+    sel.model_family = family;
+    sel.selection_criterion = criterion;
+    sel.q_mode = qmode;
+    sel.return_type = rtype;
+    sel.pmax = pend;
+    sel.qmax = qend;
+    sel.pstart = pstart;
+    sel.qstart = qstart;
+    sel.cs_lags = cs_lags;
+    sel.gets_pval = gets_pval;
+    sel.grid = error(0);
+
+    if family $== "ARDL" or family $== "QARDL";
+        if rtype $== "grid" or rtype $== "both";
+            if _qardlCriterionIsGETS(criterion);
+                errorlog "ardlSelect: return_type = \"grid\" is not available with criterion = \"gets\"";
+                end;
+            endif;
+            grid = pqSelect(data, pend, qend, pstart, qstart, criterion,
+                            qmode, "grid", gets_pval);
+            sel.grid = grid;
+            idx = minindc(grid[., cols(grid)]);
+            best = grid[idx, 1:cols(grid)-1];
+        else;
+            best = pqSelect(data, pend, qend, pstart, qstart, criterion,
+                            qmode, "best", gets_pval);
+        endif;
+
+        sel.pst = best[1, 1];
+        if qmode $== "vector";
+            sel.qvec = best[1, 2:cols(best)]';
+            sel.qst = maxc(sel.qvec);
+        else;
+            sel.qst = best[1, 2];
+            sel.qvec = sel.qst*ones(cols(data) - 1, 1);
+        endif;
+
+        retp(sel);
+    endif;
+
+    if qmode $/= "scalar";
+        errorlog "ardlSelect: q_mode = \"vector\" is only available for ARDL/QARDL selection";
+        end;
+    endif;
+    if pstart /= 1 or qstart /= 0;
+        errorlog "ardlSelect: pstart/qstart range restrictions are only available for ARDL/QARDL selection";
+        end;
+    endif;
+
+    if family $== "NARDL";
+        if rtype $== "grid" or rtype $== "both";
+            if _qardlCriterionIsGETS(criterion);
+                errorlog "ardlSelect: return_type = \"grid\" is not available with criterion = \"gets\"";
+                end;
+            endif;
+            grid = nardlOrderGrid(data, pend, qend, criterion, d, thresh1,
+                                  thresh2);
+            sel.grid = grid;
+            idx = minindc(grid[., 3]);
+            pst = grid[idx, 1];
+            qst = grid[idx, 2];
+        else;
+            { pst, qst } = nardlOrder(data, pend, qend, criterion, gets_pval,
+                                      d, thresh1, thresh2);
+        endif;
+
+        sel.pst = pst;
+        sel.qst = qst;
+        sel.qvec = qst*ones(cols(data) - 1, 1);
+        retp(sel);
+    endif;
+
+    if family $== "CS-ARDL";
+        call _qardlValidateLagScalarZero(cs_lags, "ardlSelect: cs_lags");
+        if rtype $== "grid" or rtype $== "both";
+            if _qardlCriterionIsGETS(criterion);
+                errorlog "ardlSelect: return_type = \"grid\" is not available with criterion = \"gets\"";
+                end;
+            endif;
+            grid = csardlOrderGrid(data, pend, qend, cs_lags, criterion);
+            sel.grid = grid;
+            idx = minindc(grid[., 3]);
+            pst = grid[idx, 1];
+            qst = grid[idx, 2];
+        else;
+            { pst, qst } = csardlOrder(data, pend, qend, cs_lags, criterion,
+                                       gets_pval);
+        endif;
+
+        sel.pst = pst;
+        sel.qst = qst;
+        sel.qvec = qst*ones(cols(data) - 2, 1);
+        retp(sel);
+    endif;
+
+    errorlog "ardlSelect: unsupported model family";
+    end;
+endp;
+
+proc (1) = _ardlSelectNormalizeModel(model);
+    model = lower(model);
+
+    if model $== "ardl";
+        retp("ARDL");
+    elseif model $== "qardl";
+        retp("QARDL");
+    elseif model $== "nardl";
+        retp("NARDL");
+    elseif model $== "csardl" or model $== "cs-ardl" or model $== "cs_ardl";
+        retp("CS-ARDL");
+    endif;
+
+    errorlog "ardlSelect: model must be \"ardl\", \"qardl\", \"nardl\", or \"csardl\"";
+    end;
+endp;
+
+proc (1) = _ardlSelectNormalizeQMode(q_mode);
+    q_mode = lower(q_mode);
+
+    if q_mode $== "scalar" or q_mode $== "uniform";
+        retp("scalar");
+    elseif q_mode $== "vector" or q_mode $== "x" or
+           q_mode $== "per-regressor" or q_mode $== "per_regressor";
+        retp("vector");
+    endif;
+
+    errorlog "ardlSelect: q_mode must be \"scalar\" or \"vector\"";
+    end;
+endp;
+
+proc (1) = _ardlSelectNormalizeReturnType(return_type);
+    return_type = lower(return_type);
+
+    if return_type $== "best" or return_type $== "selected";
+        retp("best");
+    elseif return_type $== "grid" or return_type $== "table";
+        retp("grid");
+    elseif return_type $== "both" or return_type $== "all";
+        retp("both");
+    endif;
+
+    errorlog "ardlSelect: return_type must be \"best\", \"grid\", or \"both\"";
+    end;
+endp;

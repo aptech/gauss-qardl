@@ -50,5 +50,5 @@ csaOut = csardl(panel, pst, qst, 1, "", 0);
 
 ## See Also
 
-[csardlOrderGrid](csardlOrderGrid.md), [csardlICMean](csardlICMean.md),
-[csardlFull](csardlFull.md)
+[ardlSelect](ardlSelect.md), [csardlOrderGrid](csardlOrderGrid.md),
+[csardlICMean](csardlICMean.md), [csardlFull](csardlFull.md)

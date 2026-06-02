@@ -41,4 +41,5 @@ grid = csardlOrderGrid(panel, 4, 4, 1, "hq");
 
 ## See Also
 
-[csardlOrder](csardlOrder.md), [csardlICMean](csardlICMean.md)
+[ardlSelect](ardlSelect.md), [csardlOrder](csardlOrder.md),
+[csardlICMean](csardlICMean.md)

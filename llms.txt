@@ -80,6 +80,7 @@ Two-step ECM estimation:
 
 Lag selection:
 
+- `ardlSelect(data, model, pend, qend, criterion, q_mode, return_type, pstart, qstart, cs_lags, gets_pval)`
 - `pqSelect(data, pend, qend, pstart, qstart, criterion, q_mode, return_type, gets_pval)`
 
 ARDL bounds:
@@ -113,6 +114,7 @@ Bootstrap, rolling, and dynamics:
 
 Output helpers:
 
+- `ardlReport`
 - `printQARDL`
 - `printQARDLECM`
 - `plotQARDL`
@@ -150,6 +152,8 @@ Lag-selection criteria:
 - `"bic"` default.
 - `"aic"`, `"hq"`, and `"hqc"` are also supported.
 - `"gets"` is supported for scalar best-order `pqSelect` and full workflows.
+- Prefer `ardlSelect` when selecting lags across ARDL, QARDL, NARDL, and
+  CS-ARDL with one output structure.
 
 ARDL bounds cases:
 

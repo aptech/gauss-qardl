@@ -15,6 +15,7 @@ new;
 #include ../src/wtestsrp.src
 #include ../src/wtestsrg.src
 #include ../src/icmean.src
+#include ../src/ardl_select.src
 #include ../src/p_values_qardl.src
 #include ../src/wtestsym.src
 #include ../src/wtestconst.src
@@ -166,6 +167,7 @@ arOut = ardl(data, 2, 1, "", 0);
 { arY, arX, ar_theta_start, ar_phi_start } = _qardlBuildLevelsDesignX(data, 2, ones(2, 1));
 expected_ar_bt = _qardlSafeInv(arX'*arX, "smoke_public_api", "expected ARDL moment matrix")*arX'*arY;
 call assert_close(arOut.bt, expected_ar_bt, 1e-10, "ardl bt does not match OLS design");
+call ardlReport(arOut, __FILE_DIR $+ "ardl_report_smoke.md", "markdown", 4, 1, 0.95, 0);
 { lr_beta, lr_cov } = ardlLongRun(arOut);
 call assert_close(lr_beta, arOut.bigbt, 1e-12, "ardlLongRun ARDL beta changed");
 call assert_close(lr_cov, arOut.bigbt_cov, 1e-12, "ardlLongRun ARDL covariance changed");

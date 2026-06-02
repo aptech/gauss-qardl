@@ -126,6 +126,11 @@
   selection, and per-regressor q-vector searches. Legacy `pqorder*`
   procedures remain callable for backward compatibility but are no longer
   exposed in the user-facing command reference.
+- `ardlSelect` as a standardized ARDL-family lag-selection wrapper returning
+  `ardlSelectOut` metadata while delegating to `pqSelect`, `nardlOrder`,
+  `nardlOrderGrid`, `csardlOrder`, and `csardlOrderGrid`.
+- `ardlReport` as a unified ARDL-family reporting wrapper for console print
+  dispatch, coefficient-table export, or both.
 - Pesaran-Shin-Smith deterministic Case I-V controls for ARDL and NARDL
   unrestricted ECM paths via `case_id`, plus `ardlFull(..., case_id)` bounds
   testing.

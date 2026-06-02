@@ -145,6 +145,90 @@ proc (2) = _ardlLongRunCSARDLFull(struct csardlFullOut out);
 endp;
 
 /*
+**> ardlReport
+**
+**  Purpose:    Unified print/export reporting wrapper for ARDL-family output
+**              structures. Prints the matching GAUSS-style result table,
+**              saves a publication-style coefficient table, or both.
+**
+**  Format:     ardlReport(modelOut);
+**              ardlReport(modelOut, fpath);
+**              ardlReport(modelOut, fpath, table_format, precision, stars,
+**                         ci_level, print_results);
+*/
+proc (0) = ardlReport(modelOut, fpath = "", table_format = "markdown",
+                      precision = 6, stars = 1, ci_level = 0.95,
+                      print_results = 1);
+
+    if print_results;
+        call _ardlReportPrint(modelOut);
+    endif;
+
+    if strlen(fpath) > 0;
+        call saveARDLTable(modelOut, fpath, table_format, precision, stars,
+                           ci_level);
+    endif;
+endp;
+
+proc (0) = _ardlReportPrint(modelOut);
+    if isStructType(modelOut, "ardlOut");
+        call printARDL(modelOut);
+    elseif isStructType(modelOut, "ardlECMOut");
+        call printARDLECM(modelOut);
+    elseif isStructType(modelOut, "qardlOut");
+        call _ardlReportPrintQARDL(modelOut);
+    elseif isStructType(modelOut, "qardlECMOut");
+        call _ardlReportPrintQARDLECM(modelOut);
+    elseif isStructType(modelOut, "nardlOut");
+        call printNARDL(modelOut);
+    elseif isStructType(modelOut, "nardlECMOut");
+        call printNARDLECM(modelOut);
+    elseif isStructType(modelOut, "csardlOut");
+        call printCSARDL(modelOut);
+    elseif isStructType(modelOut, "csardlECMOut");
+        call printCSARDLECM(modelOut);
+    elseif isStructType(modelOut, "ardlFullOut");
+        call _ardlReportPrintARDLFull(modelOut);
+    elseif isStructType(modelOut, "qardlFullOut");
+        call _ardlReportPrintQARDLFull(modelOut);
+    elseif isStructType(modelOut, "nardlFullOut");
+        call _ardlReportPrintNARDLFull(modelOut);
+    elseif isStructType(modelOut, "csardlFullOut");
+        call _ardlReportPrintCSARDLFull(modelOut);
+    else;
+        errorlog "ardlReport: unsupported output structure";
+        end;
+    endif;
+endp;
+
+proc (0) = _ardlReportPrintQARDL(struct qardlOut qaOut);
+    call printQARDL(qaOut, qaOut.tau);
+endp;
+
+proc (0) = _ardlReportPrintQARDLECM(struct qardlECMOut qECMOut);
+    call printQARDLECM(qECMOut, qECMOut.tau);
+endp;
+
+proc (0) = _ardlReportPrintARDLFull(struct ardlFullOut out);
+    call printARDL(out.ar);
+endp;
+
+proc (0) = _ardlReportPrintQARDLFull(struct qardlFullOut out);
+    call printQARDL(out.qa, out.tau);
+    call printQARDLECM(out.ecm, out.tau);
+endp;
+
+proc (0) = _ardlReportPrintNARDLFull(struct nardlFullOut out);
+    call printNARDL(out.na);
+    call printNARDLECM(out.ecm);
+endp;
+
+proc (0) = _ardlReportPrintCSARDLFull(struct csardlFullOut out);
+    call printCSARDL(out.csa);
+    call printCSARDLECM(out.ecm);
+endp;
+
+/*
 **> saveARDLTable
 **
 **  Purpose:    Save a publication-style coefficient table for an ARDL-family

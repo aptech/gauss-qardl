@@ -94,5 +94,5 @@ qvec_x = xbest[1, 2:cols(xbest)]';
 
 ## See Also
 
-[icmean](icmean.md), [qardlFull](qardlFull.md), [ardlFull](ardlFull.md),
-[qardlX](qardlX.md), [qardlECMX](qardlECMX.md)
+[ardlSelect](ardlSelect.md), [icmean](icmean.md), [qardlFull](qardlFull.md),
+[ardlFull](ardlFull.md), [qardlX](qardlX.md), [qardlECMX](qardlECMX.md)

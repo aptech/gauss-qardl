@@ -129,6 +129,33 @@ struct ardlECMOut {
     matrix coef_cov;
 };
 
+struct ardlSelectOut {
+    // Standardized selector metadata
+    string model_family;
+    string selection_criterion;
+    string q_mode;
+    string return_type;
+
+    // Search bounds
+    scalar pmax;
+    scalar qmax;
+    scalar pstart;
+    scalar qstart;
+    scalar cs_lags;
+    scalar gets_pval;
+
+    // Selected lag orders
+    scalar pst;
+    scalar qst;
+
+    // Per-regressor q-vector. For scalar selection, all entries equal qst.
+    matrix qvec;
+
+    // Information-criterion grid when available/requested.
+    // Scalar grids use [p, q, IC]; vector grids use [p, q1, ..., qk, IC].
+    matrix grid;
+};
+
 struct qardlOut {
     // Standardized model metadata
     string model_family;

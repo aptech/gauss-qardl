@@ -100,7 +100,22 @@ qECMAutoHAC = qardlECMHAC(data, 2, 1, tau, 0);
 only `alpha_cov` and `rho_cov` change.
 The robust and HAC wrappers accept the same final `ecm_type` argument.
 
-Use `pqSelect` directly when you only need lag selection:
+Use `ardlSelect` when you want one lag-selection API across ARDL-family
+models:
+
+```gauss
+sel = ardlSelect(data, "ardl", 8, 8, "bic");
+arOut = ardl(data, sel.pst, sel.qst, "", 0);
+
+qsel = ardlSelect(data, "qardl", 4, 2, "bic", q_mode = "vector");
+qaOut = qardlX(data, qsel.pst, qsel.qvec, tau);
+
+nsel = ardlSelect(data, "nardl", 4, 4, "bic");
+csel = ardlSelect(panel, "csardl", 4, 4, "bic", cs_lags = 1);
+```
+
+Use `pqSelect` directly when you specifically need ARDL/QARDL scalar or
+per-regressor q-vector lag selection:
 
 ```gauss
 best = pqSelect(data);
@@ -420,7 +435,17 @@ resampling.
 
 ## Table Export
 
-Use the generic table exporter for publication-style coefficient tables:
+Use `ardlReport` when you want one reporting call that can print, save, or do
+both:
+
+```gauss
+ardlReport(arOut);
+ardlReport(arOut, "ardl_report.md", "markdown", 4, 1, 0.95);
+ardlReport(qfOut, "qardl_report.tex", "latex", 4, 1, 0.90, 0);
+```
+
+Use the generic table exporter directly for publication-style coefficient
+tables:
 
 ```gauss
 saveARDLTable(arOut, "ardl_table.md", "markdown", 4, 1, 0.95);
@@ -454,7 +479,7 @@ point estimates and zero band placeholders.
 
 The standard QARDL workflow currently includes:
 
-- Information-criterion lag selection through `pqSelect` and
+- Information-criterion lag selection through `ardlSelect`, `pqSelect`, and
   `ardlFull`/`qardlFull`.
 - ARDL bounds testing through `ardlbounds`, `ardlboundsCase`, `ardlFull`, and
   `qardlFull`.
@@ -468,6 +493,8 @@ The standard QARDL workflow currently includes:
 - Rolling QARDL and QARDL-ECM workflows for exploratory stability analysis.
 - Residual diagnostics for time-series ARDL-family outputs through
   `ardlResidualDiagnostics` and `printARDLResidualDiagnostics`.
+- Unified console/file reporting through `ardlReport`, with table export
+  delegated to `saveARDLTable`.
 
 The standard ARDL workflow currently includes OLS covariance output, fitted
 values, residuals, residual variance, residual serial-correlation,

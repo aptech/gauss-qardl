@@ -26,6 +26,7 @@
         "wtestsrp.src",
         "wtestsrg.src",
         "icmean.src",
+        "ardl_select.src",
         "p_values_qardl.src",
         "wtestsym.src",
         "wtestconst.src",

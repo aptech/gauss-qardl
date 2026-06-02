@@ -36,6 +36,10 @@ coverage, and release-verification tooling.
   covering scalar lag selection, restricted grids, IC table output, scalar
   GETS selection, and per-regressor q-vector searches while preserving legacy
   `pqorder*` procedures for compatibility.
+- Added `ardlSelect` as a standardized ARDL-family lag-selection wrapper with
+  structured output across ARDL, QARDL, NARDL, and CS-ARDL selection paths.
+- Added `ardlReport` as a unified reporting wrapper for printing and exporting
+  ARDL-family output structures.
 - Added Pesaran-Shin-Smith deterministic Case I-V controls for ARDL and NARDL
   ECM paths through `case_id`, with `ardlFull(..., case_id)`
   using the selected case for bounds testing.

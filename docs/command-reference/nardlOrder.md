@@ -57,5 +57,5 @@ naOut = nardl(data, pst, qst, "", 0);
 
 ## See Also
 
-[nardlOrderGrid](nardlOrderGrid.md), [nardlICMean](nardlICMean.md),
-[nardlFull](nardlFull.md)
+[ardlSelect](ardlSelect.md), [nardlOrderGrid](nardlOrderGrid.md),
+[nardlICMean](nardlICMean.md), [nardlFull](nardlFull.md)

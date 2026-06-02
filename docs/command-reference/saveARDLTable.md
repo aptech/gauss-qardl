@@ -64,5 +64,6 @@ saveARDLTable(qfOut, "qardl_table.tex", "latex", 4, 1, 0.90);
 
 ## See Also
 
-[saveARDLMarkdown](saveARDLMarkdown.md), [saveARDLLaTeX](saveARDLLaTeX.md),
-[saveQARDLResults](saveQARDLResults.md), [saveQARDLECMResults](saveQARDLECMResults.md)
+[ardlReport](ardlReport.md), [saveARDLMarkdown](saveARDLMarkdown.md),
+[saveARDLLaTeX](saveARDLLaTeX.md), [saveQARDLResults](saveQARDLResults.md),
+[saveQARDLECMResults](saveQARDLECMResults.md)

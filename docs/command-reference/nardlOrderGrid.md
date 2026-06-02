@@ -45,4 +45,5 @@ grid_thresh = nardlOrderGrid(data, 4, 4, "bic", 0);
 
 ## See Also
 
-[nardlOrder](nardlOrder.md), [nardlICMean](nardlICMean.md)
+[ardlSelect](ardlSelect.md), [nardlOrder](nardlOrder.md),
+[nardlICMean](nardlICMean.md)

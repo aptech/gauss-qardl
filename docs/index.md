@@ -135,6 +135,11 @@ Estimates CS-ARDL error-correction models.
 
 ### Lag Selection
 
+[ardlSelect](command-reference/ardlSelect.md)
+
+Selects ARDL-family lag orders through one standardized wrapper for ARDL,
+QARDL, NARDL, and CS-ARDL.
+
 [pqSelect](command-reference/pqSelect.md)
 
 Selects ARDL/QARDL lag orders or returns lag-search grids for scalar and
@@ -259,6 +264,10 @@ Computes quantile impulse response functions.
 Computes positive and negative NARDL dynamic multiplier paths.
 
 ### Output, Plotting, And Export
+
+[ardlReport](command-reference/ardlReport.md)
+
+Prints and/or exports ARDL-family reports through one unified wrapper.
 
 [printARDL](command-reference/printARDL.md)
 

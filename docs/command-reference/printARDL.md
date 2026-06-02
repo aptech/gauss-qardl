@@ -39,4 +39,4 @@ printARDL(arOut);
 ## See Also
 
 [ardl](ardl.md), [ardlECM](ardlECM.md), [printARDLECM](printARDLECM.md),
-[printQARDL](printQARDL.md)
+[printQARDL](printQARDL.md), [ardlReport](ardlReport.md)

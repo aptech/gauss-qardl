@@ -72,8 +72,9 @@ qfOut = qardlFull(macro, tau = tau,
 - Formula dataframe support across ARDL-family workflows, including
   GAUSS-style panel identifier inference and explicit `group_var`/`time_var`
   overrides for CS-ARDL dataframe formulas.
-- Lag selection with BIC, AIC, HQ, and HQC through `pqSelect`; scalar GETS is
-  available in `pqSelect` and the full workflows.
+- Lag selection with BIC, AIC, HQ, and HQC through `ardlSelect` across ARDL,
+  QARDL, NARDL, and CS-ARDL; scalar GETS is available in supported selectors
+  and full workflows.
 - ARDL bounds testing for Pesaran-Shin-Smith Cases I-V, with bundled
   asymptotic critical values and simulation critical-value APIs.
 - CS-ARDL panel diagnostics, including Pesaran CD/CD(p) and
@@ -81,8 +82,8 @@ qfOut = qardlFull(macro, tau = tau,
 - Robust and Newey-West/Bartlett HAC covariance paths.
 - Cross-quantile Wald tests, p-value helpers, QIRF with bootstrap confidence
   bands, rolling estimation, block bootstrap confidence intervals,
-  confidence-band plot options, CSV export, and generic Markdown/LaTeX/CSV
-  coefficient-table export.
+  confidence-band plot options, CSV export, unified `ardlReport`, and generic
+  Markdown/LaTeX/CSV coefficient-table export.
 
 ## Documentation
 

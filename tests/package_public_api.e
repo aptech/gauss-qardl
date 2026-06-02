@@ -77,6 +77,8 @@ ic_range_grid = pqorderRangeGrid(data, 2, 2, 2, 2, "bic");
 pq_select = pqSelect(data, 2, 2);
 pq_select_grid = pqSelect(data, 2, 2, return_type = "grid");
 pq_select_gets = pqSelect(data, 2, 2, criterion = "gets", gets_pval = 0.1);
+struct ardlSelectOut selectOut;
+selectOut = ardlSelect(data, "ardl", 2, 2, "bic");
 call assert_true(rows(ic_grid) == 6 and cols(ic_grid) == 3, "pqorderGrid returned wrong shape");
 call assert_true(rows(ic_range_grid) == 1 and cols(ic_range_grid) == 3, "pqorderRangeGrid returned wrong shape");
 call assert_true(rows(pq_select) == 1 and cols(pq_select) == 2 and
@@ -86,6 +88,10 @@ call assert_true(rows(pq_select_grid) == 6 and cols(pq_select_grid) == 3,
                  "pqSelect scalar grid returned wrong shape");
 call assert_true(rows(pq_select_gets) == 1 and cols(pq_select_gets) == 2,
                  "pqSelect GETS returned wrong shape");
+call assert_true(selectOut.model_family $== "ARDL" and
+                 selectOut.pst == pst and selectOut.qst == qst and
+                 rows(selectOut.qvec) == 2,
+                 "ardlSelect ARDL output invalid");
 { pst_x, qst_x } = pqorderX(data, 2, 1, "bic");
 ic_x_grid = pqorderXGrid(data, 2, 1, "bic");
 pq_select_x = pqSelect(data, 2, 1, q_mode = "vector");

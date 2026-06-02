@@ -43,6 +43,7 @@ decomposition NARDL outputs also store `q_control`, `control_qvec`, and
 
 | Structure | Family | Key metadata additions | Notes |
 | --- | --- | --- | --- |
+| `ardlSelectOut` | ARDL-family selector | `model_family`, `selection_criterion`, `q_mode`, `return_type`, `pmax`, `qmax`, `pst`, `qst`, `qvec`, optional `grid` | Returned by `ardlSelect`; standardizes lag-selection metadata across ARDL, QARDL, NARDL, and CS-ARDL selectors. |
 | `ardlOut` | ARDL | common metadata, `qvec`, row-index sample metadata | Levels-form OLS output. Use `ardlECM` for ARDL error-correction estimates. |
 | `ardlECMOut` | ARDL-ECM | common metadata, `ecm_type`, `qvec`, row-index sample metadata, `beta_lr`, `rho_ols` | Dedicated ARDL ECM output; supports `"two-step"` and `"uecm"`. |
 | `ardlFullOut` | ARDL | common workflow metadata, `pmax`, `qmax` | Bundles selected ARDL output in `.ar`. |

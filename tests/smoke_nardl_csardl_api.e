@@ -15,6 +15,7 @@ new;
 #include ../src/wtestsrp.src
 #include ../src/wtestsrg.src
 #include ../src/icmean.src
+#include ../src/ardl_select.src
 #include ../src/p_values_qardl.src
 #include ../src/wtestsym.src
 #include ../src/wtestconst.src
@@ -232,10 +233,17 @@ call assert_true(nECMOut.symmetry_restriction $== "SRSR" and
 struct nardlFullOut nfOut;
 nfOut = nardlFull(nardl_data, 1, 1, "", 0);
 nardl_grid = nardlOrderGrid(nardl_data, 1, 1);
+struct ardlSelectOut selectOut;
+selectOut = ardlSelect(nardl_data, "nardl", 1, 1, "bic",
+                       return_type = "grid");
 call assert_true(nfOut.pst == nardl_grid[minindc(nardl_grid[., 3]), 1] and
                  nfOut.qst == nardl_grid[minindc(nardl_grid[., 3]), 2] and
                  nfOut.na.nobs == naOut.nobs,
                  "nardlFull metadata invalid");
+call assert_true(selectOut.model_family $== "NARDL" and
+                 rows(selectOut.grid) == rows(nardl_grid) and
+                 selectOut.pst == nfOut.pst and selectOut.qst == nfOut.qst,
+                 "ardlSelect NARDL grid output invalid");
 nfOut = nardlFull(nardl_data, 1, 1, "", 0, "bic", "x1", "x2", 1);
 call assert_true(nfOut.na.ndecomp == 1 and nfOut.na.ncontrol == 1 and
                  nfOut.ecm.ndecomp == 1 and nfOut.ecm.ncontrol == 1,
@@ -271,9 +279,13 @@ nfOut = nardlFull(default_nardl_data, verbose = 0);
 call assert_true(nfOut.pst >= 1 and nfOut.pst <= 8 and nfOut.qst >= 0 and nfOut.qst <= 8,
                  "nardlFull default lag bounds invalid");
 { n_p_gets, n_q_gets } = nardlOrder(default_nardl_data, 2, 2, "gets", 0.1);
+selectOut = ardlSelect(default_nardl_data, "nardl", 2, 2, "gets",
+                       gets_pval = 0.1);
 call assert_true(n_p_gets >= 1 and n_p_gets <= 2 and
                  n_q_gets >= 0 and n_q_gets <= 2,
                  "nardlOrder GETS returned invalid lag orders");
+call assert_true(selectOut.pst == n_p_gets and selectOut.qst == n_q_gets,
+                 "ardlSelect NARDL GETS output invalid");
 nfOut = nardlFull(default_nardl_data, 2, 2, "", 0, "gets", "x1", "x2", 1,
                   "uecm", 0.1);
 call assert_true(nfOut.selection_criterion $== "gets" and nfOut.pst >= 1 and
@@ -434,14 +446,25 @@ call assert_true(cECMOut.ecm_type $== "uecm" and cECMOut.nunits == nunits and
 struct csardlFullOut cfOut;
 cfOut = csardlFull(panel, 1, 1, 1, "", 0);
 csardl_grid = csardlOrderGrid(panel, 1, 1, 1);
+selectOut = ardlSelect(panel, "csardl", 1, 1, "bic", cs_lags = 1,
+                       return_type = "grid");
 call assert_true(cfOut.pst == csardl_grid[minindc(csardl_grid[., 3]), 1] and
                  cfOut.qst == csardl_grid[minindc(csardl_grid[., 3]), 2] and
                  cfOut.cs_lags == 1,
                  "csardlFull metadata invalid");
+call assert_true(selectOut.model_family $== "CS-ARDL" and
+                 rows(selectOut.grid) == rows(csardl_grid) and
+                 selectOut.pst == cfOut.pst and selectOut.qst == cfOut.qst and
+                 selectOut.cs_lags == 1,
+                 "ardlSelect CS-ARDL grid output invalid");
 { c_p_gets, c_q_gets } = csardlOrder(panel, 2, 2, 1, "gets", 0.1);
+selectOut = ardlSelect(panel, "csardl", 2, 2, "gets", cs_lags = 1,
+                       gets_pval = 0.1);
 call assert_true(c_p_gets >= 1 and c_p_gets <= 2 and
                  c_q_gets >= 0 and c_q_gets <= 2,
                  "csardlOrder GETS returned invalid lag orders");
+call assert_true(selectOut.pst == c_p_gets and selectOut.qst == c_q_gets,
+                 "ardlSelect CS-ARDL GETS output invalid");
 cfOut = csardlFull(panel, 1, 1, 1, "", 0, "bic", "", "", "uecm");
 call assert_true(cfOut.ecm.ecm_type $== "uecm" and rows(cfOut.ecm.beta_lr) == 2,
                  "csardlFull UECM option metadata invalid");
