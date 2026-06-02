@@ -121,6 +121,11 @@
   `gets_pval` in scalar ARDL/QARDL, NARDL, and CS-ARDL order selectors and
   full workflows, while preserving existing AIC/BIC/HQ/HQC selection and IC
   grid helpers.
+- `pqSelect` as the documented ARDL/QARDL lag-selection entry point, covering
+  scalar p/q selection, restricted ranges, full IC grids, scalar GETS
+  selection, and per-regressor q-vector searches. Legacy `pqorder*`
+  procedures remain callable for backward compatibility but are no longer
+  exposed in the user-facing command reference.
 - Pesaran-Shin-Smith deterministic Case I-V controls for ARDL and NARDL
   unrestricted ECM paths via `case_id`, plus `ardlFull(..., case_id)` bounds
   testing.

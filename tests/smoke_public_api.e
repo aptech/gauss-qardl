@@ -55,6 +55,11 @@ call assert_true(pst_default >= 1 and pst_default <= 8 and qst_default >= 0 and 
 { pst_range_gets, qst_range_gets } = pqorderRange(data, 2, 3, 1, 3, "gets", 0.1);
 ic_grid = pqorderGrid(data, 2, 3, "bic");
 ic_range_grid = pqorderRangeGrid(data, 2, 3, 2, 3, "bic");
+pq_select = pqSelect(data, 2, 3);
+pq_select_grid = pqSelect(data, 2, 3, return_type = "grid");
+pq_select_range = pqSelect(data, 3, 3, pstart = 2, qstart = 2,
+                           criterion = "bic");
+pq_select_gets = pqSelect(data, 3, 3, criterion = "gets", gets_pval = 0.1);
 call assert_true(pst_aic >= 1 and qst_aic >= 0, "pqorder AIC returned invalid lag orders");
 call assert_true(pst_hq >= 1 and qst_hq >= 0, "pqorder HQ returned invalid lag orders");
 call assert_true(pst_gets >= 1 and pst_gets <= 3 and qst_gets >= 0 and qst_gets <= 3,
@@ -68,6 +73,18 @@ call assert_true(pst_range_gets >= 2 and pst_range_gets <= 3 and
                  "pqorderRange GETS ignored lag bounds");
 call assert_true(rows(ic_grid) == 8 and cols(ic_grid) == 3, "pqorderGrid returned wrong shape");
 call assert_true(rows(ic_range_grid) == 4 and cols(ic_range_grid) == 3, "pqorderRangeGrid returned wrong shape");
+call assert_true(rows(pq_select) == 1 and cols(pq_select) == 2 and
+                 pq_select[1, 1] == pst_rect and pq_select[1, 2] == qst_rect,
+                 "pqSelect scalar best does not match pqorder");
+call assert_true(rows(pq_select_grid) == 8 and cols(pq_select_grid) == 3,
+                 "pqSelect scalar grid returned wrong shape");
+call assert_true(rows(pq_select_range) == 1 and cols(pq_select_range) == 2 and
+                 pq_select_range[1, 1] >= 2 and pq_select_range[1, 2] >= 2,
+                 "pqSelect restricted scalar range invalid");
+call assert_true(rows(pq_select_gets) == 1 and cols(pq_select_gets) == 2 and
+                 pq_select_gets[1, 1] >= 1 and pq_select_gets[1, 1] <= 3 and
+                 pq_select_gets[1, 2] >= 0 and pq_select_gets[1, 2] <= 3,
+                 "pqSelect GETS returned invalid lag orders");
 best_idx = minindc(ic_grid[., 3]);
 call assert_true(ic_grid[best_idx, 1] == pst_rect and ic_grid[best_idx, 2] == qst_rect,
                  "pqorderGrid minimum does not match pqorder");
@@ -77,10 +94,22 @@ call assert_true(ic_range_grid[best_idx, 1] == pst_range and ic_range_grid[best_
 call assert_true(icmean(data, pst, qst) == icmean(data, pst, qst, "bic"), "icmean default criterion changed");
 { pst_x, qst_x } = pqorderX(data, 2, 1, "bic");
 ic_x_grid = pqorderXGrid(data, 2, 1, "bic");
+pq_select_x = pqSelect(data, 2, 1, q_mode = "vector");
+pq_select_x_grid = pqSelect(data, 2, 1, q_mode = "vector", return_type = "grid");
+pq_select_x_range_grid = pqSelect(data, 2, 1, qstart = 1,
+                                  q_mode = "vector", return_type = "grid");
 call assert_true(pst_x >= 1 and rows(qst_x) == 2 and minc(qst_x) >= 0 and maxc(qst_x) <= 1,
                  "pqorderX returned invalid lag orders");
 call assert_true(rows(ic_x_grid) == 8 and cols(ic_x_grid) == 4,
                  "pqorderXGrid returned wrong shape");
+call assert_true(rows(pq_select_x) == 1 and cols(pq_select_x) == 3 and
+                 pq_select_x[1, 1] == pst_x,
+                 "pqSelect vector best returned wrong shape");
+call assert_true(rows(pq_select_x_grid) == 8 and cols(pq_select_x_grid) == 4,
+                 "pqSelect vector grid returned wrong shape");
+call assert_true(rows(pq_select_x_range_grid) == 2 and cols(pq_select_x_range_grid) == 4 and
+                 minc(vec(pq_select_x_range_grid[., 2:3])) >= 1,
+                 "pqSelect vector grid qstart filter returned invalid rows");
 call assert_true(icmeanX(data, 2, { 1, 0 }) > -1e256, "icmeanX returned invalid IC");
 
 struct qardlOut qaOut;

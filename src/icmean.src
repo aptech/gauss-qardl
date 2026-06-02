@@ -27,6 +27,61 @@ proc _icmeanUnchecked(data, ppp, qqq, criterion, caller);
     retp(ic);
 endp;
 
+proc (1) = pqSelect(data, pend = 8, qend = 8, pstart = 1, qstart = 0,
+                    criterion = "bic", q_mode = "scalar", return_type = "best",
+                    gets_pval = 0.1);
+
+    local mode, out, pst, qst, icgrid, lst, k0;
+
+    call _qardlValidateSearchInputs(data, pend, qend, { 0.5 }, "pqSelect");
+    call _qardlValidateLagRange(pstart, pend, "pqSelect: pstart/pend");
+    call _qardlValidateLagRangeZero(qstart, qend, "pqSelect: qstart/qend");
+    call _qardlValidateGETSPValue(gets_pval, "pqSelect");
+
+    criterion = lower(criterion);
+    mode = _pqSelectNormalizeQMode(q_mode, "pqSelect");
+    out = _pqSelectNormalizeOutput(return_type, "pqSelect");
+
+    if mode $== "scalar" and out $== "best";
+        call _qardlValidateSelectionCriterion(criterion, "pqSelect");
+
+        if _qardlCriterionIsGETS(criterion);
+            { pst, qst } = _qardlGETSLagOrderSearch(data, pstart, pend,
+                                                    qstart, qend,
+                                                    gets_pval, "pqSelect");
+        else;
+            { pst, qst } = _qardlLagOrderSearch(data, pstart, pend, qstart,
+                                                qend, criterion);
+        endif;
+
+        retp(pst~qst);
+    endif;
+
+    call _qardlValidateICCriterion(criterion, "pqSelect");
+
+    if mode $== "scalar";
+        icgrid = _qardlLagOrderGrid(data, pstart, pend, qstart, qend,
+                                    criterion);
+        if out $== "grid";
+            retp(icgrid);
+        endif;
+
+        lst = minindc(icgrid[., 3]);
+        retp(icgrid[lst, 1:2]);
+    endif;
+
+    k0 = cols(data) - 1;
+    icgrid = _qardlLagOrderGridX(data, pstart, pend, qend, criterion);
+    icgrid = _pqSelectFilterXGrid(icgrid, qstart, k0);
+
+    if out $== "grid";
+        retp(icgrid);
+    endif;
+
+    lst = minindc(icgrid[., cols(icgrid)]);
+    retp(icgrid[lst, 1:1+k0]);
+endp;
+
 proc (2) = pqorder(data, pend = 8, qend = 8, criterion = "bic",
                    gets_pval = 0.1);
 
@@ -303,6 +358,63 @@ proc (1) = _qardlQVectorFromIndex(idx, k0, qend);
     endo;
 
     retp(qvec);
+endp;
+
+proc (1) = _pqSelectNormalizeQMode(q_mode, caller);
+    q_mode = lower(q_mode);
+
+    if q_mode $== "scalar" or q_mode $== "uniform";
+        retp("scalar");
+    endif;
+
+    if q_mode $== "vector" or q_mode $== "x" or
+       q_mode $== "per-regressor" or q_mode $== "per_regressor";
+        retp("vector");
+    endif;
+
+    errorlog caller $+ ": q_mode must be \"scalar\" or \"vector\"";
+    end;
+endp;
+
+proc (1) = _pqSelectNormalizeOutput(output_type, caller);
+    output_type = lower(output_type);
+
+    if output_type $== "best" or output_type $== "selected";
+        retp("best");
+    endif;
+
+    if output_type $== "grid" or output_type $== "table";
+        retp("grid");
+    endif;
+
+    errorlog caller $+ ": return_type must be \"best\" or \"grid\"";
+    end;
+endp;
+
+proc (1) = _pqSelectFilterXGrid(icgrid, qstart, k0);
+    local out, ii, keep;
+
+    if qstart <= 0;
+        retp(icgrid);
+    endif;
+
+    out = zeros(rows(icgrid), cols(icgrid));
+    keep = 0;
+    ii = 1;
+    do until ii > rows(icgrid);
+        if minc(icgrid[ii, 2:1+k0]') >= qstart;
+            keep = keep + 1;
+            out[keep, .] = icgrid[ii, .];
+        endif;
+        ii = ii + 1;
+    endo;
+
+    if keep == 0;
+        errorlog "pqSelect: qstart/qend leaves no vector-lag grid rows";
+        end;
+    endif;
+
+    retp(out[1:keep, .]);
 endp;
 
 proc (1) = _qardlInformationCriterion(sigma2, nobs, nparam, criterion);

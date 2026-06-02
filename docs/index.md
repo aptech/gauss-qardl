@@ -135,29 +135,10 @@ Estimates CS-ARDL error-correction models.
 
 ### Lag Selection
 
-[pqorder](command-reference/pqorder.md)
+[pqSelect](command-reference/pqSelect.md)
 
-Selects scalar p and q lag orders by information criterion.
-
-[pqorderRange](command-reference/pqorderRange.md)
-
-Selects scalar p and q lag orders over a restricted search grid.
-
-[pqorderGrid](command-reference/pqorderGrid.md)
-
-Returns the full scalar p/q information-criterion search table.
-
-[pqorderRangeGrid](command-reference/pqorderRangeGrid.md)
-
-Returns a restricted scalar p/q information-criterion search table.
-
-[pqorderX](command-reference/pqorderX.md)
-
-Selects p and a per-regressor q vector by information criterion.
-
-[pqorderXGrid](command-reference/pqorderXGrid.md)
-
-Returns the full per-regressor q-vector information-criterion search table.
+Selects ARDL/QARDL lag orders or returns lag-search grids for scalar and
+per-regressor q specifications.
 
 [icmean](command-reference/icmean.md)
 

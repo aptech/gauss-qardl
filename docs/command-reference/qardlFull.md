@@ -81,5 +81,5 @@ printQARDLECM(qfOut.ecm, tau);
 
 ## See Also
 
-[qardl](qardl.md), [qardlECM](qardlECM.md), [pqorder](pqorder.md),
+[qardl](qardl.md), [qardlECM](qardlECM.md), [pqSelect](pqSelect.md),
 [ardlboundsCase](ardlboundsCase.md)

@@ -32,6 +32,10 @@ coverage, and release-verification tooling.
 - Added scalar GETS lag selection through `criterion = "gets"` and optional
   `gets_pval` in ARDL/QARDL, NARDL, and CS-ARDL order-selection and full
   workflows.
+- Added `pqSelect` as the documented ARDL/QARDL lag-selection entry point,
+  covering scalar lag selection, restricted grids, IC table output, scalar
+  GETS selection, and per-regressor q-vector searches while preserving legacy
+  `pqorder*` procedures for compatibility.
 - Added Pesaran-Shin-Smith deterministic Case I-V controls for ARDL and NARDL
   ECM paths through `case_id`, with `ardlFull(..., case_id)`
   using the selected case for bounds testing.

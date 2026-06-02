@@ -80,11 +80,7 @@ Two-step ECM estimation:
 
 Lag selection:
 
-- `pqorder(data, pend, qend, criterion)`
-- `pqorderRange(data, pstart, pend, qstart, qend, criterion)`
-- `pqorderGrid(data, pend, qend, criterion)`
-- `pqorderX(data, pend, qend, criterion)`
-- `pqorderXGrid(data, pend, qend, criterion)`
+- `pqSelect(data, pend, qend, pstart, qstart, criterion, q_mode, return_type, gets_pval)`
 
 ARDL bounds:
 
@@ -133,8 +129,8 @@ Lag orders:
 
 - `ppp` is the autoregressive lag order and must be at least 1.
 - `qqq` is the scalar distributed-lag order and may be 0.
-- `qvec` is a per-regressor distributed-lag vector for `qardlX`, `qardlECMX`,
-  `pqorderX`, and `pqorderXGrid`.
+- `qvec` is a per-regressor distributed-lag vector for `qardlX` and
+  `qardlECMX`. Use `pqSelect(..., q_mode = "vector")` to select q vectors.
 
 Covariance:
 
@@ -153,6 +149,7 @@ Lag-selection criteria:
 
 - `"bic"` default.
 - `"aic"`, `"hq"`, and `"hqc"` are also supported.
+- `"gets"` is supported for scalar best-order `pqSelect` and full workflows.
 
 ARDL bounds cases:
 

@@ -80,4 +80,4 @@ printARDL(afOut.ar);
 ## See Also
 
 [ardl](ardl.md), [ardlECM](ardlECM.md), [ardlAutoCase](ardlAutoCase.md),
-[ardlbounds](ardlbounds.md), [pqorder](pqorder.md), [qardlFull](qardlFull.md)
+[ardlbounds](ardlbounds.md), [pqSelect](pqSelect.md), [qardlFull](qardlFull.md)

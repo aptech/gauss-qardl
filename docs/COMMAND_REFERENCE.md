@@ -1,7 +1,7 @@
 # QARDL Command Reference
 
 This command reference follows the standard GAUSS documentation pattern:
-each public procedure should have a page with `Purpose`, `Format`,
+each user-facing procedure should have a page with `Purpose`, `Format`,
 `Parameters`, `Returns`, `Remarks`, `Examples`, `Source`, and `See Also`
 sections.
 
@@ -57,12 +57,7 @@ sections.
 
 ## Lag Selection
 
-- [pqorder](command-reference/pqorder.md)
-- [pqorderRange](command-reference/pqorderRange.md)
-- [pqorderGrid](command-reference/pqorderGrid.md)
-- [pqorderRangeGrid](command-reference/pqorderRangeGrid.md)
-- [pqorderX](command-reference/pqorderX.md)
-- [pqorderXGrid](command-reference/pqorderXGrid.md)
+- [pqSelect](command-reference/pqSelect.md)
 - [nardlOrder](command-reference/nardlOrder.md)
 - [nardlOrderGrid](command-reference/nardlOrderGrid.md)
 - [csardlOrder](command-reference/csardlOrder.md)

@@ -50,4 +50,4 @@ qECMOut = qardlECMX(data, 2, { 0, 1 }, tau, "hac", 2);
 
 ## See Also
 
-[qardlECM](qardlECM.md), [qardlX](qardlX.md), [pqorderX](pqorderX.md)
+[qardlECM](qardlECM.md), [qardlX](qardlX.md), [pqSelect](pqSelect.md)

@@ -84,7 +84,7 @@ The release also adds:
 The ARDL API provides a conventional OLS levels-form estimator, formula support,
 lag selection, bounds testing, diagnostics, prediction, and forecasting. Users
 who want a compact workflow can call `ardlFull`; users who want more control can
-select lags with `pqorder` and then call `ardl` directly.
+select lags with `pqSelect` and then call `ardl` directly.
 
 ### QARDL
 

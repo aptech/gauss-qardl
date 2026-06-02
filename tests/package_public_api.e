@@ -74,12 +74,28 @@ call assert_true(pst_gets >= 1 and pst_gets <= 2 and qst_gets >= 0 and qst_gets 
 call assert_true(pst_range == 2 and qst_range == 2, "pqorderRange fixed grid returned invalid lag orders");
 ic_grid = pqorderGrid(data, 2, 2, "bic");
 ic_range_grid = pqorderRangeGrid(data, 2, 2, 2, 2, "bic");
+pq_select = pqSelect(data, 2, 2);
+pq_select_grid = pqSelect(data, 2, 2, return_type = "grid");
+pq_select_gets = pqSelect(data, 2, 2, criterion = "gets", gets_pval = 0.1);
 call assert_true(rows(ic_grid) == 6 and cols(ic_grid) == 3, "pqorderGrid returned wrong shape");
 call assert_true(rows(ic_range_grid) == 1 and cols(ic_range_grid) == 3, "pqorderRangeGrid returned wrong shape");
+call assert_true(rows(pq_select) == 1 and cols(pq_select) == 2 and
+                 pq_select[1, 1] == pst and pq_select[1, 2] == qst,
+                 "pqSelect scalar best does not match pqorder");
+call assert_true(rows(pq_select_grid) == 6 and cols(pq_select_grid) == 3,
+                 "pqSelect scalar grid returned wrong shape");
+call assert_true(rows(pq_select_gets) == 1 and cols(pq_select_gets) == 2,
+                 "pqSelect GETS returned wrong shape");
 { pst_x, qst_x } = pqorderX(data, 2, 1, "bic");
 ic_x_grid = pqorderXGrid(data, 2, 1, "bic");
+pq_select_x = pqSelect(data, 2, 1, q_mode = "vector");
+pq_select_x_grid = pqSelect(data, 2, 1, q_mode = "vector", return_type = "grid");
 call assert_true(pst_x >= 1 and rows(qst_x) == 2 and rows(ic_x_grid) == 8 and cols(ic_x_grid) == 4,
                  "pqorderX output invalid");
+call assert_true(rows(pq_select_x) == 1 and cols(pq_select_x) == 3,
+                 "pqSelect vector best returned wrong shape");
+call assert_true(rows(pq_select_x_grid) == 8 and cols(pq_select_x_grid) == 4,
+                 "pqSelect vector grid returned wrong shape");
 
 struct qardlOut qaOut;
 qaOut = qardl(data, pst, qst, tau, "iid", 0, 0);

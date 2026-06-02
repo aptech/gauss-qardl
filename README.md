@@ -72,8 +72,8 @@ qfOut = qardlFull(macro, tau = tau,
 - Formula dataframe support across ARDL-family workflows, including
   GAUSS-style panel identifier inference and explicit `group_var`/`time_var`
   overrides for CS-ARDL dataframe formulas.
-- Lag selection with BIC, AIC, HQ, and HQC in the order/grid helpers; scalar
-  GETS is available in `pqorder`, `pqorderRange`, and the full workflows.
+- Lag selection with BIC, AIC, HQ, and HQC through `pqSelect`; scalar GETS is
+  available in `pqSelect` and the full workflows.
 - ARDL bounds testing for Pesaran-Shin-Smith Cases I-V, with bundled
   asymptotic critical values and simulation critical-value APIs.
 - CS-ARDL panel diagnostics, including Pesaran CD/CD(p) and

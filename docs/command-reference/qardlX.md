@@ -46,4 +46,4 @@ qaOut = qardlX(data, 2, { 0, 1, 3 }, tau, "hac", 4);
 
 ## See Also
 
-[qardl](qardl.md), [pqorderX](pqorderX.md), [qardlECMX](qardlECMX.md)
+[qardl](qardl.md), [pqSelect](pqSelect.md), [qardlECMX](qardlECMX.md)

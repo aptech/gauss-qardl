@@ -25,7 +25,7 @@ ic = icmean(data, ppp, qqq, criterion);
 
 ## Remarks
 
-Most users should call `pqorder`, `pqorderRange`, or `qardlFull` instead of
+Most users should call `pqSelect` or `qardlFull` instead of
 calling `icmean` directly.
 
 ## Examples
@@ -40,4 +40,4 @@ bic_val = icmean(data, 2, 1, "bic");
 
 ## See Also
 
-[pqorder](pqorder.md), [pqorderGrid](pqorderGrid.md)
+[pqSelect](pqSelect.md), [qardlFull](qardlFull.md)

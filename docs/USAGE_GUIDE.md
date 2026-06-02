@@ -100,15 +100,19 @@ qECMAutoHAC = qardlECMHAC(data, 2, 1, tau, 0);
 only `alpha_cov` and `rho_cov` change.
 The robust and HAC wrappers accept the same final `ecm_type` argument.
 
-Use `pqorder` directly when you only need lag selection:
+Use `pqSelect` directly when you only need lag selection:
 
 ```gauss
-{ pst, qst } = pqorder(data);
-{ pst, qst } = pqorder(data, pend = 8, qend = 8, criterion = "aic");
-{ pg, qg } = pqorder(data, pend = 8, qend = 8, criterion = "gets",
+best = pqSelect(data);
+pst = best[1, 1];
+qst = best[1, 2];
+
+aic_best = pqSelect(data, pend = 8, qend = 8, criterion = "aic");
+gets_best = pqSelect(data, pend = 8, qend = 8, criterion = "gets",
                      gets_pval = 0.1);
-{ pst, qst } = pqorderRange(data, 2, 8, 1, 4, "bic");
-ic_grid = pqorderGrid(data, 8, 8, "bic");
+range_best = pqSelect(data, 8, 4, pstart = 2, qstart = 1,
+                      criterion = "bic");
+ic_grid = pqSelect(data, 8, 8, return_type = "grid");
 ```
 
 Supported lag-selection criteria are `"bic"` (default), `"aic"`, `"hq"`,
@@ -122,27 +126,30 @@ qfGets = qardlFull(data, tau = tau, verbose = 0, criterion = "gets",
                    gets_pval = 0.1);
 ```
 
-Use `pqorderRange` when you need a restricted lag-search grid. For example,
-`pqorderRange(data, 2, 8, 1, 4, "bic")` searches p from 2 through 8 and q from
-1 through 4. Setting the start and end equal fixes a lag order.
-Use `pqorderGrid` or `pqorderRangeGrid` to inspect the full search table. The
-returned matrix has columns `[p, q, IC]`; the selected model is the row with the
-smallest IC value. The default `pqorder`/`pqorderGrid` search includes `q = 0`;
-use `pqorderRange(..., qstart = 1, ...)` when differenced-x lag terms are
-required by design.
+Use `pstart` and `qstart` when you need a restricted lag-search grid. For
+example, `pqSelect(data, 8, 4, pstart = 2, qstart = 1, criterion = "bic")`
+searches p from 2 through 8 and q from 1 through 4. Setting the start and end
+equal fixes a lag order. Use `return_type = "grid"` to inspect the full search
+table. The returned scalar-q grid has columns `[p, q, IC]`; the selected model
+is the row with the smallest IC value. The default `pqSelect` search includes
+`q = 0`; use `qstart = 1` when differenced-x lag terms are required by design.
 
 When different regressors need different distributed-lag depths, use the vector
 lag-order APIs:
 
 ```gauss
-{ pst_x, qvec_x } = pqorderX(data, 4, 2, "bic");
+best_x = pqSelect(data, 4, 2, q_mode = "vector", criterion = "bic");
+pst_x = best_x[1, 1];
+qvec_x = best_x[1, 2:cols(best_x)]';
 qaOut = qardlX(data, pst_x, qvec_x, tau);
 qECMOut = qardlECMX(data, pst_x, qvec_x, tau);
 qUECMOut = qardlECMX(data, pst_x, qvec_x, tau, "iid", 0, 0, "uecm");
 ```
 
 `qvec_x` is `k x 1`, ordered the same way as the regressors in `data`.
-`pqorderXGrid` returns columns `[p, q1, ..., qk, IC]`.
+`pqSelect(..., q_mode = "vector", return_type = "grid")` returns columns
+`[p, q1, ..., qk, IC]`. The legacy `pqorder*` procedures remain callable for
+backward compatibility, but `pqSelect` is the documented lag-selection API.
 
 ## Output Metadata
 
@@ -447,7 +454,7 @@ point estimates and zero band placeholders.
 
 The standard QARDL workflow currently includes:
 
-- Information-criterion lag selection through `pqorder`/`pqorderGrid` and
+- Information-criterion lag selection through `pqSelect` and
   `ardlFull`/`qardlFull`.
 - ARDL bounds testing through `ardlbounds`, `ardlboundsCase`, `ardlFull`, and
   `qardlFull`.
