@@ -24,7 +24,9 @@ Nothing. Results are printed to the GAUSS output window.
 
 ## Remarks
 
-Use after `ardlboundsCase` or `ardlboundsCaseSim`.
+Use after `ardlboundsCase` or `ardlboundsCaseSim`. The printed output includes
+a 5% interpretation statement: reject no level relationship, cannot reject no
+level relationship, or inconclusive when the statistic lies between the bounds.
 
 ## Examples
 

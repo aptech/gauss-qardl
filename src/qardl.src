@@ -2269,6 +2269,98 @@ proc (1) = _qardlSignifNote();
     retp("Signif. codes: *** p < 0.01, ** p < 0.05, * p < 0.10");
 endp;
 
+proc (1) = _qardlAlphaLabel(alpha);
+    retp(ftos(100*alpha, "%*.*lf", 1, 0) $+ "%");
+endp;
+
+proc (0) = _qardlPrintDecision(label, pval, reject_text, fail_text, alpha);
+    local level;
+
+    level = _qardlAlphaLabel(alpha);
+    if scalmiss(pval);
+        print label $+ ": No interpretation is available because the p-value is missing.";
+    elseif pval < alpha;
+        print label $+ ": Reject at the " $+ level $+ " level. " $+ reject_text;
+    else;
+        print label $+ ": Cannot reject at the " $+ level $+ " level. " $+ fail_text;
+    endif;
+endp;
+
+proc (0) = _qardlPrintECMInterpretation(rho, pval, alpha);
+    local level;
+
+    level = _qardlAlphaLabel(alpha);
+    print "Interpretation:";
+    if scalmiss(pval);
+        print "  The error-correction p-value is missing, so adjustment significance cannot be assessed.";
+    elseif rho < 0 and pval < alpha;
+        print "  The error-correction coefficient is negative and statistically significant at the " $+ level $+ " level.";
+        print "  This is consistent with adjustment back toward the long-run equilibrium.";
+    elseif rho < 0;
+        print "  The error-correction coefficient is negative but not statistically significant at the " $+ level $+ " level.";
+        print "  Interpret long-run adjustment with caution.";
+    elseif pval < alpha;
+        print "  The error-correction coefficient is statistically significant but not negative.";
+        print "  This is not consistent with stable adjustment back toward equilibrium.";
+    else;
+        print "  The error-correction coefficient is not negative and significant at the " $+ level $+ " level.";
+        print "  Interpret long-run adjustment with caution.";
+    endif;
+endp;
+
+proc (0) = _qardlPrintECMQInterp(rho, pval, tau, alpha);
+    local ii, good, nvalid, level;
+
+    level = _qardlAlphaLabel(alpha);
+    good = 0;
+    nvalid = 0;
+    ii = 1;
+    do until ii > rows(rho);
+        if not scalmiss(pval[ii]);
+            nvalid = nvalid + 1;
+            if rho[ii] < 0 and pval[ii] < alpha;
+                good = good + 1;
+            endif;
+        endif;
+        ii = ii + 1;
+    endo;
+
+    print "Interpretation:";
+    sprintf("  Negative and significant error-correction coefficients at the %s level: %g of %g quantiles.",
+            level, good, nvalid);
+    if good > 0;
+        print "  These quantiles show evidence of adjustment back toward the long-run equilibrium.";
+    else;
+        print "  None of the reported quantiles show negative and significant adjustment.";
+    endif;
+endp;
+
+proc (0) = _qardlPrintRejectCount(label, pvals, null_text, reject_text, fail_text, alpha);
+    local ii, nvalid, nreject, level;
+
+    level = _qardlAlphaLabel(alpha);
+    nvalid = 0;
+    nreject = 0;
+    ii = 1;
+    do until ii > rows(pvals);
+        if not scalmiss(pvals[ii]);
+            nvalid = nvalid + 1;
+            if pvals[ii] < alpha;
+                nreject = nreject + 1;
+            endif;
+        endif;
+        ii = ii + 1;
+    endo;
+
+    sprintf("  %s: %g of %g reject at the %s level.", label, nreject, nvalid, level);
+    print "    H0: " $+ null_text;
+    if nreject > 0;
+        print "    " $+ reject_text;
+    else;
+        print "    " $+ fail_text;
+    endif;
+endp;
+
 proc (1) = _qardlTableBorder(ch, width);
     local ii, border;
 
@@ -2403,6 +2495,8 @@ proc (0) = printARDLECM(struct ardlECMOut arECMOut);
     sprintf("  rho          %16.6f%15.6f%13.6f%12.6f%7s",
             arECMOut.rho, se_rho, z_rho, pv_rho,
             _qardlSignifStars(pv_rho));
+    print dash_line;
+    call _qardlPrintECMInterpretation(arECMOut.rho, pv_rho, 0.05);
     print eq_line;
     print note;
 endp;
@@ -2620,6 +2714,7 @@ proc (0) = printQARDLECM(struct qardlECMOut qECMOut, tau = { 0.25, 0.5, 0.75 });
         jj = jj + 1;
     endo;
 
+    call _qardlPrintECMQInterp(qECMOut.rho, pv_rho, tau, 0.05);
     print eq_line;
     print note;
 
@@ -4122,6 +4217,8 @@ proc (0) = _ardlPrintAutoCase(caller, pst, qst, case_ids, det_pv, bounds_table);
                 bounds_table[ii, 3], bounds_table[ii, 4]);
         ii = ii + 1;
     endo;
+    print caller $+ ": interpretation";
+    print "  Primary admissible PSS case: Case " $+ ntos(case_ids[1]) $+ " - " $+ _ardlDeterministicLabel(case_ids[1]);
 endp;
 
 proc (0) = _ardlValidateCaseID(case_id, caller);

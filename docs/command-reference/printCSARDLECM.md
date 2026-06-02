@@ -24,6 +24,9 @@ No return value. Results are printed to the GAUSS output window.
 The table labels the ECM as two-step or unrestricted based on
 `cECMOut.ecm_type`.
 
+The printed output also includes a 5% interpretation statement for the
+error-correction coefficient.
+
 ## Examples
 
 ```gauss

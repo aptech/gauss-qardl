@@ -64,6 +64,9 @@ mode stores the pruned Case V UECM fit separately and keeps `.ecm` as the
 primary-case dense UECM object for compatibility with existing ARDL ECM output
 fields.
 
+When `verbose = 1`, the printed output includes an interpretation line naming
+the primary admissible PSS case selected from the deterministic-term screening.
+
 ## Examples
 
 ```gauss

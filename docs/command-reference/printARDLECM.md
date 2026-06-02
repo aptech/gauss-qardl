@@ -26,6 +26,11 @@ Direct calls to `ardlECM` print this table by default. Pass
 The table labels whether the ECM was estimated with the default two-step
 method or the unrestricted ECM.
 
+The printed output also includes a 5% interpretation statement for the
+error-correction coefficient. The statement checks whether `rho` is negative
+and statistically significant, which is the usual indication of adjustment
+back toward the long-run equilibrium.
+
 ## Examples
 
 ```gauss
