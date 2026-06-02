@@ -33,8 +33,10 @@ coverage, and release-verification tooling.
   `gets_pval` in ARDL/QARDL, NARDL, and CS-ARDL order-selection and full
   workflows.
 - Added Pesaran-Shin-Smith deterministic Case I-V controls for ARDL and NARDL
-  unrestricted ECM paths through `case_id`, with `ardlFull(..., case_id)`
+  ECM paths through `case_id`, with `ardlFull(..., case_id)`
   using the selected case for bounds testing.
+- Extended ARDL and NARDL two-step ECM paths to accept `case_id = 1` through
+  `5` for deterministic terms in the differenced equation.
 - Added unified `predictARDL` and `forecastARDL` dispatch across ARDL, QARDL,
   NARDL, and CS-ARDL outputs.
 - Preserved backward-compatible `predictQARDL` and `forecastQARDL` wrappers.

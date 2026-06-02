@@ -28,8 +28,7 @@ nECMOut = nardlECM(data, ppp, qqq, formula, print_results,
   decomposition and lag controls as `nardl`.
 - `ecm_type` (*string*) - `"two-step"` (default) or `"uecm"`.
 - `case_id` (*scalar*) - Pesaran-Shin-Smith deterministic case `1` through
-  `5` for unrestricted ECM designs. Default is `3`. Cases other than `3`
-  require `ecm_type = "uecm"`.
+  `5` for the ECM equation. Default is `3`.
 - `d`, `thresh1`, `thresh2` - Partial-sum reset threshold controls shared
   with `nardl`. Default `"inf"` gives ordinary cumulative positive and
   negative partial sums.
@@ -51,10 +50,10 @@ The default `"two-step"` estimator first estimates the NARDL long-run levels
 relation, then uses one lagged error-correction term in the differenced ECM.
 With `ecm_type = "uecm"`, lagged dependent and lagged level terms enter the
 ECM directly, and long-run coefficients are derived as `-theta / rho`.
-For unrestricted ECMs, `case_id` controls deterministic terms in the
-differenced equation: Case I has no intercept/trend, Cases II-III include an
-intercept, and Cases IV-V include intercept and trend. Any trend coefficient
-is stored in `bt`.
+For both two-step and unrestricted ECMs, `case_id` controls deterministic
+terms in the differenced equation: Case I has no intercept/trend, Cases II-III
+include an intercept, and Cases IV-V include intercept and trend. Any trend
+coefficient is stored in `bt`.
 The same threshold settings are used in the long-run levels relation and the
 ECM design so two-step and unrestricted fits remain internally consistent.
 `symmetry = "SRSR"` imposes equality on positive and negative short-run
@@ -69,6 +68,8 @@ library qardl;
 
 nECMOut = nardlECM(df, 2, 2, "y ~ x1 + x2", 0,
                    "x1", "x2", 2, 1);
+nCaseI2 = nardlECM(df, 2, 2, "y ~ x1 + x2", 0,
+                   "x1", "x2", 2, 1, "two-step", 1);
 nUECMOut = nardlECM(df, 2, 2, "y ~ x1 + x2", 0,
                     "x1", "x2", 2, 1, "uecm");
 nCaseI = nardlECM(df, 2, 2, "y ~ x1 + x2", 0,

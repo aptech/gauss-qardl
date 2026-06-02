@@ -285,7 +285,8 @@ proc (struct nardlECMOut) = _nardlEstimateECM(data, ppp, q_decomp, formula,
         { Y_ecm, ONEX_ecm } =
             _nardlBuildSpecECMDesign(data, ppp, q_decomp, decomp_idx, control_idx,
                                      q_control, naOut.beta_pos, naOut.beta_neg,
-                                     naOut.beta_control, decomp_thresholds);
+                                     naOut.beta_control, decomp_thresholds,
+                                     case_id);
     endif;
     call _qardlCheckFullColumnRank(ONEX_ecm, caller, "ECM design matrix");
 
@@ -298,7 +299,7 @@ proc (struct nardlECMOut) = _nardlEstimateECM(data, ppp, q_decomp, formula,
                                    q_control, case_id, symmetry);
     else;
         R_sym = _nardlSymRestrECM(ppp, q_decomp, ndecomp, ncontrol,
-                                  q_control, symmetry);
+                                  q_control, case_id, symmetry);
     endif;
     { bt_ecm, fitted, resid, coef_cov, sigma2 } =
         _nardlRestrictedOLS(Y_ecm, ONEX_ecm, R_sym, caller, "ECM");
@@ -1718,9 +1719,9 @@ endp;
 
 proc (2) = _nardlBuildSpecECMDesign(data, ppp, q_decomp, decomp_idx, control_idx,
                                     q_control, beta_pos, beta_neg, beta_control,
-                                    decomp_thresholds);
+                                    decomp_thresholds, case_id = 3);
     local nn, ndecomp, ncontrol, max_lag, N, yy, x_pos, x_neg, dx_pos, dx_neg;
-    local x_ctrl, dx_ctrl, Y, ec_lag, ONEX, dy_lags;
+    local x_ctrl, dx_ctrl, Y, ec_lag, ONEX, dy_lags, trend;
     local dx_pos_lags, dx_neg_lags, dx_ctrl_lags;
     local ii, jj, src, col;
 
@@ -1743,6 +1744,7 @@ proc (2) = _nardlBuildSpecECMDesign(data, ppp, q_decomp, decomp_idx, control_idx
     endif;
 
     Y = zeros(N, 1);
+    trend = seqa(max_lag + 2, 1, N);
     ec_lag = zeros(N, 1);
 
     ii = 1;
@@ -1756,7 +1758,13 @@ proc (2) = _nardlBuildSpecECMDesign(data, ppp, q_decomp, decomp_idx, control_idx
         ii = ii + 1;
     endo;
 
-    ONEX = ones(N, 1)~ec_lag;
+    if case_id == 1;
+        ONEX = ec_lag;
+    elseif case_id == 2 or case_id == 3;
+        ONEX = ones(N, 1)~ec_lag;
+    else;
+        ONEX = ones(N, 1)~trend~ec_lag;
+    endif;
 
     if ppp > 1;
         dy_lags = zeros(N, ppp-1);
@@ -2663,13 +2671,14 @@ proc (1) = _nardlSymRestrUECM(ppp, q_decomp, ndecomp, ncontrol,
 endp;
 
 proc (1) = _nardlSymRestrECM(ppp, q_decomp, ndecomp, ncontrol,
-                             q_control, symmetry);
-    local K, R, row, ii, jj, pos_start, neg_start;
+                             q_control, case_id, symmetry);
+    local det_cols, K, R, row, ii, jj, pos_start, neg_start;
 
-    K = 2 + (ppp-1) + 2*q_decomp*ndecomp + q_control*ncontrol;
+    det_cols = _ardlDeterministicColumnCount(case_id);
+    K = det_cols + 1 + (ppp-1) + 2*q_decomp*ndecomp + q_control*ncontrol;
     R = error(0);
     if _nardlHasSRSR(symmetry) and q_decomp > 0;
-        pos_start = 2 + (ppp-1) + 1;
+        pos_start = det_cols + 1 + (ppp-1) + 1;
         neg_start = pos_start + q_decomp*ndecomp;
         ii = 1;
         do until ii > ndecomp;

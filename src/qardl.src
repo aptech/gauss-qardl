@@ -4133,10 +4133,7 @@ proc (0) = _ardlValidateCaseID(case_id, caller);
 endp;
 
 proc (0) = _ardlValidateECMCase(ecm_type, case_id, caller);
-    if not (ecm_type $== "uecm") and case_id /= 3;
-        errorlog caller $+ ": case_id values other than 3 require ecm_type = \"uecm\"";
-        end;
-    endif;
+    // case_id is valid for both two-step and UECM ECM designs.
 endp;
 
 proc (1) = _ardlDeterministicColumnCount(case_id);
@@ -4197,7 +4194,13 @@ proc (2) = _ardlBuildECMDesignX(data, ppp, qvec, beta_lr, ecm_type,
         endif;
     else;
         ec_lag = yy[(T0+1):(nn-1)] - xx[(T0+1):(nn-1), .]*beta_lr;
-        ONEX = ones(N_ecm, 1)~ec_lag;
+        if case_id == 1;
+            ONEX = ec_lag;
+        elseif case_id == 2 or case_id == 3;
+            ONEX = ones(N_ecm, 1)~ec_lag;
+        else;
+            ONEX = ones(N_ecm, 1)~trend~ec_lag;
+        endif;
     endif;
 
     if ppp > 1;

@@ -31,8 +31,7 @@ nfOut = nardlFull(data, pend, qend, formula, verbose, criterion,
 - `gets_pval` (*scalar*) - Wald p-value threshold used when
   `criterion = "gets"`. Default is `0.1`.
 - `case_id` (*scalar*) - Pesaran-Shin-Smith deterministic case passed to the
-  NARDL ECM when `ecm_type = "uecm"`. Default is `3`. Cases other than `3`
-  require `ecm_type = "uecm"`.
+  NARDL ECM. Default is `3`.
 - `d`, `thresh1`, `thresh2` - Partial-sum reset threshold controls shared
   with `nardl`. The selected threshold vector is stored in
   `nfOut.decomp_thresholds` and nested estimator outputs.

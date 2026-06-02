@@ -85,6 +85,9 @@
   `ecm_type = "two-step"` (default) or `"uecm"` to match the package's ECM
   API style. Existing QARDL, NARDL, and CS-ARDL ECM workflows, including
   `rollingQardlECM`, accept the same ECM mode option.
+- ARDL and NARDL two-step ECM estimators now accept `case_id = 1` through `5`
+  for deterministic terms in the differenced equation, matching the existing
+  UECM case surface.
 - Expanded command-reference coverage so NARDL and CS-ARDL user-facing
   helpers each have dedicated documentation pages matching the QARDL docs.
 - `docs/developer/R_PACKAGE_FUNCTIONALITY_INVENTORY.md`, comparing the full

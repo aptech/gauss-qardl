@@ -162,6 +162,15 @@ call assert_true(arECMOut.ecm_type $== "two-step" and arECMOut.nobs == arOut.nob
                  "ardlECM default two-step metadata invalid");
 call assert_true(rows(arECMOut.bt) == 5 and rows(arECMOut.beta_lr) == 2,
                  "ardlECM two-step output shape invalid");
+arECMOut = ardlECM(data, 2, 1, "", 0, "two-step", 1);
+call assert_true(arECMOut.deterministic $== "case I: no intercept, no trend" and
+                 rows(arECMOut.bt) == 4 and arECMOut.alpha == 0,
+                 "ardlECM Case I two-step output invalid");
+arECMOut = ardlECM(data, 2, 1, "", 0, "two-step", 5);
+call assert_true(arECMOut.deterministic $== "case V: unrestricted intercept, unrestricted trend" and
+                 rows(arECMOut.bt) == 6 and arECMOut.alpha_cov > 0,
+                 "ardlECM Case V two-step output invalid");
+arECMOut = ardlECM(data, 2, 1, "", 0);
 rdiagOut = ardlResidualDiagnostics(arECMOut, 4);
 call assert_true(rdiagOut.nobs == arECMOut.nobs and rdiagOut.source_model_family $== "ARDL-ECM",
                  "ardlResidualDiagnostics ARDL-ECM output invalid");

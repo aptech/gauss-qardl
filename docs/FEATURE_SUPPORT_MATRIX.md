@@ -9,7 +9,7 @@ embedded in every estimator call.
 | Levels estimator | Yes | Yes | Yes | Yes |
 | Full workflow | Yes | Yes | Yes | Yes |
 | ECM workflow | `ardlECM`; two-step or UECM | Yes; two-step or UECM | Yes; two-step or UECM | Yes; two-step or UECM |
-| UECM deterministic cases | Cases I-V | Default Case III | Cases I-V | Default Case III |
+| ECM deterministic cases | Cases I-V for two-step and UECM | Default Case III | Cases I-V for two-step and UECM | Default Case III |
 | Formula strings | Yes | Yes | Yes | Yes |
 | Automatic lag selection | IC, hierarchical GETS, sparse auto-case GETS | IC and GETS | IC, hierarchical GETS, sparse auto-case GETS | IC and GETS |
 | Auto-case workflow | Yes; hierarchical or sparse GETS | No | Yes; hierarchical or sparse GETS | No |

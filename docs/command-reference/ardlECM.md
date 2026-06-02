@@ -10,7 +10,7 @@ Estimates ARDL error-correction models by OLS.
 arECMOut = ardlECM(data, ppp, qqq);
 arECMOut = ardlECM(data, ppp, qqq, formula, print_results);
 arECMOut = ardlECM(data, ppp, qqq, formula, print_results, ecm_type);
-arECMOut = ardlECM(data, ppp, qqq, formula, print_results, "uecm", case_id);
+arECMOut = ardlECM(data, ppp, qqq, formula, print_results, ecm_type, case_id);
 ```
 
 ## Parameters
@@ -26,8 +26,7 @@ arECMOut = ardlECM(data, ppp, qqq, formula, print_results, "uecm", case_id);
 - `ecm_type` (*string*) - `"two-step"` (default) for the GAUSS restricted
   two-step ECM, or `"uecm"` for the unrestricted ECM.
 - `case_id` (*scalar*) - Pesaran-Shin-Smith deterministic case `1` through
-  `5` for unrestricted ECM designs. Default is `3`. Cases other than `3`
-  require `ecm_type = "uecm"`.
+  `5` for the ECM equation. Default is `3`.
 
 ## Returns
 
@@ -52,10 +51,10 @@ differenced equation directly, and long-run coefficients are derived as
 
 The ECM sample uses one fewer observation than the corresponding levels ARDL
 fit because the dependent variable is first differenced.
-For `ecm_type = "uecm"`, `case_id` controls the deterministic terms in the
-differenced equation: Case I has no intercept/trend, Cases II-III include an
-intercept, and Cases IV-V include intercept and trend. The trend coefficient,
-when present, is stored in `bt`.
+For both two-step and unrestricted ECMs, `case_id` controls deterministic
+terms in the differenced equation: Case I has no intercept/trend, Cases II-III
+include an intercept, and Cases IV-V include intercept and trend. The trend
+coefficient, when present, is stored in `bt`.
 
 ## Examples
 
@@ -65,6 +64,7 @@ library qardl;
 data = loadd("qardl_data.dat");
 
 arECMOut = ardlECM(data, 2, 1, "", 0);
+arCaseI2 = ardlECM(data, 2, 1, "", 0, "two-step", 1);
 arUECMOut = ardlECM(data, 2, 1, "", 0, "uecm");
 arCaseV = ardlECM(data, 2, 1, "", 0, "uecm", 5);
 

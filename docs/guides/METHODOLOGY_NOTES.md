@@ -14,9 +14,9 @@ testing where supported, and final levels-form estimation.
 `ecm_type = "two-step"` estimates the GAUSS restricted ECM by first estimating
 the levels long-run relation and then using one lagged error-correction term.
 `ecm_type = "uecm"` estimates the unrestricted ECM with lagged dependent and
-level regressors entered directly. UECM designs accept `case_id = 1` through
-`5` to choose the Pesaran-Shin-Smith deterministic case; the default Case III
-preserves the prior constant-only UECM behavior.
+level regressors entered directly. Both ECM designs accept `case_id = 1`
+through `5` to choose deterministic terms in the differenced equation; the
+default Case III preserves the prior constant-only behavior.
 `ardlAutoCase` selects scalar `p/q` orders by hierarchical GETS by default,
 fits a Case V UECM, and maps the retained constant/trend evidence to Case I,
 Cases II/III, or Cases IV/V. `gets_mode = "sparse"` instead starts from the
@@ -78,7 +78,7 @@ constrains positive and negative long-run level effects to be equal, and
 `"both"` imposes both restrictions.
 
 `nardlECM` defaults to the same restricted two-step ECM pattern and can run a
-direct unrestricted ECM with `ecm_type = "uecm"`. NARDL UECM designs accept
+direct unrestricted ECM with `ecm_type = "uecm"`. Both NARDL ECM designs accept
 the same `case_id = 1` through `5` deterministic-case option. Dynamic
 multiplier paths are available through `nardlDynamicMultipliers`. NARDL bounds output is a
 bounds-style UECM statistic; exact finite-sample critical-value integration

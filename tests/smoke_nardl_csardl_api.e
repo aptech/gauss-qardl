@@ -196,6 +196,14 @@ call assert_true(rows(nECMOut.beta_pos) == 2 and rows(nECMOut.beta_neg) == 2,
                  "nardlECM long-run fields invalid");
 call assert_true(nECMOut.sigma2 > 0 and rows(nECMOut.bt) > 2,
                  "nardlECM diagnostics invalid");
+nECMOut = nardlECM(nardl_data, 1, 1, "", 0, "", "", -1, 0, "two-step", 1);
+call assert_true(nECMOut.deterministic $== "case I: no intercept, no trend" and
+                 rows(nECMOut.bt) == 5 and nECMOut.alpha == 0,
+                 "nardlECM Case I two-step output invalid");
+nECMOut = nardlECM(nardl_data, 1, 1, "", 0, "", "", -1, 0, "two-step", 5);
+call assert_true(nECMOut.deterministic $== "case V: unrestricted intercept, unrestricted trend" and
+                 rows(nECMOut.bt) == 7 and nECMOut.alpha_cov > 0,
+                 "nardlECM Case V two-step output invalid");
 nECMOut = nardlECM(nardl_data, 1, 1, "", 0, "", "", -1, 0, "uecm");
 call assert_true(nECMOut.ecm_type $== "uecm" and nECMOut.nobs == n - 2 and
                  rows(nECMOut.beta_pos) == 2 and rows(nECMOut.beta_neg) == 2,
@@ -239,6 +247,10 @@ nfOut = nardlFull(nardl_data, 1, 1, "", 0, "bic", "", "", 0, "uecm", 0.1, 1);
 call assert_true(nfOut.deterministic $== "case I: no intercept, no trend" and
                  rows(nfOut.ecm.bt) == 9,
                  "nardlFull Case I UECM output invalid");
+nfOut = nardlFull(nardl_data, 1, 1, "", 0, "bic", "", "", 0, "two-step", 0.1, 1);
+call assert_true(nfOut.deterministic $== "case I: no intercept, no trend" and
+                 rows(nfOut.ecm.bt) == 5 and nfOut.ecm.alpha == 0,
+                 "nardlFull Case I two-step output invalid");
 nfOut = nardlFull(nardl_data, 1, 1, "", 0, "bic", "", "", 0,
                   "uecm", 0.1, 3, "inf", error(0), error(0), "LRSR");
 call assert_true(nfOut.na.symmetry_restriction $== "LRSR" and
