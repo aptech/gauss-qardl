@@ -24,8 +24,9 @@ The printed table includes mean-group versus pooled long-run coefficients,
 poolability, slope heterogeneity, Pesaran-Yamagata slope homogeneity, and
 Pesaran CD diagnostics.
 
-The printed output also includes 5% interpretation statements for each panel
-diagnostic, including residual cross-sectional dependence.
+After the significance note, the printed output includes a tabular 5%
+interpretation for each panel diagnostic, including residual cross-sectional
+dependence.
 
 ## Examples
 

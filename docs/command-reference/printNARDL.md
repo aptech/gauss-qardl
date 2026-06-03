@@ -24,8 +24,8 @@ The table includes long-run positive and negative effects, optional control
 effects, AR coefficients, the bounds-style F-statistic, and long-run
 asymmetry diagnostics.
 
-The printed output also includes 5% interpretation statements for long-run
-and, when available, short-run asymmetry tests.
+After the significance note, the printed output includes a tabular 5%
+interpretation for long-run and, when available, short-run asymmetry tests.
 
 ## Examples
 

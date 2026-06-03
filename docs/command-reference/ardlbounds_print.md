@@ -22,8 +22,8 @@ Nothing. Results are printed to the GAUSS output window.
 
 ## Remarks
 
-Use after `ardlbounds`. The printed output includes a 5% interpretation
-statement for the compatibility Case III bounds test.
+Use after `ardlbounds`. The bottom of the printed output includes a tabular 5%
+interpretation for the compatibility Case III bounds test.
 
 ## Examples
 

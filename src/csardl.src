@@ -827,35 +827,40 @@ proc (0) = printCSARDLDiagnostics(struct csardlDiagOut diagOut);
     sprintf("%-25s%13.0f    %-8s%8.0f", "CD order:", diagOut.cd_order,
             "min T:", diagOut.cd_min_t);
     sprintf("%-25s%13.0f", "max T:", diagOut.cd_max_t);
-    print dash_line;
-    print "Interpretation:";
-    call _qardlPrintDecision("Poolability Wald",
-                             diagOut.poolability_pv,
-                             "The pooled long-run slopes differ from the mean-group long-run slopes.",
-                             "The diagnostics do not indicate a difference between pooled and mean-group long-run slopes.",
-                             0.05);
-    call _qardlPrintDecision("Slope heterogeneity",
-                             diagOut.slope_hetero_pv,
-                             "The long-run slopes show evidence of cross-sectional heterogeneity.",
-                             "The diagnostics do not indicate long-run slope heterogeneity.",
-                             0.05);
-    call _qardlPrintDecision("PY Delta",
-                             diagOut.py_delta_pv,
-                             "Reject slope homogeneity using the Pesaran-Yamagata Delta test.",
-                             "Cannot reject slope homogeneity using the Pesaran-Yamagata Delta test.",
-                             0.05);
-    call _qardlPrintDecision("PY LR Delta",
-                             diagOut.py_lr_delta_pv,
-                             "Reject long-run slope homogeneity using the Pesaran-Yamagata Delta test.",
-                             "Cannot reject long-run slope homogeneity using the Pesaran-Yamagata Delta test.",
-                             0.05);
-    call _qardlPrintDecision("Pesaran CD",
-                             diagOut.cd_pv,
-                             "Residual cross-sectional dependence is detected.",
-                             "Residual cross-sectional independence is not rejected.",
-                             0.05);
     print eq_line;
     print note;
+    call _qardlPrintInterpHeader();
+    call _qardlPrintDecisionRow("Poolability Wald",
+                                diagOut.poolability_pv,
+                                "pooled and MG LR slopes are equal",
+                                "Pooled long-run slopes differ from mean-group slopes.",
+                                "No difference between pooled and MG slopes is indicated.",
+                                0.05);
+    call _qardlPrintDecisionRow("Slope heterogeneity",
+                                diagOut.slope_hetero_pv,
+                                "long-run slopes are homogeneous",
+                                "Long-run slopes show cross-sectional heterogeneity.",
+                                "Long-run slope heterogeneity is not indicated.",
+                                0.05);
+    call _qardlPrintDecisionRow("PY Delta",
+                                diagOut.py_delta_pv,
+                                "slope homogeneity",
+                                "Slope homogeneity is rejected.",
+                                "Slope homogeneity is not rejected.",
+                                0.05);
+    call _qardlPrintDecisionRow("PY LR Delta",
+                                diagOut.py_lr_delta_pv,
+                                "long-run slope homogeneity",
+                                "Long-run slope homogeneity is rejected.",
+                                "Long-run slope homogeneity is not rejected.",
+                                0.05);
+    call _qardlPrintDecisionRow("Pesaran CD",
+                                diagOut.cd_pv,
+                                "cross-sectional independence",
+                                "Residual cross-sectional dependence is detected.",
+                                "Residual cross-sectional independence is not rejected.",
+                                0.05);
+    call _qardlPrintInterpEnd();
 endp;
 
 /*
@@ -958,10 +963,9 @@ proc (0) = printCSARDLECM(struct csardlECMOut cECMOut);
     sprintf("  rho         %16.6f%15.6f%13.6f%12.6f%7s",
             cECMOut.rho[1], se_rho, z_rho, pv_rho,
             _qardlSignifStars(pv_rho));
-    print dash_line;
-    call _qardlPrintECMInterpretation(cECMOut.rho[1], pv_rho, 0.05);
     print eq_line;
     print note;
+    call _qardlPrintECMInterpretation(cECMOut.rho[1], pv_rho, 0.05);
 endp;
 
 /*

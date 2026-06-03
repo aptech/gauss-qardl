@@ -972,24 +972,24 @@ proc (0) = printNARDL(struct nardlOut naOut);
                 _qardlSignifStars(naOut.asymmetry_pv[ii]));
         ii = ii + 1;
     endo;
-    print dash_line;
-    print "Interpretation:";
-    call _qardlPrintRejectCount("Long-run asymmetry",
-                                naOut.asymmetry_pv,
-                                "positive and negative long-run effects are symmetric",
-                                "Evidence of long-run asymmetry is present for at least one decomposed variable.",
-                                "No decomposed variable shows statistically significant long-run asymmetry.",
-                                0.05);
-    if not scalmiss(naOut.short_run_pv[1]);
-        call _qardlPrintRejectCount("Short-run asymmetry",
-                                    naOut.short_run_pv,
-                                    "positive and negative short-run effects are symmetric",
-                                    "Evidence of short-run asymmetry is present for at least one decomposed variable.",
-                                    "No decomposed variable shows statistically significant short-run asymmetry.",
-                                    0.05);
-    endif;
     print eq_line;
     print note;
+    call _qardlPrintInterpHeader();
+    call _qardlPrintRejectCountRow("Long-run asymmetry",
+                                   naOut.asymmetry_pv,
+                                   "positive and negative LR effects symmetric",
+                                   "Long-run asymmetry is present for at least one variable.",
+                                   "No variable shows significant long-run asymmetry.",
+                                   0.05);
+    if not scalmiss(naOut.short_run_pv[1]);
+        call _qardlPrintRejectCountRow("Short-run asymmetry",
+                                       naOut.short_run_pv,
+                                       "positive and negative SR effects symmetric",
+                                       "Short-run asymmetry is present for at least one variable.",
+                                       "No variable shows significant short-run asymmetry.",
+                                       0.05);
+    endif;
+    call _qardlPrintInterpEnd();
 endp;
 
 /*
@@ -1058,16 +1058,17 @@ proc (0) = printNARDLECM(struct nardlECMOut nECMOut);
                 _qardlSignifStars(nECMOut.asymmetry_pv[ii]));
         ii = ii + 1;
     endo;
-    print dash_line;
-    call _qardlPrintECMInterpretation(nECMOut.rho[1], pv_rho, 0.05);
-    call _qardlPrintRejectCount("Long-run asymmetry",
-                                nECMOut.asymmetry_pv,
-                                "positive and negative long-run effects are symmetric",
-                                "Evidence of long-run asymmetry is present for at least one decomposed variable.",
-                                "No decomposed variable shows statistically significant long-run asymmetry.",
-                                0.05);
     print eq_line;
     print note;
+    call _qardlPrintInterpHeader();
+    call _qardlPrintECMInterpRow(nECMOut.rho[1], pv_rho, 0.05);
+    call _qardlPrintRejectCountRow("Long-run asymmetry",
+                                   nECMOut.asymmetry_pv,
+                                   "positive and negative LR effects symmetric",
+                                   "Long-run asymmetry is present for at least one variable.",
+                                   "No variable shows significant long-run asymmetry.",
+                                   0.05);
+    call _qardlPrintInterpEnd();
 endp;
 
 /*

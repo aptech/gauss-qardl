@@ -128,59 +128,59 @@ proc (0) = printARDLResidualDiagnostics(struct ardlResidualDiagOut dOut);
     endo;
 
     print eq_line;
-    print "Interpretation:";
-    call _qardlPrintRejectCount("Ljung-Box",
-                                dOut.serial_pv,
-                                "no residual serial correlation",
-                                "Residual serial correlation is detected in at least one series.",
-                                "No series rejects the no-serial-correlation null.",
-                                0.05);
-    call _qardlPrintRejectCount("BG LM",
-                                dOut.bg_pv,
-                                "no residual serial correlation",
-                                "Residual serial correlation is detected in at least one series.",
-                                "No series rejects the no-serial-correlation null.",
-                                0.05);
-    call _qardlPrintRejectCount("Breusch-Pagan",
-                                dOut.hetero_pv,
-                                "homoskedastic residuals",
-                                "Heteroskedasticity is detected in at least one series.",
-                                "No series rejects the homoskedasticity null.",
-                                0.05);
-    call _qardlPrintRejectCount("ARCH LM",
-                                dOut.arch_pv,
-                                "no ARCH effects",
-                                "ARCH effects are detected in at least one series.",
-                                "No series rejects the no-ARCH-effects null.",
-                                0.05);
-    call _qardlPrintRejectCount("Jarque-Bera",
-                                dOut.normality_pv,
-                                "normally distributed residuals",
-                                "Residual non-normality is detected in at least one series.",
-                                "No series rejects the residual-normality null.",
-                                0.05);
-    call _qardlPrintRejectCount("RESET",
-                                dOut.reset_pv,
-                                "correct functional specification",
-                                "Functional-form misspecification is indicated in at least one series.",
-                                "No series rejects the functional-specification null.",
-                                0.05);
-    if dOut.stability_available;
-        call _qardlPrintRejectCount("CUSUM",
-                                    dOut.cusum_pv,
-                                    "parameter stability",
-                                    "Parameter instability is indicated in at least one series.",
-                                    "No series rejects the parameter-stability null.",
-                                    0.05);
-        call _qardlPrintRejectCount("CUSUMSQ",
-                                    dOut.cusumsq_pv,
-                                    "parameter stability",
-                                    "Parameter instability is indicated in at least one series.",
-                                    "No series rejects the parameter-stability null.",
-                                    0.05);
-    endif;
-    print eq_line;
     print note;
+    call _qardlPrintInterpHeader();
+    call _qardlPrintRejectCountRow("Ljung-Box",
+                                   dOut.serial_pv,
+                                   "no residual serial correlation",
+                                   "Serial correlation is detected in at least one series.",
+                                   "No series rejects no serial correlation.",
+                                   0.05);
+    call _qardlPrintRejectCountRow("BG LM",
+                                   dOut.bg_pv,
+                                   "no residual serial correlation",
+                                   "Serial correlation is detected in at least one series.",
+                                   "No series rejects no serial correlation.",
+                                   0.05);
+    call _qardlPrintRejectCountRow("Breusch-Pagan",
+                                   dOut.hetero_pv,
+                                   "homoskedastic residuals",
+                                   "Heteroskedasticity is detected in at least one series.",
+                                   "No series rejects homoskedasticity.",
+                                   0.05);
+    call _qardlPrintRejectCountRow("ARCH LM",
+                                   dOut.arch_pv,
+                                   "no ARCH effects",
+                                   "ARCH effects are detected in at least one series.",
+                                   "No series rejects no ARCH effects.",
+                                   0.05);
+    call _qardlPrintRejectCountRow("Jarque-Bera",
+                                   dOut.normality_pv,
+                                   "normally distributed residuals",
+                                   "Residual non-normality is detected in at least one series.",
+                                   "No series rejects residual normality.",
+                                   0.05);
+    call _qardlPrintRejectCountRow("RESET",
+                                   dOut.reset_pv,
+                                   "correct functional specification",
+                                   "Functional-form misspecification is indicated.",
+                                   "No series rejects correct specification.",
+                                   0.05);
+    if dOut.stability_available;
+        call _qardlPrintRejectCountRow("CUSUM",
+                                       dOut.cusum_pv,
+                                       "parameter stability",
+                                       "Parameter instability is indicated in at least one series.",
+                                       "No series rejects parameter stability.",
+                                       0.05);
+        call _qardlPrintRejectCountRow("CUSUMSQ",
+                                       dOut.cusumsq_pv,
+                                       "parameter stability",
+                                       "Parameter instability is indicated in at least one series.",
+                                       "No series rejects parameter stability.",
+                                       0.05);
+    endif;
+    call _qardlPrintInterpEnd();
 endp;
 
 proc (struct ardlResidualDiagOut) = _ardlDiagFromMatrices(resid, fitted, source_model_family, max_lags);

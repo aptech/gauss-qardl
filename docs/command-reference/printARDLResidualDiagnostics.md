@@ -26,8 +26,9 @@ Jarque-Bera, RESET, residual CUSUM, and residual CUSUMSQ statistics with
 p-values and significance codes. CUSUM and CUSUMSQ p-values use the
 residual-bridge approximation described in `ardlResidualDiagnostics`.
 
-The printed output also includes 5% interpretation statements that summarize
-how many residual series reject each diagnostic null.
+After the significance note, the printed output includes a tabular 5%
+interpretation summarizing how many residual series reject each diagnostic
+null.
 
 ## Examples
 

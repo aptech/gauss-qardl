@@ -31,9 +31,9 @@ the default two-step ECM or an unrestricted ECM.
 The Step 2 coefficient table includes a `Sig.` column:
 `***` for `p < 0.01`, `**` for `p < 0.05`, and `*` for `p < 0.10`.
 
-The printed output also includes a 5% interpretation statement counting how
-many reported quantiles have negative and statistically significant
-error-correction coefficients.
+After the significance note, the printed output includes a tabular 5%
+interpretation counting how many reported quantiles have negative and
+statistically significant error-correction coefficients.
 
 ## Examples
 
