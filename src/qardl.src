@@ -2274,7 +2274,23 @@ proc (1) = _qardlAlphaLabel(alpha);
 endp;
 
 proc (1) = _qardlInterpWidth();
-    retp(128);
+    retp(132);
+endp;
+
+proc (1) = _qardlInterpTestWidth();
+    retp(22);
+endp;
+
+proc (1) = _qardlInterpNullWidth();
+    retp(36);
+endp;
+
+proc (1) = _qardlInterpOutcomeWidth();
+    retp(18);
+endp;
+
+proc (1) = _qardlInterpTextWidth();
+    retp(50);
 endp;
 
 proc (0) = _qardlPrintInterpHeader();
@@ -2287,7 +2303,7 @@ proc (0) = _qardlPrintInterpHeader();
     print eq_line;
     print "Interpretation";
     print eq_line;
-    sprintf("%-22s  %-38s  %-20s  %-60s",
+    sprintf("%-22s  %-36s  %-18s  %-50s",
             "Test", "Null hypothesis", "Outcome", "Interpretation");
     print dash_line;
 endp;
@@ -2296,9 +2312,53 @@ proc (0) = _qardlPrintInterpEnd();
     print _qardlTableBorder("=", _qardlInterpWidth());
 endp;
 
+proc (1) = _qardlStringLineCount(s, width);
+    local n;
+
+    n = ceil(strlen(s) / width);
+    if n < 1;
+        n = 1;
+    endif;
+
+    retp(n);
+endp;
+
+proc (1) = _qardlStringChunk(s, width, line_num);
+    local start_pos, nchar;
+
+    start_pos = (line_num - 1)*width + 1;
+    if start_pos > strlen(s);
+        retp("");
+    endif;
+
+    nchar = minc(width|(strlen(s) - start_pos + 1));
+    retp(strsect(s, start_pos, nchar));
+endp;
+
 proc (0) = _qardlPrintInterpRow(test_name, null_text, outcome, interpretation);
-    sprintf("%-22s  %-38s  %-20s  %-60s",
-            test_name, null_text, outcome, interpretation);
+    local wt, wn, wo, wi, nlines, line_num;
+    local test_chunk, null_chunk, outcome_chunk, interp_chunk;
+
+    wt = _qardlInterpTestWidth();
+    wn = _qardlInterpNullWidth();
+    wo = _qardlInterpOutcomeWidth();
+    wi = _qardlInterpTextWidth();
+
+    nlines = maxc(_qardlStringLineCount(test_name, wt)|
+                  _qardlStringLineCount(null_text, wn)|
+                  _qardlStringLineCount(outcome, wo)|
+                  _qardlStringLineCount(interpretation, wi));
+
+    line_num = 1;
+    do until line_num > nlines;
+        test_chunk = _qardlStringChunk(test_name, wt, line_num);
+        null_chunk = _qardlStringChunk(null_text, wn, line_num);
+        outcome_chunk = _qardlStringChunk(outcome, wo, line_num);
+        interp_chunk = _qardlStringChunk(interpretation, wi, line_num);
+        sprintf("%-22s  %-36s  %-18s  %-50s",
+                test_chunk, null_chunk, outcome_chunk, interp_chunk);
+        line_num = line_num + 1;
+    endo;
 endp;
 
 proc (0) = _qardlPrintDecisionRow(label, pval, null_text, reject_text, fail_text, alpha);
