@@ -11,7 +11,7 @@ embedded in every estimator call.
 | ECM workflow | `ardlECM`; two-step or UECM | Yes; two-step or UECM | Yes; two-step or UECM | Yes; two-step or UECM |
 | ECM deterministic cases | Cases I-V for two-step and UECM | Default Case III | Cases I-V for two-step and UECM | Default Case III |
 | Formula strings | Yes | Yes | Yes | Yes |
-| Automatic lag selection | IC, hierarchical GETS, sparse auto-case GETS; unified `ardlSelect` wrapper | IC and GETS; unified `ardlSelect` wrapper | IC, hierarchical GETS, sparse auto-case GETS; unified `ardlSelect` wrapper | IC and GETS; unified `ardlSelect` wrapper |
+| Automatic lag selection | IC, hierarchical GETS, standalone sparse GETS, sparse auto-case GETS; unified `ardlSelect` wrapper | IC and GETS; unified `ardlSelect` wrapper | IC, hierarchical GETS, standalone sparse GETS, sparse auto-case GETS; unified `ardlSelect` wrapper | IC and GETS; unified `ardlSelect` wrapper |
 | Auto-case workflow | Yes; hierarchical or sparse GETS | No | Yes; hierarchical or sparse GETS | No |
 | Explicit decomposed-variable / linear-control NARDL specs | Not applicable | Not applicable | Yes | Not applicable |
 | NARDL partial-sum reset thresholds | Not applicable | Not applicable | Yes | Not applicable |

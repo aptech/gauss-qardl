@@ -180,6 +180,15 @@ call write_numeric_csv(ar_uecm_resid, "value", outdir $+ "ardl_uecm_resid.csv");
 call write_numeric_csv(ar_uecm_sigma2, "value", outdir $+ "ardl_uecm_sigma2.csv");
 call write_numeric_csv(rows(Y_ardl_uecm), "value", outdir $+ "ardl_uecm_nobs.csv");
 
+struct ardlSparseGETSOut arSPOut;
+arSPOut = ardlSparseGETS(ardl_data, 2, 2, "", 0.1, 0);
+
+call write_numeric_csv(arSPOut.keep_cols, "value", outdir $+ "ardl_sparse_gets_keep.csv");
+call write_numeric_csv(arSPOut.bt, "value", outdir $+ "ardl_sparse_gets_bt.csv");
+call write_numeric_csv(arSPOut.sigma2, "value", outdir $+ "ardl_sparse_gets_sigma2.csv");
+call write_numeric_csv(arSPOut.nobs, "value", outdir $+ "ardl_sparse_gets_nobs.csv");
+call write_numeric_csv(arSPOut.n_dropped, "value", outdir $+ "ardl_sparse_gets_n_dropped.csv");
+
 struct nardlOut naOut;
 naOut = nardl(nardl_data, 2, 2, "", 0, "x1", "x2", -1, 1);
 
@@ -207,5 +216,15 @@ call write_numeric_csv(na_uecm_fitted, "value", outdir $+ "nardl_uecm_fitted.csv
 call write_numeric_csv(na_uecm_resid, "value", outdir $+ "nardl_uecm_resid.csv");
 call write_numeric_csv(na_uecm_sigma2, "value", outdir $+ "nardl_uecm_sigma2.csv");
 call write_numeric_csv(rows(Y_nardl_uecm), "value", outdir $+ "nardl_uecm_nobs.csv");
+
+struct ardlSparseGETSOut naSPOut;
+naSPOut = nardlSparseGETS(nardl_data, 2, 2, "", "x1", "x2", 1, 0.1,
+                          print_results = 0);
+
+call write_numeric_csv(naSPOut.keep_cols, "value", outdir $+ "nardl_sparse_gets_keep.csv");
+call write_numeric_csv(naSPOut.bt, "value", outdir $+ "nardl_sparse_gets_bt.csv");
+call write_numeric_csv(naSPOut.sigma2, "value", outdir $+ "nardl_sparse_gets_sigma2.csv");
+call write_numeric_csv(naSPOut.nobs, "value", outdir $+ "nardl_sparse_gets_nobs.csv");
+call write_numeric_csv(naSPOut.n_dropped, "value", outdir $+ "nardl_sparse_gets_n_dropped.csv");
 
 print "ardl_nardl_gauss_export.e: PASS";

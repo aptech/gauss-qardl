@@ -27,10 +27,22 @@ read_numeric <- function(name) {
   as.numeric(as.matrix(read.csv(path, check.names = FALSE)))
 }
 
+read_expected_numeric <- function(name) {
+  path <- file.path(expected_dir, name)
+  if (!file.exists(path)) {
+    stop("Missing R reference output: ", path, call. = FALSE)
+  }
+  as.numeric(as.matrix(read.csv(path, check.names = FALSE)))
+}
+
 write_numeric <- function(name, value) {
   write.csv(data.frame(value = as.numeric(value)),
             file.path(expected_dir, name),
             row.names = FALSE)
+}
+
+write_text <- function(name, value) {
+  writeLines(as.character(value), file.path(expected_dir, name))
 }
 
 clean_vector <- function(value) {
@@ -152,6 +164,84 @@ compare_numeric <- function(name, gauss, reference, required = TRUE) {
   )
 }
 
+compare_optional_numeric <- function(name, actual_name, expected_name = actual_name) {
+  expected_path <- file.path(expected_dir, expected_name)
+  if (!file.exists(expected_path)) {
+    return(data.frame(
+      check = name,
+      required = FALSE,
+      gauss_n = length(read_numeric(actual_name)),
+      r_n = 0,
+      compared_n = 0,
+      length_match = FALSE,
+      gauss_first = if (length(read_numeric(actual_name))) read_numeric(actual_name)[[1]] else NA_real_,
+      r_first = NA_real_,
+      max_abs_diff = NA_real_,
+      max_rel_diff = NA_real_,
+      tolerance = tolerance,
+      relative_tolerance = relative_tolerance,
+      pass = TRUE
+    ))
+  }
+
+  compare_numeric(name, read_numeric(actual_name), read_expected_numeric(expected_name),
+                  required = FALSE)
+}
+
+gets_status_from_fit <- function(fit, gauss_order, r_order) {
+  coef_values <- stats::coef(fit)
+  r_full <- setNames(rep(0, length(r_order)), r_order)
+  hit <- intersect(names(coef_values), names(r_full))
+  r_full[hit] <- coef_values[hit]
+
+  data.frame(
+    keep = as.numeric(r_order %in% names(coef_values)),
+    bt = as.numeric(r_full[r_order])
+  )[match(gauss_order, r_order), ]
+}
+
+maybe_gets_ardl <- function(df) {
+  tryCatch({
+    gets_ardl_uecm(
+      x = df,
+      dep_var = c("y"),
+      expl_var = c("x1", "x2"),
+      p_order = c(2),
+      q_order = c(2, 2),
+      gets_pval = 0.1,
+      case = 5,
+      F_HC = FALSE,
+      order_l = 4,
+      graph_save = FALSE
+    )
+  }, error = function(e) {
+    write_text("ardl_sparse_gets_skip.txt", paste("Skipped:", conditionMessage(e)))
+    NULL
+  })
+}
+
+maybe_gets_nardl <- function(df) {
+  tryCatch({
+    gets_nardl_uecm(
+      x = df,
+      decomp = c("x1"),
+      control = c("x2"),
+      c_q_order = c(1),
+      p_order = c(2),
+      q_order = c(2),
+      gets_pval = 0.1,
+      dep_var = c("y"),
+      order_l = 4,
+      graph_save = FALSE,
+      case = 5,
+      F_HC = FALSE
+    )
+  }, error = function(e) {
+    write_text("nardl_sparse_gets_skip.txt", paste("Skipped:", conditionMessage(e)))
+    NULL
+  })
+}
+
 ardl_df <- read.csv(file.path(actual_dir, "ardl_input.csv"), check.names = FALSE)
 nardl_df <- read.csv(file.path(actual_dir, "nardl_input.csv"), check.names = FALSE)
 
@@ -181,6 +271,9 @@ nardl_ref <- nardl_uecm(
   case = 3
 )
 
+ardl_gets_ref <- maybe_gets_ardl(ardl_df)
+nardl_gets_ref <- maybe_gets_nardl(nardl_df)
+
 r_elapsed <- (proc.time() - r_watch)[["elapsed"]]
 
 ardl_lr <- longrun_estimate(ardl_ref)
@@ -205,6 +298,53 @@ nardl_uecm_fitted <- clean_vector(stats::fitted(nardl_ref$NARDL_ECM_fit))
 nardl_uecm_resid <- clean_vector(stats::resid(nardl_ref$NARDL_ECM_fit))
 nardl_uecm_sigma2 <- sum(nardl_uecm_resid^2) /
   (length(nardl_uecm_resid) - length(stats::coef(nardl_ref$NARDL_ECM_fit)))
+
+gauss_ardl_gets_order <- c("const", "trend", "y_lag", "x_lag_x1", "x_lag_x2",
+                           "dy_lag1", "dx_x1_lag0", "dx_x1_lag1",
+                           "dx_x2_lag0", "dx_x2_lag1")
+ardl_gets_r_order <- c("(Intercept)", "trend", "y_1", "x1_1", "x2_1",
+                       "D.y_1", "D.x1", "D.x1_1", "D.x2", "D.x2_1")
+
+gauss_nardl_gets_order <- c("const", "trend", "y_lag", "x_pos_lag_x1",
+                            "x_neg_lag_x1", "x_ctrl_lag_x2", "dy_lag1",
+                            "dx_pos_x1_lag0", "dx_pos_x1_lag1",
+                            "dx_neg_x1_lag0", "dx_neg_x1_lag1",
+                            "dx_ctrl_x2_lag0")
+nardl_gets_r_order <- c("(Intercept)", "trend", "y_1", "x1_pos_1",
+                        "x1_neg_1", "x2_1", "D.y_1", "D.x1_pos_1",
+                        "D.x1_pos_2", "D.x1_neg_1", "D.x1_neg_2", "D.x2_1")
+
+if (!is.null(ardl_gets_ref)) {
+  ardl_gets_status <- gets_status_from_fit(
+    ardl_gets_ref$Parsimonious_ECM_fit,
+    gauss_ardl_gets_order,
+    ardl_gets_r_order
+  )
+  write_numeric("ardl_sparse_gets_keep.csv", ardl_gets_status$keep)
+  write_numeric("ardl_sparse_gets_bt.csv", ardl_gets_status$bt)
+  ardl_gets_resid <- clean_vector(stats::resid(ardl_gets_ref$Parsimonious_ECM_fit))
+  ardl_gets_sigma2 <- sum(ardl_gets_resid^2) /
+    (length(ardl_gets_resid) - length(stats::coef(ardl_gets_ref$Parsimonious_ECM_fit)))
+  write_numeric("ardl_sparse_gets_sigma2.csv", ardl_gets_sigma2)
+  write_numeric("ardl_sparse_gets_nobs.csv", length(ardl_gets_resid))
+  write_numeric("ardl_sparse_gets_n_dropped.csv", sum(ardl_gets_status$keep == 0))
+}
+
+if (!is.null(nardl_gets_ref)) {
+  nardl_gets_status <- gets_status_from_fit(
+    nardl_gets_ref$Parsimonious_ECM_fit,
+    gauss_nardl_gets_order,
+    nardl_gets_r_order
+  )
+  write_numeric("nardl_sparse_gets_keep.csv", nardl_gets_status$keep)
+  write_numeric("nardl_sparse_gets_bt.csv", nardl_gets_status$bt)
+  nardl_gets_resid <- clean_vector(stats::resid(nardl_gets_ref$Parsimonious_ECM_fit))
+  nardl_gets_sigma2 <- sum(nardl_gets_resid^2) /
+    (length(nardl_gets_resid) - length(stats::coef(nardl_gets_ref$Parsimonious_ECM_fit)))
+  write_numeric("nardl_sparse_gets_sigma2.csv", nardl_gets_sigma2)
+  write_numeric("nardl_sparse_gets_nobs.csv", length(nardl_gets_resid))
+  write_numeric("nardl_sparse_gets_n_dropped.csv", sum(nardl_gets_status$keep == 0))
+}
 
 write_numeric("ardl_bigbt.csv", ardl_lr)
 write_numeric("ardl_fitted.csv", ardl_fitted)
@@ -257,7 +397,17 @@ summary <- rbind(
   compare_numeric("NARDL UECM fitted values", read_numeric("nardl_uecm_fitted.csv"), nardl_uecm_fitted),
   compare_numeric("NARDL UECM residuals", read_numeric("nardl_uecm_resid.csv"), nardl_uecm_resid),
   compare_numeric("NARDL UECM sigma2", read_numeric("nardl_uecm_sigma2.csv"), nardl_uecm_sigma2),
-  compare_numeric("NARDL UECM nobs", read_numeric("nardl_uecm_nobs.csv"), length(nardl_uecm_fitted))
+  compare_numeric("NARDL UECM nobs", read_numeric("nardl_uecm_nobs.csv"), length(nardl_uecm_fitted)),
+  compare_optional_numeric("ARDL sparse GETS keep vector", "ardl_sparse_gets_keep.csv"),
+  compare_optional_numeric("ARDL sparse GETS coefficients", "ardl_sparse_gets_bt.csv"),
+  compare_optional_numeric("ARDL sparse GETS sigma2", "ardl_sparse_gets_sigma2.csv"),
+  compare_optional_numeric("ARDL sparse GETS nobs", "ardl_sparse_gets_nobs.csv"),
+  compare_optional_numeric("ARDL sparse GETS dropped count", "ardl_sparse_gets_n_dropped.csv"),
+  compare_optional_numeric("NARDL sparse GETS keep vector", "nardl_sparse_gets_keep.csv"),
+  compare_optional_numeric("NARDL sparse GETS coefficients", "nardl_sparse_gets_bt.csv"),
+  compare_optional_numeric("NARDL sparse GETS sigma2", "nardl_sparse_gets_sigma2.csv"),
+  compare_optional_numeric("NARDL sparse GETS nobs", "nardl_sparse_gets_nobs.csv"),
+  compare_optional_numeric("NARDL sparse GETS dropped count", "nardl_sparse_gets_n_dropped.csv")
 )
 
 write.csv(summary, file.path(expected_dir, "comparison_summary.csv"), row.names = FALSE)

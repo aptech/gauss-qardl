@@ -40,6 +40,11 @@ The suite builds deterministic GAUSS datasets and validates:
   reconstruction of the GAUSS restricted ECM design;
 - fixed-order NARDL unrestricted ECM coefficients, fitted values, residuals,
   `sigma2`, and usable observations against `nardl_uecm()$NARDL_ECM_fit`;
+- standalone ARDL and NARDL sparse GETS outputs against
+  `gets_ardl_uecm()` and `gets_nardl_uecm()` where the R package reference is
+  available. These diagnostic rows compare the final keep vector, full
+  coefficient vector in GAUSS term order, `sigma2`, usable observations, and
+  dropped-term count;
 - coarse runtime budgets for the GAUSS export step and the R package reference
   step.
 
@@ -57,7 +62,9 @@ Rows that intentionally compare different conventions are retained as
 diagnostics and marked `required = FALSE` in the generated summary. These
 include package-reported long-run relations derived from the R UECM fit and the
 R package's NARDL levels fit, which uses a shorter sample than GAUSS's fixed
-levels estimator.
+levels estimator. Sparse GETS rows are also diagnostic because the R package
+delegates deletion to `gets.lm`, while GAUSS uses its own deterministic
+max-p-value deletion loop with the same protected lagged-level convention.
 
 Generated comparison files are written to ignored directories under
 `tests/r_package/actual/` and `tests/r_package/r_expected/`.

@@ -373,6 +373,61 @@ struct ardlAutoCaseOut {
     struct ardlECMOut ecm;
 };
 
+struct ardlSparseGETSOut {
+    // Standardized workflow metadata
+    string model_family;
+    string formula;
+    string depvar;
+    string array xvars;
+    string array decomp_vars;
+    string array control_vars;
+    string deterministic;
+    string covariance_type;
+    string selection_criterion;
+
+    // Search/settings metadata
+    scalar p;
+    scalar q;
+    scalar q_control;
+    scalar gets_pval;
+    scalar case_id;
+    scalar primary_case;
+    scalar case_count;
+    matrix case_ids;
+
+    // Sample/design metadata
+    scalar sample_start;
+    scalar sample_end;
+    scalar estimation_start;
+    scalar estimation_end;
+    scalar nobs;
+    scalar k;
+    scalar ndecomp;
+    scalar ncontrol;
+    matrix decomp_indices;
+    matrix control_indices;
+    matrix decomp_thresholds;
+    scalar design_rank;
+    scalar design_cols;
+    scalar design_condition;
+
+    // Sparse GETS selection metadata
+    string array term_labels;
+    matrix keep_cols;
+    matrix dropped_cols;
+    scalar n_kept;
+    scalar n_dropped;
+    matrix deterministic_coef;
+    matrix deterministic_pv;
+
+    // Sparse Case V UECM fit
+    matrix bt;
+    matrix coef_cov;
+    matrix fitted;
+    matrix resid;
+    scalar sigma2;
+};
+
 struct nardlOut {
     // Standardized model metadata
     string model_family;

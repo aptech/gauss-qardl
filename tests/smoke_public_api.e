@@ -256,6 +256,15 @@ call assert_true(acOut.selection_criterion $== "gets-sparse" and
                  acOut.sparse_sigma2 > 0,
                  "ardlAutoCase sparse GETS metadata invalid");
 
+struct ardlSparseGETSOut spOut;
+spOut = ardlSparseGETS(data, 2, 2, "", 0.1, 0);
+call assert_true(spOut.model_family $== "ARDL-SparseGETS" and
+                 rows(spOut.term_labels) == rows(spOut.keep_cols) and
+                 rows(spOut.keep_cols) == 10 and
+                 minc(spOut.keep_cols[3:5]) == 1 and
+                 spOut.sigma2 > 0,
+                 "ardlSparseGETS output invalid");
+
 struct qardlOut qaQ0Out;
 qaQ0Out = qardl(data, 2, 0, tau, "iid", 0, 0);
 call assert_true(qaQ0Out.q == 0 and rows(qaQ0Out.gamma) == 2*rows(tau),

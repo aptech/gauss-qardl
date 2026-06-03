@@ -140,6 +140,14 @@ Estimates CS-ARDL error-correction models.
 Selects ARDL-family lag orders through one standardized wrapper for ARDL,
 QARDL, NARDL, and CS-ARDL.
 
+[ardlSparseGETS](command-reference/ardlSparseGETS.md)
+
+Runs standalone sparse GETS reduction on the Case V ARDL unrestricted ECM.
+
+[nardlSparseGETS](command-reference/nardlSparseGETS.md)
+
+Runs standalone sparse GETS reduction on the Case V NARDL unrestricted ECM.
+
 [pqSelect](command-reference/pqSelect.md)
 
 Selects ARDL/QARDL lag orders or returns lag-search grids for scalar and
@@ -268,6 +276,10 @@ Computes positive and negative NARDL dynamic multiplier paths.
 [ardlReport](command-reference/ardlReport.md)
 
 Prints and/or exports ARDL-family reports through one unified wrapper.
+
+[printARDLSparseGETS](command-reference/printARDLSparseGETS.md)
+
+Prints sparse GETS retained and dropped term output.
 
 [printARDL](command-reference/printARDL.md)
 

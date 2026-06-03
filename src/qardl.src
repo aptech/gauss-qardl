@@ -417,6 +417,144 @@ proc (struct ardlAutoCaseOut) = ardlAutoCase(data, pend = 8, qend = 8,
     retp(acOut);
 endp;
 
+/*
+**> ardlSparseGETS
+**
+**  Purpose:    Run standalone sparse general-to-specific reduction on the
+**              Case V ARDL unrestricted ECM. Lagged level terms are protected;
+**              deterministic and short-run difference terms are eligible for
+**              deletion by coefficient p-value.
+*/
+proc (struct ardlSparseGETSOut) = ardlSparseGETS(data, ppp, qqq,
+                                                formula = "",
+                                                gets_pval = 0.05,
+                                                print_results = 1);
+    local depvar, xvars, k0, Y, XU, protect_cols, keep, bt, coef_cov;
+    local fitted, resid, sigma2, det_coef, det_pv, case_ids, labels;
+    local idx, Xk, T0;
+    struct ardlSparseGETSOut spOut;
+
+    { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
+    data = applyQARDLFormula(data, formula);
+    call _qardlValidateEstimatorInputs(data, ppp, qqq, { 0.5 }, "ardlSparseGETS");
+    call _qardlValidateGETSPValue(gets_pval, "ardlSparseGETS");
+
+    k0 = cols(data) - 1;
+    { Y, XU } = _ardlBuildECMDesignX(data, ppp, qqq*ones(k0, 1),
+                                     zeros(k0, 1), "uecm", 5);
+    protect_cols = seqa(3, 1, k0 + 1);
+    { keep, bt, coef_cov, fitted, resid, sigma2 } =
+        _qardlSparseGETS(Y, XU, protect_cols, gets_pval, "ardlSparseGETS");
+
+    det_coef = bt[1:2];
+    det_pv = _ardlDetPValues(bt, coef_cov, 2);
+    case_ids = _ardlCaseIDs(det_pv, gets_pval);
+    labels = _ardlSparseGETSLabels(xvars, ppp, qqq);
+    idx = _qardlMaskIndices(keep);
+    Xk = XU[., idx];
+    T0 = maxc(ppp|qqq);
+
+    spOut.model_family = "ARDL-SparseGETS";
+    spOut.formula = formula;
+    spOut.depvar = depvar;
+    spOut.xvars = xvars;
+    spOut.decomp_vars = "";
+    spOut.control_vars = "";
+    spOut.deterministic = "case V: unrestricted intercept, unrestricted trend";
+    spOut.covariance_type = "ols";
+    spOut.selection_criterion = "gets-sparse";
+    spOut.p = ppp;
+    spOut.q = qqq;
+    spOut.q_control = 0;
+    spOut.gets_pval = gets_pval;
+    spOut.case_id = 5;
+    spOut.primary_case = case_ids[rows(case_ids)];
+    spOut.case_count = rows(case_ids);
+    spOut.case_ids = case_ids;
+    spOut.sample_start = 1;
+    spOut.sample_end = rows(data);
+    spOut.estimation_start = T0 + 2;
+    spOut.estimation_end = rows(data);
+    spOut.nobs = rows(Y);
+    spOut.k = k0;
+    spOut.ndecomp = 0;
+    spOut.ncontrol = 0;
+    spOut.decomp_indices = error(0);
+    spOut.control_indices = error(0);
+    spOut.decomp_thresholds = error(0);
+    spOut.design_rank = rank(Xk);
+    spOut.design_cols = cols(Xk);
+    spOut.design_condition = sqrt(_qardlConditionNumber(Xk'Xk));
+    spOut.term_labels = labels;
+    spOut.keep_cols = keep;
+    spOut.dropped_cols = _qardlDroppedCols(keep);
+    spOut.n_kept = sumc(keep);
+    spOut.n_dropped = sumc(keep .== 0);
+    spOut.deterministic_coef = det_coef;
+    spOut.deterministic_pv = det_pv;
+    spOut.bt = bt;
+    spOut.coef_cov = coef_cov;
+    spOut.fitted = fitted;
+    spOut.resid = resid;
+    spOut.sigma2 = sigma2;
+
+    if print_results;
+        call printARDLSparseGETS(spOut);
+    endif;
+
+    retp(spOut);
+endp;
+
+proc (0) = printARDLSparseGETS(struct ardlSparseGETSOut spOut);
+    local ii, se, zval, pval, status, header, note, table_width, eq_line, dash_line;
+
+    header = "Col  Status   Term                         Coeff.       Std. Err.      z-value       P>|z|    Sig.";
+    note = _qardlSignifNote();
+    table_width = maxc(strlen(header)|101|strlen(note));
+    eq_line = _qardlTableBorder("=", table_width);
+    dash_line = _qardlTableBorder("-", table_width);
+
+    print eq_line;
+    print spOut.model_family;
+    print eq_line;
+    sprintf("%-26s%12.0f        %-26s%12.0f", "No. of obs:", spOut.nobs,
+            "Candidate terms:", rows(spOut.keep_cols));
+    sprintf("%-26s%12.0f        %-26s%12.0f", "Retained terms:", spOut.n_kept,
+            "Dropped terms:", spOut.n_dropped);
+    sprintf("%-26s%12.0f        %-26s%12.0f", "AR lags (p):", spOut.p,
+            "DL lags (q):", spOut.q);
+    print "GETS p-value threshold: " $+ ftos(spOut.gets_pval, "%*.*lf", 1, 4);
+    print "Deterministic screen: " $+ _ardlDeterministicLabel(spOut.primary_case);
+    print dash_line;
+    print header;
+    print dash_line;
+
+    ii = 1;
+    do until ii > rows(spOut.keep_cols);
+        if spOut.keep_cols[ii] == 1;
+            status = "kept";
+            se = sqrt(spOut.coef_cov[ii, ii]);
+            if se > 0;
+                zval = spOut.bt[ii] / se;
+                pval = 2*cdfnc(abs(zval));
+            else;
+                zval = 0;
+                pval = 1;
+            endif;
+            sprintf("%-4.0f %-8s %-24s%16.6f%15.6f%13.6f%12.6f%7s",
+                    ii, status, spOut.term_labels[ii], spOut.bt[ii],
+                    se, zval, pval, _qardlSignifStars(pval));
+        else;
+            status = "dropped";
+            sprintf("%-4.0f %-8s %-24s%16s%15s%13s%12s%7s",
+                    ii, status, spOut.term_labels[ii], "", "", "", "", "");
+        endif;
+        ii = ii + 1;
+    endo;
+    print eq_line;
+    print note;
+endp;
+
 proc (struct qardlOut) = qardl(data, ppp, qqq, tau = { 0.25, 0.5, 0.75 }, cov_type = "iid", hac_lags = 0, print_results = 1);
 
     local za, nn, yy, xx, mm, ee, Y, X, ONEX, bigbt, psu, midbt,
@@ -4160,6 +4298,52 @@ proc (1) = _qardlMaskIndices(mask);
     endo;
 
     retp(idx);
+endp;
+
+proc (1) = _qardlDroppedCols(keep);
+    local mask;
+
+    mask = keep .== 0;
+    if sumc(mask) == 0;
+        retp(error(0));
+    endif;
+
+    retp(_qardlMaskIndices(mask));
+endp;
+
+proc (1) = _ardlSparseGETSLabels(xvars, ppp, qqq);
+    local labels, k0, ii, jj;
+
+    k0 = rows(xvars);
+    labels = "const" $| "trend" $| "y_lag";
+
+    ii = 1;
+    do until ii > k0;
+        labels = labels $| ("x_lag_" $+ xvars[ii]);
+        ii = ii + 1;
+    endo;
+
+    if ppp > 1;
+        jj = 1;
+        do until jj > ppp-1;
+            labels = labels $| ("dy_lag" $+ ntos(jj));
+            jj = jj + 1;
+        endo;
+    endif;
+
+    if qqq > 0;
+        ii = 1;
+        do until ii > k0;
+            jj = 0;
+            do until jj > qqq-1;
+                labels = labels $| ("dx_" $+ xvars[ii] $+ "_lag" $+ ntos(jj));
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+    endif;
+
+    retp(labels);
 endp;
 
 proc (6) = _qardlSparseGETS(Y, X, protect_cols, gets_pval, caller);

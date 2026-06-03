@@ -619,6 +619,118 @@ proc (struct nardlAutoCaseOut) = nardlAutoCase(data, pend = 8, qend = 8,
 endp;
 
 /*
+**> nardlSparseGETS
+**
+**  Purpose:    Run standalone sparse general-to-specific reduction on the
+**              Case V NARDL unrestricted ECM. Lagged level terms are protected;
+**              deterministic and short-run difference terms are eligible for
+**              deletion by coefficient p-value.
+*/
+proc (struct ardlSparseGETSOut) = nardlSparseGETS(data, ppp, q_decomp,
+                                                  formula = "",
+                                                  decomp_vars = "",
+                                                  control_vars = "",
+                                                  q_control = 0,
+                                                  gets_pval = 0.1,
+                                                  d = "inf",
+                                                  thresh1 = error(0),
+                                                  thresh2 = error(0),
+                                                  print_results = 1);
+    local depvar, xvars, decomp_idx, control_idx, decomp_names, control_names;
+    local decomp_thresholds, Y, XU, ndecomp, ncontrol, level_count;
+    local protect_cols, keep, bt, coef_cov, fitted, resid, sigma2;
+    local det_coef, det_pv, case_ids, labels, idx, Xk, max_lag;
+    struct ardlSparseGETSOut spOut;
+
+    { depvar, xvars } = _qardlFormulaNames(formula, cols(data) - 1);
+    data = applyNARDLFormula(data, formula);
+    call _qardlValidateLagScalar(ppp, "nardlSparseGETS: ppp");
+    call _qardlValidateLagScalarZero(q_decomp, "nardlSparseGETS: q_decomp");
+    call _qardlValidateLagScalarZero(q_control, "nardlSparseGETS: q_control");
+    call _qardlValidateGETSPValue(gets_pval, "nardlSparseGETS");
+    { decomp_idx, control_idx, decomp_names, control_names } =
+        _nardlResolveSpecSelectors(xvars, decomp_vars, control_vars,
+                                   "nardlSparseGETS");
+    if _nardlIndexCount(control_idx) == 0;
+        q_control = 0;
+    endif;
+    call _nardlValidateSpecInputs(data, ppp, q_decomp, q_control,
+                                  decomp_idx, control_idx,
+                                  "nardlSparseGETS");
+    decomp_thresholds = _nardlResolveThresh(data, decomp_idx, d, thresh1,
+                                            thresh2, "nardlSparseGETS");
+
+    { Y, XU } = _nardlBuildSpecUECMDesign(data, ppp, q_decomp,
+                                          decomp_idx, control_idx, q_control,
+                                          5, decomp_thresholds);
+    ndecomp = rows(decomp_idx);
+    ncontrol = _nardlIndexCount(control_idx);
+    level_count = 1 + 2*ndecomp + ncontrol;
+    protect_cols = seqa(3, 1, level_count);
+    { keep, bt, coef_cov, fitted, resid, sigma2 } =
+        _qardlSparseGETS(Y, XU, protect_cols, gets_pval, "nardlSparseGETS");
+
+    det_coef = bt[1:2];
+    det_pv = _ardlDetPValues(bt, coef_cov, 2);
+    case_ids = _ardlCaseIDs(det_pv, gets_pval);
+    labels = _nardlSparseGETSLabels(decomp_names, control_names, ppp,
+                                    q_decomp, q_control, ncontrol);
+    idx = _qardlMaskIndices(keep);
+    Xk = XU[., idx];
+    max_lag = maxc(ppp|q_decomp|q_control);
+
+    spOut.model_family = "NARDL-SparseGETS";
+    spOut.formula = formula;
+    spOut.depvar = depvar;
+    spOut.xvars = xvars;
+    spOut.decomp_vars = decomp_names;
+    spOut.control_vars = control_names;
+    spOut.deterministic = "case V: unrestricted intercept, unrestricted trend";
+    spOut.covariance_type = "ols";
+    spOut.selection_criterion = "gets-sparse";
+    spOut.p = ppp;
+    spOut.q = q_decomp;
+    spOut.q_control = q_control;
+    spOut.gets_pval = gets_pval;
+    spOut.case_id = 5;
+    spOut.primary_case = case_ids[rows(case_ids)];
+    spOut.case_count = rows(case_ids);
+    spOut.case_ids = case_ids;
+    spOut.sample_start = 1;
+    spOut.sample_end = rows(data);
+    spOut.estimation_start = max_lag + 2;
+    spOut.estimation_end = rows(data);
+    spOut.nobs = rows(Y);
+    spOut.k = cols(data) - 1;
+    spOut.ndecomp = ndecomp;
+    spOut.ncontrol = ncontrol;
+    spOut.decomp_indices = decomp_idx;
+    spOut.control_indices = control_idx;
+    spOut.decomp_thresholds = decomp_thresholds;
+    spOut.design_rank = rank(Xk);
+    spOut.design_cols = cols(Xk);
+    spOut.design_condition = sqrt(_qardlConditionNumber(Xk'Xk));
+    spOut.term_labels = labels;
+    spOut.keep_cols = keep;
+    spOut.dropped_cols = _qardlDroppedCols(keep);
+    spOut.n_kept = sumc(keep);
+    spOut.n_dropped = sumc(keep .== 0);
+    spOut.deterministic_coef = det_coef;
+    spOut.deterministic_pv = det_pv;
+    spOut.bt = bt;
+    spOut.coef_cov = coef_cov;
+    spOut.fitted = fitted;
+    spOut.resid = resid;
+    spOut.sigma2 = sigma2;
+
+    if print_results;
+        call printARDLSparseGETS(spOut);
+    endif;
+
+    retp(spOut);
+endp;
+
+/*
 **> nardlOrder
 **
 **  Purpose:    Select scalar NARDL p and q orders by IC or GETS.
@@ -2023,6 +2135,76 @@ proc (9) = _nardlSparseAutoCases(data, ppp, q_decomp, decomp_idx, control_idx,
 
     retp(case_ids, det_coef, det_pv, keep, bt, coef_cov, fitted, resid,
          sigma2);
+endp;
+
+proc (1) = _nardlSparseGETSLabels(decomp_names, control_names, ppp,
+                                  q_decomp, q_control, ncontrol);
+    local labels, ndecomp, ii, jj;
+
+    ndecomp = rows(decomp_names);
+    labels = "const" $| "trend" $| "y_lag";
+
+    ii = 1;
+    do until ii > ndecomp;
+        labels = labels $| ("x_pos_lag_" $+ decomp_names[ii]);
+        ii = ii + 1;
+    endo;
+
+    ii = 1;
+    do until ii > ndecomp;
+        labels = labels $| ("x_neg_lag_" $+ decomp_names[ii]);
+        ii = ii + 1;
+    endo;
+
+    ii = 1;
+    do until ii > ncontrol;
+        labels = labels $| ("x_ctrl_lag_" $+ control_names[ii]);
+        ii = ii + 1;
+    endo;
+
+    if ppp > 1;
+        jj = 1;
+        do until jj > ppp-1;
+            labels = labels $| ("dy_lag" $+ ntos(jj));
+            jj = jj + 1;
+        endo;
+    endif;
+
+    if q_decomp > 0;
+        ii = 1;
+        do until ii > ndecomp;
+            jj = 0;
+            do until jj > q_decomp-1;
+                labels = labels $| ("dx_pos_" $+ decomp_names[ii] $+ "_lag" $+ ntos(jj));
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+
+        ii = 1;
+        do until ii > ndecomp;
+            jj = 0;
+            do until jj > q_decomp-1;
+                labels = labels $| ("dx_neg_" $+ decomp_names[ii] $+ "_lag" $+ ntos(jj));
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+    endif;
+
+    if ncontrol > 0 and q_control > 0;
+        ii = 1;
+        do until ii > ncontrol;
+            jj = 0;
+            do until jj > q_control-1;
+                labels = labels $| ("dx_ctrl_" $+ control_names[ii] $+ "_lag" $+ ntos(jj));
+                jj = jj + 1;
+            endo;
+            ii = ii + 1;
+        endo;
+    endif;
+
+    retp(labels);
 endp;
 
 proc (1) = _nardlAutoBoundsTable(data, ppp, q_decomp, decomp_idx, control_idx,

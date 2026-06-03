@@ -58,6 +58,8 @@ sections.
 ## Lag Selection
 
 - [ardlSelect](command-reference/ardlSelect.md)
+- [ardlSparseGETS](command-reference/ardlSparseGETS.md)
+- [nardlSparseGETS](command-reference/nardlSparseGETS.md)
 - [pqSelect](command-reference/pqSelect.md)
 - [nardlOrder](command-reference/nardlOrder.md)
 - [nardlOrderGrid](command-reference/nardlOrderGrid.md)
@@ -108,6 +110,7 @@ sections.
 ## Output, Plotting, And Export
 
 - [ardlReport](command-reference/ardlReport.md)
+- [printARDLSparseGETS](command-reference/printARDLSparseGETS.md)
 - [printARDL](command-reference/printARDL.md)
 - [printARDLECM](command-reference/printARDLECM.md)
 - [ardlLongRun](command-reference/ardlLongRun.md)

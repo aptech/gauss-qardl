@@ -48,6 +48,7 @@ decomposition NARDL outputs also store `q_control`, `control_qvec`, and
 | `ardlECMOut` | ARDL-ECM | common metadata, `ecm_type`, `qvec`, row-index sample metadata, `beta_lr`, `rho_ols` | Dedicated ARDL ECM output; supports `"two-step"` and `"uecm"`. |
 | `ardlFullOut` | ARDL | common workflow metadata, `pmax`, `qmax` | Bundles selected ARDL output in `.ar`. |
 | `ardlAutoCaseOut` | ARDL-AutoCase | common workflow metadata, `pmax`, `qmax`, `gets_mode`, `case_ids`, `primary_case`, `bounds_table`, optional `sparse_*` fields | Bundles GETS-selected ARDL levels output in `.ar` and primary-case UECM output in `.ecm`; sparse mode stores the pruned Case V UECM fit separately. |
+| `ardlSparseGETSOut` | ARDL/NARDL sparse GETS | common workflow metadata, `term_labels`, `keep_cols`, `dropped_cols`, `bt`, `coef_cov`, `fitted`, `resid`, `sigma2`, `case_ids`, `primary_case` | Returned by `ardlSparseGETS` and `nardlSparseGETS`; exposes standalone sparse Case V UECM pruning while auto-case continues to store sparse results in its own fields. |
 | `qardlOut` | QARDL | common metadata, `qvec`, `fitted`, `resid` | `fitted` and `resid` are `nobs x rows(tau)`. |
 | `qardlECMOut` | QARDL-ECM | common metadata, `ecm_type`, `qvec`, `bt`, `fitted`, `resid` | Supports `"two-step"` and `"uecm"`; full covariance is currently exposed through `alpha_cov` and `rho_cov`. |
 | `qardlFullOut` | QARDL | common workflow metadata, `pmax`, `qmax` | Propagates formula/name metadata to `.qa` and `.ecm`. |

@@ -316,6 +316,17 @@ call assert_true(nacOut.selection_criterion $== "gets-sparse" and
                  nacOut.sparse_sigma2 > 0,
                  "nardlAutoCase sparse GETS metadata invalid");
 
+struct ardlSparseGETSOut nspOut;
+nspOut = nardlSparseGETS(default_nardl_data, 2, 2, "", "x1", "x2", 1, 0.1,
+                         print_results = 0);
+call assert_true(nspOut.model_family $== "NARDL-SparseGETS" and
+                 rows(nspOut.term_labels) == rows(nspOut.keep_cols) and
+                 rows(nspOut.keep_cols) == 12 and
+                 minc(nspOut.keep_cols[3:6]) == 1 and
+                 nspOut.ndecomp == 1 and nspOut.ncontrol == 1 and
+                 nspOut.sigma2 > 0,
+                 "nardlSparseGETS output invalid");
+
 /*
 ** CS-ARDL deterministic checks.  Panel data are balanced and stacked
 ** by unit: [unit_id, y, x1, x2].
