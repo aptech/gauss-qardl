@@ -137,6 +137,7 @@ style:
 - [LLM reference](llms.txt): compact package guide for users who want to point
   an AI assistant at the QARDL API.
 - [Citation guide](CITATION.md),
+  [3.1.1 release notes](docs/release/QARDL_3_1_1_RELEASE_NOTES.md),
   [3.1.0 release article](docs/release/QARDL_3_1_0_RELEASE_ARTICLE.md), and
   [3.0.0 release article](docs/archive/QARDL_RELEASE_ARTICLE.md): preferred software
   citation materials for research users.
@@ -209,7 +210,10 @@ powershell -ExecutionPolicy Bypass -File scripts\run_release_verification.ps1 -I
 If you use this library in academic, policy, consulting, or commercial
 research, please cite the QARDL software release article and the underlying
 QARDL methodology. See [CITATION.md](CITATION.md) and the
-[3.1.0 release article](docs/release/QARDL_3_1_0_RELEASE_ARTICLE.md). The historical
+[3.1.1 release notes](docs/release/QARDL_3_1_1_RELEASE_NOTES.md). The 3.1.0
+software article remains available at
+[docs/release/QARDL_3_1_0_RELEASE_ARTICLE.md](docs/release/QARDL_3_1_0_RELEASE_ARTICLE.md).
+The historical
 3.0.0 article remains available at
 [docs/archive/QARDL_RELEASE_ARTICLE.md](docs/archive/QARDL_RELEASE_ARTICLE.md),
 with a PDF copy at

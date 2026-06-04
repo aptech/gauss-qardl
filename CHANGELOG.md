@@ -1,5 +1,67 @@
 # Changelog
 
+## 3.1.1 - 2026-06-04
+
+### Added
+- `ardlECM` as the ARDL-family ECM companion to `ardl`, with
+  `ecm_type = "two-step"` as the default and `ecm_type = "uecm"` for
+  unrestricted error-correction estimation.
+- UECM options across ECM-specific workflows so ARDL, QARDL, NARDL, and
+  CS-ARDL ECM procedures can use either two-step or unrestricted ECM
+  parameterizations where supported.
+- R-style NARDL specification controls on existing NARDL procedures, including
+  named decomposed variables, linear controls, `q_decomp`, `q_control`,
+  partial-sum threshold reset options, and symmetry restrictions.
+- Hierarchical GETS lag-selection support across ARDL, QARDL, NARDL, and
+  CS-ARDL selection/full workflows while preserving existing IC options.
+- Standalone sparse GETS workflows, `ardlSparseGETS` and `nardlSparseGETS`,
+  plus `printARDLSparseGETS`, exposing sparse Case V UECM pruning outside the
+  auto-case workflows.
+- Unified lag-selection wrappers `pqSelect` and `ardlSelect`, with legacy
+  `pqorder*`, `nardlOrder*`, and `csardlOrder*` helpers kept callable for
+  backward compatibility.
+- `ardlReport` as a unified ARDL-family reporting wrapper for console output,
+  table export, or both.
+- Interpretation tables for coefficient, asymmetry, residual diagnostic, and
+  panel diagnostic output, including wrapped fixed-width table printing so
+  interpretation text stays inside table borders.
+- Automatic diagnostics in `*Full` workflows:
+  `ardlFull.levels_diag`, `qardlFull.levels_diag`, `qardlFull.ecm_diag`,
+  `nardlFull.levels_diag`, `nardlFull.ecm_diag`, and
+  `csardlFull.panel_diag`.
+- Optional `print_diagnostics` arguments on `ardlFull`, `qardlFull`,
+  `nardlFull`, and `csardlFull`. The default `-1` follows `verbose`, `0`
+  stores diagnostics silently, and `1` prints diagnostics even when
+  `verbose = 0`.
+- Expanded R `ardl.nardl` parity inventory and validation harness, including
+  fixed-order ARDL/NARDL levels and ECM comparisons, runtime comparison output,
+  and optional sparse GETS keep/coefficient diagnostics when R is available.
+- Command-reference pages for newly public user-facing functions and updated
+  output-schema documentation for the expanded full-workflow diagnostic fields.
+- 3.1.1 release notes under `docs/release/`.
+
+### Changed
+- Full-workflow examples now rely on GAUSS structure-reference assignment and
+  no longer declare output structures explicitly.
+- Example files no longer contain development TODO notes, making the examples
+  cleaner user-facing scripts.
+- `pqorder*` command-reference pages were removed from the user-facing command
+  reference in favor of documented `pqSelect`; the legacy procedures remain
+  available.
+- R-package functionality inventory was moved to the developer documentation
+  area and updated to track remaining R-parity priorities.
+- Documentation links, feature matrix, migration guide, and command references
+  now describe diagnostics stored by full workflows and the
+  `print_diagnostics` control.
+
+### Fixed
+- Clarified R-package ECM convention differences, including unrestricted ECM
+  behavior and sample/lag-alignment differences in validation notes.
+- Added source smoke coverage for new full-workflow diagnostic fields,
+  sparse GETS outputs, unified selection wrappers, and package public API
+  metadata.
+- Updated package metadata and citation files to version `3.1.1`.
+
 ## 3.1.0 - 2026-05-21
 
 ### Added

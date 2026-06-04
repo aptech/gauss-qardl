@@ -418,6 +418,7 @@ Exports QARDL-ECM matrix results to CSV files.
 - [Performance And Numerical Reliability](validation/PERFORMANCE_NUMERICAL_RELIABILITY.md)
 - [Validation Tolerances](validation/VALIDATION_TOLERANCES.md)
 - [Published QARDL Replication Notes](validation/PUBLISHED_REPLICATIONS.md)
+- [QARDL 3.1.1 Release Notes](release/QARDL_3_1_1_RELEASE_NOTES.md)
 - [QARDL 3.1.0 Release Article](release/QARDL_3_1_0_RELEASE_ARTICLE.md)
 - [Historical QARDL 3.0.0 Release Article](archive/QARDL_RELEASE_ARTICLE.md)
 - [Citation Guide](../CITATION.md)
