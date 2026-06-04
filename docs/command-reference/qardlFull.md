@@ -11,7 +11,8 @@ testing, levels-form QARDL estimation, and QARDL-ECM estimation.
 qfOut = qardlFull(data);
 qfOut = qardlFull(data, pend, qend);
 qfOut = qardlFull(data, pend, qend, tau, formula, verbose, criterion,
-                  cov_type, hac_lags, ecm_type, gets_pval);
+                  cov_type, hac_lags, ecm_type, gets_pval,
+                  print_diagnostics);
 ```
 
 ## Parameters
@@ -37,6 +38,9 @@ qfOut = qardlFull(data, pend, qend, tau, formula, verbose, criterion,
   stored in `qfOut.ecm`.
 - `gets_pval` (*scalar*) - Wald p-value threshold used when
   `criterion = "gets"`. Default is `0.1`.
+- `print_diagnostics` (*scalar*) - If `1`, print residual diagnostics for
+  both selected estimators. If `0`, store diagnostics without printing. If
+  `-1`, follow `verbose`. Default is `-1`.
 
 ## Returns
 
@@ -61,7 +65,9 @@ With `criterion = "gets"`, lag selection starts from `pend`/`qend` and
 removes highest-order lag blocks by Wald p-value while preserving contiguous
 scalar `p/q` orders.
 Residual diagnostics are computed automatically for both selected estimators
-and stored in `qfOut.levels_diag` and `qfOut.ecm_diag`.
+and stored in `qfOut.levels_diag` and `qfOut.ecm_diag`. By default they print
+when `verbose = 1`; set `print_diagnostics = 0` to suppress diagnostic
+printing while still storing the diagnostic objects.
 
 ## Examples
 
@@ -75,6 +81,8 @@ qfOut = qardlFull(data, tau = tau, verbose = 0, criterion = "bic",
                   cov_type = "hac", hac_lags = 0);
 qfGets = qardlFull(data, tau = tau, verbose = 0, criterion = "gets",
                    gets_pval = 0.1);
+qfDiagOnly = qardlFull(data, 4, 4, tau, "", 0, "bic", "iid", 0,
+                       "two-step", 0.1, 1);
 printQARDL(qfOut.qa, tau);
 printQARDLECM(qfOut.ecm, tau);
 printARDLResidualDiagnostics(qfOut.levels_diag);

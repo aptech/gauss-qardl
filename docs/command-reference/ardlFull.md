@@ -13,7 +13,7 @@ afOut = ardlFull(data, pend, qend);
 afOut = ardlFull(data, pend, qend, formula, verbose, criterion);
 afOut = ardlFull(data, pend, qend, formula, verbose, "gets", gets_pval);
 afOut = ardlFull(data, pend, qend, formula, verbose, criterion, gets_pval,
-                 case_id);
+                 case_id, print_diagnostics);
 ```
 
 ## Parameters
@@ -31,6 +31,9 @@ afOut = ardlFull(data, pend, qend, formula, verbose, criterion, gets_pval,
   `criterion = "gets"`. Default is `0.1`.
 - `case_id` (*scalar*) - Pesaran-Shin-Smith deterministic case used for the
   bounds test. Default is `3`.
+- `print_diagnostics` (*scalar*) - If `1`, print residual diagnostics after
+  the selected model output. If `0`, store diagnostics without printing. If
+  `-1`, follow `verbose`. Default is `-1`.
 
 ## Returns
 
@@ -53,7 +56,9 @@ contiguous lag structure.
 `case_id` is passed to `ardlboundsCase` for the bounds-test step. Levels-form
 `ardl` estimation remains the package's standard constant-only levels model.
 Residual diagnostics are computed automatically for the selected levels model
-and stored in `afOut.levels_diag`.
+and stored in `afOut.levels_diag`. By default they print when `verbose = 1`;
+set `print_diagnostics = 0` to suppress diagnostic printing while still
+storing the object.
 
 Use `ardlECM` with selected `pst` and `qst` when you want the matching ARDL
 error-correction model after running the full lag-selection and bounds-test
@@ -73,6 +78,8 @@ afGets = ardlFull(df, formula = "real_dividend ~ real_earnings",
                   verbose = 0, criterion = "gets", gets_pval = 0.1);
 afCaseIV = ardlFull(df, 4, 4, "real_dividend ~ real_earnings", 0,
                     "bic", 0.1, 4);
+afDiagOnly = ardlFull(df, 4, 4, "real_dividend ~ real_earnings", 0,
+                      "bic", 0.1, 3, 1);
 printARDL(afOut.ar);
 printARDLResidualDiagnostics(afOut.levels_diag);
 ```

@@ -11,7 +11,8 @@ estimation.
 nfOut = nardlFull(data);
 nfOut = nardlFull(data, pend, qend, formula, verbose, criterion,
                   decomp_vars, control_vars, q_control, ecm_type, gets_pval,
-                  case_id, d, thresh1, thresh2, symmetry);
+                  case_id, d, thresh1, thresh2, symmetry,
+                  print_diagnostics);
 ```
 
 ## Parameters
@@ -37,6 +38,9 @@ nfOut = nardlFull(data, pend, qend, formula, verbose, criterion,
   `nfOut.decomp_thresholds` and nested estimator outputs.
 - `symmetry` (*string*) - Optional NARDL symmetry restriction passed to
   `.na` and `.ecm`: `"none"` (default), `"SRSR"`, `"LRSR"`, or `"both"`.
+- `print_diagnostics` (*scalar*) - If `1`, print residual diagnostics for
+  both selected estimators. If `0`, store diagnostics without printing. If
+  `-1`, follow `verbose`. Default is `-1`.
 
 ## Returns
 
@@ -60,7 +64,9 @@ When `symmetry` is supplied, the selected NARDL levels and ECM outputs both
 store `symmetry_restriction` and apply the requested short-run and/or long-run
 constraints.
 Residual diagnostics are computed automatically for both selected estimators
-using `ardlResidualDiagnostics`.
+using `ardlResidualDiagnostics`. By default they print when `verbose = 1`;
+set `print_diagnostics = 0` to suppress diagnostic printing while still
+storing the diagnostic objects.
 
 ## Examples
 
@@ -78,6 +84,9 @@ nfThresh = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
 nfSym = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
                   "x1", "x2", 1, "uecm", 0.1, 3,
                   "inf", error(0), error(0), "LRSR");
+nfDiagOnly = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
+                       "x1", "x2", 1, "uecm", 0.1, 3,
+                       "inf", error(0), error(0), "none", 1);
 printNARDL(nfOut.na);
 printNARDLECM(nfOut.ecm);
 printARDLResidualDiagnostics(nfOut.levels_diag);

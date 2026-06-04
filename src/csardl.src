@@ -202,7 +202,7 @@ endp;
 **  Format:     cfOut = csardlFull(data);
 **              cfOut = csardlFull(data, pend, qend, cs_lags, formula,
 **                                verbose, criterion, group_var, time_var,
-**                                ecm_type, gets_pval);
+**                                ecm_type, gets_pval, print_diagnostics);
 **
 **  Note:       If omitted, pend and qend default to 8 and cs_lags defaults
 **              to 0.
@@ -212,8 +212,9 @@ proc (struct csardlFullOut) = csardlFull(data, pend = 8, qend = 8,
                                          verbose = 1, criterion = "bic",
                                          group_var = "", time_var = "",
                                          ecm_type = "two-step",
-                                         gets_pval = 0.1);
-    local pst, qst, depvar, xvars, unitvar, timevar;
+                                         gets_pval = 0.1,
+                                         print_diagnostics = -1);
+    local pst, qst, depvar, xvars, unitvar, timevar, print_diag;
 
     call _qardlValidateLagScalar(pend, "csardlFull: pend");
     call _qardlValidateLagScalarZero(qend, "csardlFull: qend");
@@ -222,6 +223,18 @@ proc (struct csardlFullOut) = csardlFull(data, pend = 8, qend = 8,
     call _qardlValidateSelectionCriterion(criterion, "csardlFull");
     call _qardlValidateGETSPValue(gets_pval, "csardlFull");
     ecm_type = _ardlNormalizeECMType(ecm_type, "csardlFull", 0);
+    if verbose /= 0 and verbose /= 1;
+        errorlog "csardlFull: verbose must be 0 or 1";
+        end;
+    endif;
+    if print_diagnostics == -1;
+        print_diag = verbose;
+    elseif print_diagnostics == 0 or print_diagnostics == 1;
+        print_diag = print_diagnostics;
+    else;
+        errorlog "csardlFull: print_diagnostics must be -1, 0, or 1";
+        end;
+    endif;
 
     { depvar, xvars, unitvar, timevar } = _csardlMetadataNames(data, formula, group_var, time_var);
     data = applyCSARDLFormula(data, formula, group_var, time_var);
@@ -275,6 +288,9 @@ proc (struct csardlFullOut) = csardlFull(data, pend = 8, qend = 8,
     if verbose;
         call printCSARDL(cfOut.csa);
         call printCSARDLECM(cfOut.ecm);
+    endif;
+    if print_diag;
+        call printCSARDLDiagnostics(cfOut.panel_diag);
     endif;
 
     retp(cfOut);

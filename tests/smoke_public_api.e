@@ -231,7 +231,7 @@ afOut = ardlFull(data, 2, 2, "", 0, "gets", 0.1);
 call assert_true(afOut.selection_criterion $== "gets" and afOut.pst >= 1 and
                  afOut.pst <= 2 and afOut.qst >= 0 and afOut.qst <= 2,
                  "ardlFull GETS output invalid");
-afOut = ardlFull(data, 2, 2, "", 0, "bic", 0.1, 4);
+afOut = ardlFull(data, 2, 2, "", 0, "bic", 0.1, 4, 0);
 call assert_true(afOut.deterministic $== "case IV: unrestricted intercept, restricted trend" and
                  rows(afOut.ardl_cv) == 3,
                  "ardlFull Case IV bounds output invalid");
@@ -320,7 +320,7 @@ call assert_true(qECMOut.ecm_type $== "uecm" and rows(qECMOut.beta_lr) == 2 and
                  "qardlECM UECM option output shape invalid");
 
 struct qardlFullOut qfOut;
-qfOut = qardlFull(data, 2, 2, tau, "", 0, "bic", "iid", 0, "uecm");
+qfOut = qardlFull(data, 2, 2, tau, "", 0, "bic", "iid", 0, "uecm", 0.1, 0);
 call assert_true(qfOut.ecm.ecm_type $== "uecm" and cols(qfOut.ecm.beta_lr) == rows(tau),
                  "qardlFull UECM option metadata invalid");
 call assert_true(qfOut.levels_diag.nseries == rows(tau) and

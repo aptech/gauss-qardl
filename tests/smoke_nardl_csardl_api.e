@@ -245,7 +245,8 @@ call assert_true(selectOut.model_family $== "NARDL" and
                  rows(selectOut.grid) == rows(nardl_grid) and
                  selectOut.pst == nfOut.pst and selectOut.qst == nfOut.qst,
                  "ardlSelect NARDL grid output invalid");
-nfOut = nardlFull(nardl_data, 1, 1, "", 0, "bic", "x1", "x2", 1);
+nfOut = nardlFull(nardl_data, 1, 1, "", 0, "bic", "x1", "x2", 1,
+                  "two-step", 0.1, 3, "inf", error(0), error(0), "none", 0);
 call assert_true(nfOut.na.ndecomp == 1 and nfOut.na.ncontrol == 1 and
                  nfOut.ecm.ndecomp == 1 and nfOut.ecm.ncontrol == 1 and
                  nfOut.levels_diag.nobs == nfOut.na.nobs and
@@ -435,7 +436,7 @@ call assert_true(diagOut.cd_pairs == nunits*(nunits-1)/2 and
                  "csardlDiagnostics CD statistic invalid");
 
 struct csardlFullOut cfDiagOut;
-cfDiagOut = csardlFull(panel, 1, 1, 1, "", 0);
+cfDiagOut = csardlFull(panel, 1, 1, 1, "", 0, "bic", "", "", "two-step", 0.1, 0);
 call assert_true(cfDiagOut.panel_diag.nunits == nunits and
                  cfDiagOut.panel_diag.p == cfDiagOut.pst and
                  cfDiagOut.panel_diag.q == cfDiagOut.qst and

@@ -166,7 +166,7 @@ call assert_true(rdiagOut.nobs == arECMOut.nobs and rdiagOut.source_model_family
                  "ardlResidualDiagnostics ARDL-ECM output invalid");
 
 struct ardlFullOut afOut;
-afOut = ardlFull(data, 2, 2, "", 0, "bic");
+afOut = ardlFull(data, 2, 2, "", 0, "bic", 0.1, 3, 0);
 call assert_true(afOut.pst >= 1 and afOut.qst >= 0 and afOut.ardl_fstat > 0 and
                  afOut.levels_diag.nobs == afOut.ar.nobs,
                  "ardlFull output changed");
@@ -245,7 +245,7 @@ call assert_true(qiOut.boot_diag[1, 1] == 2 and qiOut.boot_diag[1, 2] >= 1 and q
                  "blockBootstrapQIRF diagnostics changed");
 
 struct qardlFullOut qfOut;
-qfOut = qardlFull(data, 2, 2, tau);
+qfOut = qardlFull(data, 2, 2, tau, "", 0, "bic", "iid", 0, "two-step", 0.1, 0);
 call assert_true(qfOut.pst >= 1 and qfOut.qst >= 1 and
                  qfOut.levels_diag.nseries == rows(tau) and
                  qfOut.ecm_diag.nseries == rows(tau),
@@ -310,7 +310,8 @@ call assert_true(nsECMOut.ndecomp == 1 and nsECMOut.ncontrol == 1 and nsECMOut.s
                  "nardlECM optional spec public API output changed");
 
 struct nardlFullOut nfOut;
-nfOut = nardlFull(nardl_df, 1, 1, "y ~ x1 + x2", 0);
+nfOut = nardlFull(nardl_df, 1, 1, "y ~ x1 + x2", 0, "bic", "", "", 0,
+                  "two-step", 0.1, 3, "inf", error(0), error(0), "none", 0);
 call assert_true(nfOut.pst == 1 and nfOut.qst >= 0 and rows(nfOut.na.beta_neg) == 2,
                  "nardlFull formula output changed");
 call assert_true(nfOut.model_family $== "NARDL" and nfOut.formula $== "y ~ x1 + x2" and
@@ -369,7 +370,8 @@ call assert_true(rows(predictARDL(csaOut, panel)) == csaOut.nobs and
                  "CSARDL unified predict/forecast dispatch changed");
 
 struct csardlFullOut cfOut;
-cfOut = csardlFull(panel_df, 1, 1, 1, "y ~ x1 + x2", 0);
+cfOut = csardlFull(panel_df, 1, 1, 1, "y ~ x1 + x2", 0, "bic", "", "",
+                   "two-step", 0.1, 0);
 call assert_true(cfOut.cs_lags == 1 and cfOut.csa.nunits == 4,
                  "csardlFull inferred panel formula output changed");
 call assert_true(cfOut.model_family $== "CS-ARDL" and cfOut.unitvar $== "unit" and

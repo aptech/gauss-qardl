@@ -396,7 +396,8 @@ endp;
 **              nfOut = nardlFull(data, pend, qend, formula, verbose, criterion,
 **                                decomp_vars, control_vars, q_control,
 **                                ecm_type, gets_pval, case_id, d,
-**                                thresh1, thresh2, symmetry);
+**                                thresh1, thresh2, symmetry,
+**                                print_diagnostics);
 **
 **  Note:       If omitted, pend and qend default to 8.
 */
@@ -407,10 +408,24 @@ proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "",
                                       gets_pval = 0.1, case_id = 3,
                                       d = "inf", thresh1 = error(0),
                                       thresh2 = error(0),
-                                      symmetry = "none");
+                                      symmetry = "none",
+                                      print_diagnostics = -1);
     local pst, qst, depvar, xvars, raw_data, grid, idx;
     local decomp_idx, control_idx, decomp_names, control_names;
-    local decomp_thresholds;
+    local decomp_thresholds, print_diag;
+
+    if verbose /= 0 and verbose /= 1;
+        errorlog "nardlFull: verbose must be 0 or 1";
+        end;
+    endif;
+    if print_diagnostics == -1;
+        print_diag = verbose;
+    elseif print_diagnostics == 0 or print_diagnostics == 1;
+        print_diag = print_diagnostics;
+    else;
+        errorlog "nardlFull: print_diagnostics must be -1, 0, or 1";
+        end;
+    endif;
 
     call _qardlValidateLagScalar(pend, "nardlFull: pend");
     call _qardlValidateLagScalarZero(qend, "nardlFull: qend");
@@ -481,6 +496,10 @@ proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "",
     if verbose;
         call printNARDL(nfOut.na);
         call printNARDLECM(nfOut.ecm);
+    endif;
+    if print_diag;
+        call printARDLResidualDiagnostics(nfOut.levels_diag);
+        call printARDLResidualDiagnostics(nfOut.ecm_diag);
     endif;
 
     retp(nfOut);

@@ -91,7 +91,9 @@ residuals, fitted values, rank diagnostics, and conditioning diagnostics.
 Integrated `*Full` workflows also store diagnostics for the selected
 specification. ARDL, QARDL, and NARDL full outputs include `levels_diag`, and
 QARDL/NARDL also include `ecm_diag`. CS-ARDL full outputs include
-`panel_diag` from `csardlDiagnostics`.
+`panel_diag` from `csardlDiagnostics`. Use `print_diagnostics = 0` to suppress
+diagnostic printing in verbose workflows, or `print_diagnostics = 1` to print
+diagnostics even when `verbose = 0`.
 
 See `docs/developer/OUTPUT_SCHEMA.md` for the current field map.
 

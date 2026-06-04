@@ -246,17 +246,27 @@ endp;
 **  Format:     afOut = ardlFull(data);
 **              afOut = ardlFull(data, pend, qend);
 **              afOut = ardlFull(data, pend, qend, formula, verbose, criterion,
-**                               gets_pval, case_id);
+**                               gets_pval, case_id, print_diagnostics);
 **
 **  Note:       If omitted, pend and qend default to 8.
 */
 proc (struct ardlFullOut) = ardlFull(data, pend = 8, qend = 8, formula = "",
                                      verbose = 1, criterion = "bic",
-                                     gets_pval = 0.1, case_id = 3);
+                                     gets_pval = 0.1, case_id = 3,
+                                     print_diagnostics = -1);
     local pst, qst, fstat, cv, depvar, xvars, tstat, used_case, q_restrict;
+    local print_diag;
 
     if verbose /= 0 and verbose /= 1;
         errorlog "ardlFull: verbose must be 0 or 1";
+        end;
+    endif;
+    if print_diagnostics == -1;
+        print_diag = verbose;
+    elseif print_diagnostics == 0 or print_diagnostics == 1;
+        print_diag = print_diagnostics;
+    else;
+        errorlog "ardlFull: print_diagnostics must be -1, 0, or 1";
         end;
     endif;
 
@@ -306,6 +316,9 @@ proc (struct ardlFullOut) = ardlFull(data, pend = 8, qend = 8, formula = "",
     afOut.ardl_cv = cv;
     afOut.ar = ar;
     afOut.levels_diag = ardlResidualDiagnostics(ar, 0);
+    if print_diag;
+        call printARDLResidualDiagnostics(afOut.levels_diag);
+    endif;
 
     retp(afOut);
 endp;
@@ -5144,8 +5157,9 @@ proc (struct qardlFullOut) = qardlFull(data, pend = 8, qend = 8,
                                        formula = "", verbose = 1,
                                        criterion = "bic", cov_type = "iid",
                                        hac_lags = 0, ecm_type = "two-step",
-                                       gets_pval = 0.1);
-    local pst, qst, fstat, cv, depvar, xvars;
+                                       gets_pval = 0.1,
+                                       print_diagnostics = -1);
+    local pst, qst, fstat, cv, depvar, xvars, print_diag;
 
     struct qardlFullOut qfOut;
     struct qardlOut qa;
@@ -5153,6 +5167,14 @@ proc (struct qardlFullOut) = qardlFull(data, pend = 8, qend = 8,
 
     if rows(verbose) * cols(verbose) /= 1 or (verbose /= 0 and verbose /= 1);
         errorlog "qardlFull: verbose must be 0 or 1";
+        end;
+    endif;
+    if print_diagnostics == -1;
+        print_diag = verbose;
+    elseif print_diagnostics == 0 or print_diagnostics == 1;
+        print_diag = print_diagnostics;
+    else;
+        errorlog "qardlFull: print_diagnostics must be -1, 0, or 1";
         end;
     endif;
 
@@ -5240,6 +5262,10 @@ proc (struct qardlFullOut) = qardlFull(data, pend = 8, qend = 8,
     qfOut.ecm        = ecm;
     qfOut.levels_diag = ardlResidualDiagnostics(qa, 0);
     qfOut.ecm_diag    = ardlResidualDiagnostics(ecm, 0);
+    if print_diag;
+        call printARDLResidualDiagnostics(qfOut.levels_diag);
+        call printARDLResidualDiagnostics(qfOut.ecm_diag);
+    endif;
 
     retp(qfOut);
 endp;
