@@ -32,13 +32,16 @@ cfOut = csardlFull(data, pend, qend, cs_lags, formula, verbose, criterion,
 
 `cfOut` is a `csardlFullOut` structure with selected lag orders `pst` and
 `qst`, search bounds, panel metadata, levels output in `.csa`, and ECM output
-in `.ecm`.
+in `.ecm`. Panel diagnostics for the selected lag orders are stored in
+`.panel_diag`.
 
 ## Remarks
 
 `cs_lags` is fixed across the `p`/`q` search grid. GETS starts from `pend` and
 `qend`, then reduces highest-order lag blocks while preserving contiguous
 `p/q` orders.
+`csardlFull` automatically runs `csardlDiagnostics` for the selected
+specification and stores the result in `cfOut.panel_diag`.
 
 ## Examples
 
@@ -49,6 +52,7 @@ cfOut = csardlFull(df_panel, 4, 4, 1, "y ~ x1 + x2", 0, "bic",
                    "country", "year", "uecm");
 cfGets = csardlFull(df_panel, 4, 4, 1, "y ~ x1 + x2", 0, "gets",
                     "country", "year", "uecm", 0.1);
+printCSARDLDiagnostics(cfOut.panel_diag);
 ```
 
 ## Source
@@ -58,4 +62,4 @@ cfGets = csardlFull(df_panel, 4, 4, 1, "y ~ x1 + x2", 0, "gets",
 ## See Also
 
 [csardl](csardl.md), [csardlECM](csardlECM.md),
-[csardlOrder](csardlOrder.md)
+[csardlDiagnostics](csardlDiagnostics.md), [csardlOrder](csardlOrder.md)

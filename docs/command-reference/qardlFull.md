@@ -48,6 +48,8 @@ qfOut = qardlFull(data, pend, qend, tau, formula, verbose, criterion,
 - `ardl_fstat`, `ardl_cv` - ARDL bounds-test statistic and critical values.
 - `qa` - A `qardlOut` structure from `qardl`.
 - `ecm` - A `qardlECMOut` structure from `qardlECM`.
+- `levels_diag` - `ardlResidualDiagOut` diagnostics for `qfOut.qa`.
+- `ecm_diag` - `ardlResidualDiagOut` diagnostics for `qfOut.ecm`.
 
 ## Remarks
 
@@ -58,6 +60,8 @@ Omitting `pend` and `qend` searches the default `p = 1,...,8` and
 With `criterion = "gets"`, lag selection starts from `pend`/`qend` and
 removes highest-order lag blocks by Wald p-value while preserving contiguous
 scalar `p/q` orders.
+Residual diagnostics are computed automatically for both selected estimators
+and stored in `qfOut.levels_diag` and `qfOut.ecm_diag`.
 
 ## Examples
 
@@ -73,6 +77,8 @@ qfGets = qardlFull(data, tau = tau, verbose = 0, criterion = "gets",
                    gets_pval = 0.1);
 printQARDL(qfOut.qa, tau);
 printQARDLECM(qfOut.ecm, tau);
+printARDLResidualDiagnostics(qfOut.levels_diag);
+printARDLResidualDiagnostics(qfOut.ecm_diag);
 ```
 
 ## Source
@@ -81,5 +87,6 @@ printQARDLECM(qfOut.ecm, tau);
 
 ## See Also
 
-[qardl](qardl.md), [qardlECM](qardlECM.md), [pqSelect](pqSelect.md),
+[qardl](qardl.md), [qardlECM](qardlECM.md),
+[ardlResidualDiagnostics](ardlResidualDiagnostics.md), [pqSelect](pqSelect.md),
 [ardlboundsCase](ardlboundsCase.md)

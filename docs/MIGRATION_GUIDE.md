@@ -88,6 +88,11 @@ model family, formula, dependent variable, regressor names, lag specification,
 sample range, deterministic case, covariance type, selection criterion,
 residuals, fitted values, rank diagnostics, and conditioning diagnostics.
 
+Integrated `*Full` workflows also store diagnostics for the selected
+specification. ARDL, QARDL, and NARDL full outputs include `levels_diag`, and
+QARDL/NARDL also include `ecm_diag`. CS-ARDL full outputs include
+`panel_diag` from `csardlDiagnostics`.
+
 See `docs/developer/OUTPUT_SCHEMA.md` for the current field map.
 
 ## Reporting

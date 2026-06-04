@@ -221,7 +221,8 @@ call assert_true(arECMOut.deterministic $== "case V: unrestricted intercept, unr
 
 struct ardlFullOut afOut;
 afOut = ardlFull(data, 2, 2, "", 0, "bic");
-call assert_true(afOut.pst >= 1 and afOut.qst >= 0 and afOut.ardl_fstat > 0 and afOut.ar.nobs > 0,
+call assert_true(afOut.pst >= 1 and afOut.qst >= 0 and afOut.ardl_fstat > 0 and
+                 afOut.ar.nobs > 0 and afOut.levels_diag.nobs == afOut.ar.nobs,
                  "ardlFull output invalid");
 afOut = ardlFull(data, verbose = 0);
 call assert_true(afOut.pst >= 1 and afOut.pst <= 8 and afOut.qst >= 0 and afOut.qst <= 8,
@@ -322,6 +323,11 @@ struct qardlFullOut qfOut;
 qfOut = qardlFull(data, 2, 2, tau, "", 0, "bic", "iid", 0, "uecm");
 call assert_true(qfOut.ecm.ecm_type $== "uecm" and cols(qfOut.ecm.beta_lr) == rows(tau),
                  "qardlFull UECM option metadata invalid");
+call assert_true(qfOut.levels_diag.nseries == rows(tau) and
+                 qfOut.ecm_diag.nseries == rows(tau) and
+                 qfOut.levels_diag.nobs == qfOut.qa.nobs and
+                 qfOut.ecm_diag.nobs == qfOut.ecm.nobs,
+                 "qardlFull diagnostics metadata invalid");
 qfOut = qardlFull(data, 2, 2, tau, "", 0, "gets", "iid", 0, "uecm", 0.1);
 call assert_true(qfOut.selection_criterion $== "gets" and qfOut.pst >= 1 and
                  qfOut.pst <= 2 and qfOut.qst >= 0 and qfOut.qst <= 2,

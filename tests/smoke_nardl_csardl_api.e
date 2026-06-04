@@ -21,6 +21,7 @@ new;
 #include ../src/wtestconst.src
 #include ../src/ardlbounds.src
 #include ../src/qirf.src
+#include ../src/diagnostics.src
 
 proc (0) = assert_true(ok, msg);
     if not ok;
@@ -246,7 +247,9 @@ call assert_true(selectOut.model_family $== "NARDL" and
                  "ardlSelect NARDL grid output invalid");
 nfOut = nardlFull(nardl_data, 1, 1, "", 0, "bic", "x1", "x2", 1);
 call assert_true(nfOut.na.ndecomp == 1 and nfOut.na.ncontrol == 1 and
-                 nfOut.ecm.ndecomp == 1 and nfOut.ecm.ncontrol == 1,
+                 nfOut.ecm.ndecomp == 1 and nfOut.ecm.ncontrol == 1 and
+                 nfOut.levels_diag.nobs == nfOut.na.nobs and
+                 nfOut.ecm_diag.nobs == nfOut.ecm.nobs,
                  "nardlFull optional spec metadata invalid");
 nfOut = nardlFull(nardl_data, 1, 1, "", 0, "bic", "", "", 0, "uecm");
 call assert_true(nfOut.ecm.ecm_type $== "uecm" and rows(nfOut.ecm.beta_pos) == 2,
@@ -430,6 +433,15 @@ call assert_true(diagOut.cd_pairs == nunits*(nunits-1)/2 and
                  diagOut.cd_order == -1 and diagOut.cd_min_t == diagOut.unit_nobs and
                  diagOut.cd_max_t == diagOut.unit_nobs,
                  "csardlDiagnostics CD statistic invalid");
+
+struct csardlFullOut cfDiagOut;
+cfDiagOut = csardlFull(panel, 1, 1, 1, "", 0);
+call assert_true(cfDiagOut.panel_diag.nunits == nunits and
+                 cfDiagOut.panel_diag.p == cfDiagOut.pst and
+                 cfDiagOut.panel_diag.q == cfDiagOut.qst and
+                 cfDiagOut.panel_diag.cs_lags == cfDiagOut.cs_lags and
+                 rows(cfDiagOut.panel_diag.unit_bigbt) == nunits,
+                 "csardlFull panel diagnostics metadata invalid");
 
 cs_fit = predictCSARDL(csaOut, panel);
 call assert_close(cs_fit, cX*expected_cbt, 1e-10, "predictCSARDL did not use stored design");

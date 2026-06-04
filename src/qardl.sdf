@@ -292,6 +292,63 @@ struct qardlECMOut {
     matrix resid;
 };
 
+struct ardlResidualDiagOut {
+    // Standardized diagnostic metadata
+    string model_family;
+    string source_model_family;
+
+    // Residual matrix dimensions and Ljung-Box lag count
+    scalar nobs;
+    scalar nseries;
+    scalar lags;
+
+    // Ljung-Box serial-correlation diagnostics, one row per residual series
+    matrix serial_stat;
+    matrix serial_df;
+    matrix serial_pv;
+    matrix ljung_box_stat;
+    matrix ljung_box_df;
+    matrix ljung_box_pv;
+
+    // Breusch-Godfrey-style LM serial-correlation diagnostics
+    matrix bg_stat;
+    matrix bg_df;
+    matrix bg_pv;
+
+    // Breusch-Pagan-style heteroskedasticity diagnostics using fitted values
+    matrix hetero_stat;
+    matrix hetero_df;
+    matrix hetero_pv;
+
+    // ARCH LM diagnostics using lagged squared residuals
+    matrix arch_stat;
+    matrix arch_df;
+    matrix arch_pv;
+
+    // Jarque-Bera normality diagnostics
+    matrix normality_stat;
+    matrix normality_df;
+    matrix normality_pv;
+
+    // Ramsey RESET-style diagnostics using fitted-value powers
+    matrix reset_stat;
+    matrix reset_df;
+    matrix reset_pv;
+
+    // Residual CUSUM and CUSUMSQ stability diagnostics
+    scalar stability_available;
+    matrix cusum_stat;
+    matrix cusum_pv;
+    matrix cusum_crit5;
+    matrix cusumsq_stat;
+    matrix cusumsq_pv;
+    matrix cusumsq_crit5;
+
+    // Diagnostic paths, one column per residual series
+    matrix cusum_path;
+    matrix cusumsq_path;
+};
+
 
 /*
 ** ardlFullOut -- returned by ardlFull().
@@ -326,6 +383,9 @@ struct ardlFullOut {
 
     // ARDL levels estimates
     struct ardlOut ar;
+
+    // Residual diagnostics for the selected ARDL levels estimator
+    struct ardlResidualDiagOut levels_diag;
 };
 
 struct ardlAutoCaseOut {
@@ -634,6 +694,10 @@ struct nardlFullOut {
     // Levels and ECM estimates
     struct nardlOut na;
     struct nardlECMOut ecm;
+
+    // Residual diagnostics for selected levels and ECM estimators
+    struct ardlResidualDiagOut levels_diag;
+    struct ardlResidualDiagOut ecm_diag;
 };
 
 struct nardlAutoCaseOut {
@@ -960,63 +1024,6 @@ struct csardlDiagOut {
     scalar cd_max_t;
 };
 
-struct ardlResidualDiagOut {
-    // Standardized diagnostic metadata
-    string model_family;
-    string source_model_family;
-
-    // Residual matrix dimensions and Ljung-Box lag count
-    scalar nobs;
-    scalar nseries;
-    scalar lags;
-
-    // Ljung-Box serial-correlation diagnostics, one row per residual series
-    matrix serial_stat;
-    matrix serial_df;
-    matrix serial_pv;
-    matrix ljung_box_stat;
-    matrix ljung_box_df;
-    matrix ljung_box_pv;
-
-    // Breusch-Godfrey-style LM serial-correlation diagnostics
-    matrix bg_stat;
-    matrix bg_df;
-    matrix bg_pv;
-
-    // Breusch-Pagan-style heteroskedasticity diagnostics using fitted values
-    matrix hetero_stat;
-    matrix hetero_df;
-    matrix hetero_pv;
-
-    // ARCH LM diagnostics using lagged squared residuals
-    matrix arch_stat;
-    matrix arch_df;
-    matrix arch_pv;
-
-    // Jarque-Bera normality diagnostics
-    matrix normality_stat;
-    matrix normality_df;
-    matrix normality_pv;
-
-    // Ramsey RESET-style diagnostics using fitted-value powers
-    matrix reset_stat;
-    matrix reset_df;
-    matrix reset_pv;
-
-    // Residual CUSUM and CUSUMSQ stability diagnostics
-    scalar stability_available;
-    matrix cusum_stat;
-    matrix cusum_pv;
-    matrix cusum_crit5;
-    matrix cusumsq_stat;
-    matrix cusumsq_pv;
-    matrix cusumsq_crit5;
-
-    // Diagnostic paths, one column per residual series
-    matrix cusum_path;
-    matrix cusumsq_path;
-};
-
 struct csardlFullOut {
     // Standardized workflow metadata
     string model_family;
@@ -1048,6 +1055,9 @@ struct csardlFullOut {
     // Levels and ECM estimates
     struct csardlOut csa;
     struct csardlECMOut ecm;
+
+    // Panel diagnostics for selected CS-ARDL lag orders
+    struct csardlDiagOut panel_diag;
 };
 
 struct rollingWaldTests {
@@ -1170,6 +1180,10 @@ struct qardlFullOut {
 
     // QARDL-ECM two-step estimates
     struct qardlECMOut ecm;
+
+    // Residual diagnostics for selected levels and ECM estimators
+    struct ardlResidualDiagOut levels_diag;
+    struct ardlResidualDiagOut ecm_diag;
 };
 
 

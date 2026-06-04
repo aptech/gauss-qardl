@@ -42,7 +42,8 @@ nfOut = nardlFull(data, pend, qend, formula, verbose, criterion,
 
 `nfOut` is a `nardlFullOut` structure with selected lag orders `pst` and
 `qst`, search bounds, common metadata, a levels output in `.na`, and an ECM
-output in `.ecm`.
+output in `.ecm`. Residual diagnostics for those nested estimators are stored
+in `.levels_diag` and `.ecm_diag`.
 
 ## Remarks
 
@@ -58,6 +59,8 @@ all use the same partial-sum reset rule.
 When `symmetry` is supplied, the selected NARDL levels and ECM outputs both
 store `symmetry_restriction` and apply the requested short-run and/or long-run
 constraints.
+Residual diagnostics are computed automatically for both selected estimators
+using `ardlResidualDiagnostics`.
 
 ## Examples
 
@@ -77,6 +80,8 @@ nfSym = nardlFull(df, 4, 4, "y ~ x1 + x2", 0, "bic",
                   "inf", error(0), error(0), "LRSR");
 printNARDL(nfOut.na);
 printNARDLECM(nfOut.ecm);
+printARDLResidualDiagnostics(nfOut.levels_diag);
+printARDLResidualDiagnostics(nfOut.ecm_diag);
 ```
 
 ## Source
@@ -86,4 +91,4 @@ printNARDLECM(nfOut.ecm);
 ## See Also
 
 [nardl](nardl.md), [nardlECM](nardlECM.md), [nardlAutoCase](nardlAutoCase.md),
-[nardlOrder](nardlOrder.md)
+[ardlResidualDiagnostics](ardlResidualDiagnostics.md), [nardlOrder](nardlOrder.md)

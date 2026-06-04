@@ -16,6 +16,7 @@ new;
 #include ../src/wtestconst.src
 #include ../src/ardlbounds.src
 #include ../src/qirf.src
+#include ../src/diagnostics.src
 
 data = loadd(__FILE_DIR $+ "../examples/qardl_data.dat");
 data = data[1:180, 1:3];

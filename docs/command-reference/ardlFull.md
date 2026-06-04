@@ -40,6 +40,7 @@ afOut = ardlFull(data, pend, qend, formula, verbose, criterion, gets_pval,
 - `nobs` - Input sample size.
 - `ardl_fstat`, `ardl_cv` - ARDL bounds-test statistic and critical values.
 - `ar` - `ardlOut` structure returned by `ardl`.
+- `levels_diag` - `ardlResidualDiagOut` diagnostics for `afOut.ar`.
 
 ## Remarks
 
@@ -51,6 +52,8 @@ and reduces the highest-order lag blocks by Wald p-value while preserving a
 contiguous lag structure.
 `case_id` is passed to `ardlboundsCase` for the bounds-test step. Levels-form
 `ardl` estimation remains the package's standard constant-only levels model.
+Residual diagnostics are computed automatically for the selected levels model
+and stored in `afOut.levels_diag`.
 
 Use `ardlECM` with selected `pst` and `qst` when you want the matching ARDL
 error-correction model after running the full lag-selection and bounds-test
@@ -71,6 +74,7 @@ afGets = ardlFull(df, formula = "real_dividend ~ real_earnings",
 afCaseIV = ardlFull(df, 4, 4, "real_dividend ~ real_earnings", 0,
                     "bic", 0.1, 4);
 printARDL(afOut.ar);
+printARDLResidualDiagnostics(afOut.levels_diag);
 ```
 
 ## Source
@@ -80,4 +84,5 @@ printARDL(afOut.ar);
 ## See Also
 
 [ardl](ardl.md), [ardlECM](ardlECM.md), [ardlAutoCase](ardlAutoCase.md),
-[ardlbounds](ardlbounds.md), [pqSelect](pqSelect.md), [qardlFull](qardlFull.md)
+[ardlbounds](ardlbounds.md), [ardlResidualDiagnostics](ardlResidualDiagnostics.md),
+[pqSelect](pqSelect.md), [qardlFull](qardlFull.md)

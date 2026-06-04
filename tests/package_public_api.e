@@ -167,7 +167,8 @@ call assert_true(rdiagOut.nobs == arECMOut.nobs and rdiagOut.source_model_family
 
 struct ardlFullOut afOut;
 afOut = ardlFull(data, 2, 2, "", 0, "bic");
-call assert_true(afOut.pst >= 1 and afOut.qst >= 0 and afOut.ardl_fstat > 0,
+call assert_true(afOut.pst >= 1 and afOut.qst >= 0 and afOut.ardl_fstat > 0 and
+                 afOut.levels_diag.nobs == afOut.ar.nobs,
                  "ardlFull output changed");
 afOut = ardlFull(data, verbose = 0);
 call assert_true(afOut.pst >= 1 and afOut.pst <= 8 and afOut.qst >= 0 and afOut.qst <= 8,
@@ -245,7 +246,10 @@ call assert_true(qiOut.boot_diag[1, 1] == 2 and qiOut.boot_diag[1, 2] >= 1 and q
 
 struct qardlFullOut qfOut;
 qfOut = qardlFull(data, 2, 2, tau);
-call assert_true(qfOut.pst >= 1 and qfOut.qst >= 1, "qardlFull returned invalid lag orders");
+call assert_true(qfOut.pst >= 1 and qfOut.qst >= 1 and
+                 qfOut.levels_diag.nseries == rows(tau) and
+                 qfOut.ecm_diag.nseries == rows(tau),
+                 "qardlFull returned invalid lag orders");
 qfOut = qardlFull(data, tau = tau, verbose = 0);
 call assert_true(qfOut.pst >= 1 and qfOut.pst <= 8 and qfOut.qst >= 0 and qfOut.qst <= 8,
                  "qardlFull default lag bounds invalid");
@@ -312,6 +316,9 @@ call assert_true(nfOut.pst == 1 and nfOut.qst >= 0 and rows(nfOut.na.beta_neg) =
 call assert_true(nfOut.model_family $== "NARDL" and nfOut.formula $== "y ~ x1 + x2" and
                  nfOut.na.formula $== "y ~ x1 + x2",
                  "nardlFull schema metadata changed");
+call assert_true(nfOut.levels_diag.nobs == nfOut.na.nobs and
+                 nfOut.ecm_diag.nobs == nfOut.ecm.nobs,
+                 "nardlFull diagnostics metadata changed");
 nfOut = nardlFull(nardl_df, 1, 1, "y ~ x1 + x2", 0, "bic", "x1", "x2", 1);
 call assert_true(nfOut.na.ndecomp == 1 and nfOut.ecm.ncontrol == 1,
                  "nardlFull optional spec public API output changed");
@@ -368,6 +375,10 @@ call assert_true(cfOut.cs_lags == 1 and cfOut.csa.nunits == 4,
 call assert_true(cfOut.model_family $== "CS-ARDL" and cfOut.unitvar $== "unit" and
                  cfOut.timevar $== "time" and cfOut.csa.formula $== "y ~ x1 + x2",
                  "csardlFull schema metadata changed");
+call assert_true(cfOut.panel_diag.nunits == cfOut.csa.nunits and
+                 cfOut.panel_diag.p == cfOut.pst and
+                 cfOut.panel_diag.q == cfOut.qst,
+                 "csardlFull panel diagnostics metadata changed");
 cfOut = csardlFull(panel_df, cs_lags = 1, formula = "y ~ x1 + x2", verbose = 0);
 call assert_true(cfOut.pst >= 1 and cfOut.pst <= 8 and cfOut.qst >= 0 and cfOut.qst <= 8,
                  "csardlFull default lag bounds invalid");

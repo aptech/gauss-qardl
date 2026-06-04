@@ -22,6 +22,7 @@ new;
 #include src/wtestsym.src
 #include src/wtestconst.src
 #include src/ardlbounds.src
+#include src/diagnostics.src
 
 proc (0) = assert_true(ok, msg);
     if not ok;

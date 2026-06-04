@@ -28,6 +28,7 @@ new;
 #include src/wtestconst.src
 #include src/ardlbounds.src
 #include src/qirf.src
+#include src/diagnostics.src
 
 proc (0) = assert_close(actual, expected, tol, msg);
     local diff;

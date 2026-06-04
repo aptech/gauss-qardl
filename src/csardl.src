@@ -252,6 +252,7 @@ proc (struct csardlFullOut) = csardlFull(data, pend = 8, qend = 8,
     cfOut.nobs = rows(data);
     cfOut.csa = csardl(data, pst, qst, cs_lags, "", 0);
     cfOut.ecm = csardlECM(data, pst, qst, cs_lags, "", 0, "", "", ecm_type);
+    cfOut.panel_diag = csardlDiagnostics(data, pst, qst, cs_lags, "", 0, "", "", -1);
     cfOut.csa.formula = formula;
     cfOut.csa.depvar = depvar;
     cfOut.csa.xvars = xvars;
@@ -264,6 +265,12 @@ proc (struct csardlFullOut) = csardlFull(data, pend = 8, qend = 8,
     cfOut.ecm.unitvar = unitvar;
     cfOut.ecm.timevar = timevar;
     cfOut.ecm.selection_criterion = criterion;
+    cfOut.panel_diag.formula = formula;
+    cfOut.panel_diag.depvar = depvar;
+    cfOut.panel_diag.xvars = xvars;
+    cfOut.panel_diag.unitvar = unitvar;
+    cfOut.panel_diag.timevar = timevar;
+    cfOut.panel_diag.selection_criterion = criterion;
 
     if verbose;
         call printCSARDL(cfOut.csa);

@@ -20,6 +20,7 @@ new;
 #include wtestconst.src
 #include ardlbounds.src
 #include qirf.src
+#include diagnostics.src
 
 proc (0) = write_numeric_csv(mat, header, fpath);
     local fid, rr, cc, ii, jj, csv_line, ret;

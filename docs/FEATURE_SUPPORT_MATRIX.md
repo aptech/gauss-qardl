@@ -21,7 +21,7 @@ embedded in every estimator call.
 | Unified point forecast | Yes | Yes | Yes | Yes |
 | Forecast intervals | Deferred | Deferred | Deferred | Deferred |
 | Bounds tests | Cases I-V | Compatibility path | Bounds-style statistic | Not PSS-integrated |
-| Residual diagnostics | Standalone | Standalone | Standalone | Panel diagnostics separate |
+| Residual diagnostics | Standalone and `*Full` output | Standalone and `*Full` output | Standalone and `*Full` output | `csardlDiagnostics` and `csardlFull.panel_diag` |
 | BG LM / ARCH LM / RESET diagnostics | Standalone | Standalone | Standalone | No |
 | Robust/HAC covariance | OLS baseline | Yes | OLS baseline | OLS baseline |
 | Bootstrap intervals | Deferred | Yes | Deferred | Deferred |

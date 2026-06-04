@@ -475,6 +475,8 @@ proc (struct nardlFullOut) = nardlFull(data, pend = 8, qend = 8, formula = "",
                                   decomp_vars, control_vars, q_control,
                                   "nardlFull", criterion, ecm_type, case_id,
                                   d, thresh1, thresh2, symmetry);
+    nfOut.levels_diag = ardlResidualDiagnostics(nfOut.na, 0);
+    nfOut.ecm_diag = ardlResidualDiagnostics(nfOut.ecm, 0);
 
     if verbose;
         call printNARDL(nfOut.na);

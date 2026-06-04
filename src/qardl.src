@@ -305,6 +305,7 @@ proc (struct ardlFullOut) = ardlFull(data, pend = 8, qend = 8, formula = "",
     afOut.ardl_fstat = fstat;
     afOut.ardl_cv = cv;
     afOut.ar = ar;
+    afOut.levels_diag = ardlResidualDiagnostics(ar, 0);
 
     retp(afOut);
 endp;
@@ -5237,6 +5238,8 @@ proc (struct qardlFullOut) = qardlFull(data, pend = 8, qend = 8,
     qfOut.ardl_cv    = cv;
     qfOut.qa         = qa;
     qfOut.ecm        = ecm;
+    qfOut.levels_diag = ardlResidualDiagnostics(qa, 0);
+    qfOut.ecm_diag    = ardlResidualDiagnostics(ecm, 0);
 
     retp(qfOut);
 endp;
