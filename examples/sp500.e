@@ -13,7 +13,6 @@ shiller = loadd(__FILE_DIR $+ "shiller_stocks_qt.csv",
                 "date($date) + real_price + real_dividend + real_earnings");
 
 // Plot the raw dividend and earnings series.
-struct plotControl myPlot;
 myPlot = plotGetDefaults("XY");
 plotSetLegend(&myPlot, "Dividend"$|"Earnings");
 plotSetLegendFont(&myPlot, "Arial", 12);

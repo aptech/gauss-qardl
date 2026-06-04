@@ -21,7 +21,6 @@ data = applyQARDLFormula(shiller, formula);
 { pst, qst } = pqorder(data, 4, 4, "bic");
 
 // Step 4: Estimate the levels-form ARDL model at the selected lag orders.
-struct ardlOut arOut;
 arOut = ardl(shiller, pst, qst, formula, 0);
 
 // Step 5: Access selected output fields directly from the returned structure.
@@ -37,6 +36,5 @@ print arOut.bigbt;
 printARDL(arOut);
 
 // Step 7: Run and print residual diagnostics for the fitted ARDL model.
-struct ardlResidualDiagOut diagOut;
 diagOut = ardlResidualDiagnostics(arOut, 4);
 printARDLResidualDiagnostics(diagOut);

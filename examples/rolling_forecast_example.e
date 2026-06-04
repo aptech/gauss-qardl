@@ -30,7 +30,6 @@ for ii(1, origins, 1);
     train = data[start_ix:end_ix, .];
     future_x = data[end_ix+1:end_ix+h, 2:cols(data)];
 
-    struct ardlOut arOut;
     arOut = ardl(train, 2, 1, "", 0);
 
     fcst[ii, .] = forecastARDL(arOut, train, h, "", future_x)';

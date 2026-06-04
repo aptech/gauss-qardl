@@ -23,10 +23,8 @@ formula = "real_dividend ~ real_earnings";
 ** cross-quantile heterogeneity. Here we let BIC select p and q from a
 ** conservative grid, then estimate robust and HAC variants for comparison.
 */
-struct qardlFullOut qfRobust;
 qfRobust = qardlFull(shiller, 8, 8, tau, formula, 0, "bic", "robust", 0);
 
-struct qardlFullOut qfHAC;
 qfHAC = qardlFull(shiller, 8, 8, tau, formula, 0, "bic", "hac", 4);
 
 data = applyQARDLFormula(shiller, formula);

@@ -90,7 +90,6 @@ do until iii > kkk;
     data = yyy~xxx;
 
     // Parameter estimation
-    struct qardlOut qaOut;
     qaOut = qardl(data, ppp, qqq, tau, "iid", 0, 0); 
 
     // Long-run parameter (beta) testing 
@@ -124,7 +123,6 @@ do until jjj > 9;
 endo;
 
 // The 6 plots
-struct plotControl myPlot;
 myPlot = plotGetDefaults("xy");
 
 plotSetTitle(&myPlot, "PP-plot Beta Wald Test and its null distribution", "Arial", 18);

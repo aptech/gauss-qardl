@@ -16,7 +16,6 @@ formula = "real_dividend ~ real_earnings";
 
 // Step 2: Run the integrated ARDL workflow. Omitting pend/qend uses the
 //         package default maximum lag search bounds.
-struct ardlFullOut afOut;
 afOut = ardlFull(shiller, formula = formula, verbose = 1, criterion = "bic");
 
 // Step 3: Inspect workflow-level output, including bounds testing and lags.
@@ -35,8 +34,3 @@ print;
 print "Prediction rows and 3-step forecast";
 print rows(fit);
 print fcst;
-
-/*
-** TODO: Validate ARDL forecast examples against published applied workflows
-**       once exact references and data transformations are selected.
-*/

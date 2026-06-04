@@ -30,7 +30,6 @@ data = y~x1~x2;
 
 // Step 3: Estimate a fixed-order NARDL levels model.
 //         Set the final argument to 1 to print directly from nardl().
-struct nardlOut naOut;
 naOut = nardl(data, 1, 1, "", 0);
 
 // Step 4: Access key output fields directly from the returned structure.
@@ -56,8 +55,3 @@ endo;
 
 // Step 5: Print the standard formatted NARDL table, including asymmetry tests.
 printNARDL(naOut);
-
-/*
-** TODO: Add published-result NARDL validation once exact datasets and
-**       specifications are available for redistribution or reproduction.
-*/

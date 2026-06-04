@@ -60,8 +60,3 @@ print;
 print "Prediction rows and 3-step forecast";
 print rows(fit);
 print fcst;
-
-/*
-** TODO: Add published-result NARDL validation once exact datasets and
-**       specifications are available for redistribution or reproduction.
-*/

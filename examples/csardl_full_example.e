@@ -49,12 +49,10 @@ formula = "y ~ x1 + x2";
 
 // Step 3: Run the integrated CS-ARDL workflow. Omitting pend/qend uses the
 //         package default maximum lag search bounds.
-struct csardlFullOut cfOut;
 cfOut = csardlFull(df, cs_lags = 1, formula = formula, verbose = 0,
                    criterion = "bic", group_var = "unit", time_var = "time");
 
 // Step 4: Estimate the matching ECM representation at the selected lag orders.
-struct csardlECMOut cECMOut;
 cECMOut = csardlECM(df, cfOut.pst, cfOut.qst, cfOut.cs_lags, formula, 0,
                     "unit", "time");
 
@@ -78,8 +76,3 @@ print;
 print "Prediction rows and 3-step forecast";
 print rows(fit);
 print fcst;
-
-/*
-** TODO: Add published-result CS-ARDL validation once exact DGP grids,
-**       datasets, and estimator variants are confirmed.
-*/

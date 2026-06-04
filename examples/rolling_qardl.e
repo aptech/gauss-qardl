@@ -24,8 +24,6 @@ print "Full-sample model metadata";
 print "--------------------------";
 print "p q k nobs = " qaOut.p~qaOut.q~qaOut.k~qaOut.nobs;
 
-struct waldTestRestrictions waldR;
-
 // Constancy-style restrictions for beta_1, phi_1, and gamma_1 across the
 // first two quantiles. The rolling routine will trim phi restrictions if a
 // smaller p is selected in a window.
