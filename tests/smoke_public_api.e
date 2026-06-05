@@ -384,6 +384,26 @@ call assert_true(wt_beta >= 0 and pv_beta >= 0 and pv_beta <= 1, "wtestsym beta 
 call assert_true(wt_gamma >= 0 and pv_gamma >= 0 and pv_gamma <= 1, "wtestsym gamma output invalid");
 call assert_true(wt_phi >= 0 and pv_phi >= 0 and pv_phi <= 1, "wtestsym phi output invalid");
 
+R_beta = zeros(1, qaOut.k*rows(tau));
+R_beta[1, 1] = 1;
+R_beta[1, qaOut.k + 1] = -1;
+{ wt_beta, pv_beta } = wtestlrb(qaOut.bigbt, qaOut.bigbt_cov, R_beta, 0, data);
+{ wt_qw, pv_qw, bigR_qw, smr_qw } = qardlWald(qaOut, "beta",
+    "beta[x1,0.25] = beta[x1,0.50]", data);
+call assert_close(bigR_qw, R_beta, 1e-12, "qardlWald generated wrong beta restriction matrix");
+call assert_close(smr_qw, 0, 1e-12, "qardlWald generated wrong beta restriction rhs");
+call assert_close(wt_qw|pv_qw, wt_beta|pv_beta, 1e-10,
+                  "qardlWald beta result differs from wtestlrb");
+
+restr_qw = "gamma[x1,0.25] = gamma[x1,0.50]" $|
+           "phi[1,0.25] - phi[1,0.50]";
+{ bigR_qw, smr_qw } = qardlRestriction(qaOut, "gamma", restr_qw[1]);
+call assert_true(rows(bigR_qw) == 1 and cols(bigR_qw) == rows(qaOut.gamma),
+                 "qardlRestriction gamma shape invalid");
+{ bigR_qw, smr_qw } = qardlRestriction(qaOut, "phi", restr_qw[2], 0);
+call assert_true(rows(bigR_qw) == 1 and cols(bigR_qw) == rows(qaOut.phi),
+                 "qardlRestriction phi shape invalid");
+
 // QIRF public API.
 struct qirfOut qiOut;
 qiOut = qirf(qaOut, 2, 1, 8, tau);

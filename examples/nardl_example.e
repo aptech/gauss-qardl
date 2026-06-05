@@ -32,26 +32,5 @@ data = y~x1~x2;
 //         Set the final argument to 1 to print directly from nardl().
 naOut = nardl(data, 1, 1, "", 0);
 
-// Step 4: Access key output fields directly from the returned structure.
-print;
-print "NARDL fixed-order example";
-print "-------------------------";
-print "p q k nobs: " naOut.p~naOut.q~naOut.k~naOut.nobs;
-print "Bounds F-stat: " naOut.bounds_fstat;
-print "Long-run coefficients";
-print "Name          beta_pos      beta_neg";
-ii = 1;
-do until ii > naOut.k;
-    sprintf("x%-9d%14.6f%14.6f", ii, naOut.beta_pos[ii], naOut.beta_neg[ii]);
-    ii = ii + 1;
-endo;
-print "Long-run asymmetry tests";
-print "Name        statistic       p-value";
-ii = 1;
-do until ii > naOut.k;
-    sprintf("x%-9d%14.6f%14.6f", ii, naOut.asymmetry_wald[ii], naOut.asymmetry_pv[ii]);
-    ii = ii + 1;
-endo;
-
-// Step 5: Print the standard formatted NARDL table, including asymmetry tests.
+// Step 4: Print the standard formatted NARDL table, including asymmetry tests.
 printNARDL(naOut);

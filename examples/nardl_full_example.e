@@ -37,25 +37,16 @@ nfOut = nardlFull(df, formula = formula, verbose = 0, criterion = "bic");
 // Step 4: Estimate the matching ECM representation at the selected lag orders.
 nECMOut = nardlECM(df, nfOut.pst, nfOut.qst, formula, 0);
 
-// Step 5: Inspect workflow-level fields and model-specific asymmetry output.
-print;
-print "NARDL formula full workflow";
-print "---------------------------";
-print "BIC-selected p, q: " nfOut.pst~nfOut.qst;
-print "ECM alpha rho:     " nECMOut.alpha~nECMOut.rho;
-print "Short-run asymmetry p-values";
-print nfOut.na.short_run_pv;
-
-// Step 6: Print formatted levels and ECM output tables.
+// Step 5: Print formatted levels and ECM output tables.
 printNARDL(nfOut.na);
 printNARDLECM(nECMOut);
 
-// Step 7: Use the unified prediction and forecast helpers. They infer the
+// Step 6: Use the unified prediction and forecast helpers. They infer the
 //         model type from the output structure.
 fit = predictARDL(nfOut.na, df, formula);
 fcst = forecastARDL(nfOut.na, df, 3, formula);
 
-// Step 8: Display the fitted-sample prediction size and 3-step forecast.
+// Step 7: Display the fitted-sample prediction size and 3-step forecast.
 print;
 print "Prediction rows and 3-step forecast";
 print rows(fit);

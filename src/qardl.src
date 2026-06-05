@@ -5270,6 +5270,294 @@ proc (struct qardlFullOut) = qardlFull(data, pend = 8, qend = 8,
     retp(qfOut);
 endp;
 
+/*
+**> qardlWald
+**
+**  Purpose:    Run QARDL Wald tests from user-friendly string restrictions.
+**              Restrictions are parsed into R and r matrices and evaluated
+**              with the existing QARDL Wald scaling and chi-square p-values.
+**
+**  Format:     { wt, pv, R, r } = qardlWald(qaOut, family, restrictions, data);
+**              { wt, pv, R, r } = qardlWald(qaOut, family, restrictions, data,
+**                                           rhs, formula);
+**
+**  Examples:   { wt, pv, R, r } = qardlWald(qaOut, "beta",
+**                      "beta[x1,0.25] = beta[x1,0.50]", data);
+**
+**              { wt, pv, R, r } = qardlWald(qaOut, "gamma",
+**                      "2*gamma[x1,0.25] - gamma[x2,0.25]", data, 0);
+*/
+proc (4) = qardlWald(struct qardlOut qaOut, family, restrictions, data,
+                     rhs = error(0), formula = "");
+    local bigR, smr, fam, wt, pv;
+
+    fam = _qardlNormalizeWaldFamily(family);
+    { bigR, smr } = qardlRestriction(qaOut, fam, restrictions, rhs, formula);
+
+    if fam $== "beta";
+        { wt, pv } = wtestlrb(qaOut.bigbt, qaOut.bigbt_cov, bigR, smr, data);
+    elseif fam $== "gamma";
+        { wt, pv } = wtestsrg(qaOut.gamma, qaOut.gamma_cov, bigR, smr, data);
+    else;
+        { wt, pv } = wtestsrp(qaOut.phi, qaOut.phi_cov, bigR, smr, data);
+    endif;
+
+    retp(wt, pv, bigR, smr);
+endp;
+
+/*
+**> qardlRestriction
+**
+**  Purpose:    Convert QARDL string restrictions into numeric R and r
+**              matrices for beta, gamma, or phi Wald tests.
+*/
+proc (2) = qardlRestriction(struct qardlOut qaOut, family, restrictions,
+                            rhs = error(0), formula = "");
+    local fam, ss, k0, p, xvars, nparam, nrestr, bigR, smr, ii;
+    local restr_i, eq_pos, lhs, rhs_expr, row_l, row_r, const_l, const_r;
+    local row_i, const_i, rhs_supplied;
+
+    fam = _qardlNormalizeWaldFamily(family);
+    ss = rows(qaOut.tau);
+    k0 = qaOut.k;
+    p = qaOut.p;
+    xvars = _qardlWaldXVars(qaOut, formula, k0);
+
+    if fam $== "beta" or fam $== "gamma";
+        nparam = k0 * ss;
+    else;
+        nparam = p * ss;
+    endif;
+
+    nrestr = rows(restrictions);
+    if nrestr < 1;
+        errorlog "qardlRestriction: restrictions must contain at least one restriction";
+        end;
+    endif;
+
+    rhs_supplied = not (rows(rhs) == 1 and cols(rhs) == 1 and scalmiss(rhs));
+    if rhs_supplied;
+        if rows(rhs) == 1 and cols(rhs) == 1 and nrestr > 1;
+            rhs = rhs*ones(nrestr, 1);
+        elseif rows(rhs) == 1 and cols(rhs) == nrestr;
+            rhs = rhs';
+        endif;
+        if rows(rhs) /= nrestr or cols(rhs) /= 1;
+            errorlog "qardlRestriction: rhs must be a scalar, a column vector, or omitted";
+            end;
+        endif;
+    else;
+        rhs = zeros(nrestr, 1);
+    endif;
+
+    bigR = zeros(nrestr, nparam);
+    smr = zeros(nrestr, 1);
+
+    ii = 1;
+    do until ii > nrestr;
+        restr_i = strtrim(restrictions[ii]);
+        eq_pos = strindx(restr_i, "=", 1);
+
+        if eq_pos > 0;
+            lhs = strtrim(strsect(restr_i, 1, eq_pos - 1));
+            rhs_expr = strtrim(strsect(restr_i, eq_pos + 1, strlen(restr_i)));
+            { row_l, const_l } = _qardlParseRestrictionExpr(lhs, fam, qaOut.tau, xvars, k0, p);
+            { row_r, const_r } = _qardlParseRestrictionExpr(rhs_expr, fam, qaOut.tau, xvars, k0, p);
+            bigR[ii, .] = row_l - row_r;
+            smr[ii] = const_r - const_l;
+        else;
+            { row_i, const_i } = _qardlParseRestrictionExpr(restr_i, fam, qaOut.tau, xvars, k0, p);
+            bigR[ii, .] = row_i;
+            smr[ii] = rhs[ii] - const_i;
+        endif;
+
+        ii = ii + 1;
+    endo;
+
+    call _qardlValidateRestrictionShape(bigR, smr, nparam, "qardlRestriction");
+
+    retp(bigR, smr);
+endp;
+
+proc (1) = _qardlNormalizeWaldFamily(family);
+    family = lower(strtrim(family));
+
+    if family $== "beta" or family $== "longrun" or
+       family $== "long-run" or family $== "lr";
+        retp("beta");
+    elseif family $== "gamma" or family $== "short-run-x" or
+           family $== "srx";
+        retp("gamma");
+    elseif family $== "phi" or family $== "ar" or family $== "short-run-y";
+        retp("phi");
+    endif;
+
+    errorlog "qardlWald: family must be 'beta', 'gamma', or 'phi'";
+    end;
+endp;
+
+proc (1) = _qardlWaldXVars(struct qardlOut qaOut, formula, k0);
+    local depvar, xvars;
+
+    if strlen(formula) > 0;
+        { depvar, xvars } = _qardlFormulaNames(formula, k0);
+        retp(xvars);
+    endif;
+
+    if rows(qaOut.xvars) == k0;
+        retp(qaOut.xvars);
+    endif;
+
+    retp(_qardlDefaultXVars(k0));
+endp;
+
+proc (2) = _qardlParseRestrictionExpr(expr_txt, fam, tau, xvars, k0, p);
+    local cleaned, terms, row, constant, ii, term, sign, star_pos;
+    local coeff, ref, parts;
+
+    if fam $== "beta" or fam $== "gamma";
+        row = zeros(1, k0 * rows(tau));
+    else;
+        row = zeros(1, p * rows(tau));
+    endif;
+    constant = 0;
+
+    cleaned = strtrim(expr_txt);
+    if strlen(cleaned) == 0;
+        retp(row, constant);
+    endif;
+
+    cleaned = strreplace(cleaned, "-", "+-");
+    terms = strtrim(strsplit(cleaned, "+"))';
+
+    ii = 1;
+    do until ii > rows(terms);
+        term = strtrim(terms[ii]);
+        if strlen(term) > 0;
+            sign = 1;
+            if strsect(term, 1, 1) $== "-";
+                sign = -1;
+                term = strtrim(strsect(term, 2, strlen(term) - 1));
+            endif;
+
+            star_pos = strindx(term, "*", 1);
+            if star_pos > 0;
+                parts = strtrim(strsplit(term, "*"));
+                coeff = sign * strtof(parts[1]);
+                ref = parts[2];
+            else;
+                coeff = sign;
+                ref = term;
+            endif;
+
+            if strindx(ref, "[", 1) > 0;
+                row[1, _qardlParamRefIndex(ref, fam, tau, xvars, k0, p)] =
+                    row[1, _qardlParamRefIndex(ref, fam, tau, xvars, k0, p)] + coeff;
+            else;
+                constant = constant + sign * strtof(ref);
+            endif;
+        endif;
+        ii = ii + 1;
+    endo;
+
+    retp(row, constant);
+endp;
+
+proc (1) = _qardlParamRefIndex(ref, fam, tau, xvars, k0, p);
+    local open_pos, close_pos, prefix, args, first_arg, tau_arg;
+    local tau_idx, var_idx, lag_idx;
+
+    ref = strtrim(ref);
+    open_pos = strindx(ref, "[", 1);
+    close_pos = strindx(ref, "]", 1);
+
+    if open_pos == 0 or close_pos == 0 or close_pos <= open_pos;
+        errorlog "qardlRestriction: invalid parameter reference: " $+ ref;
+        end;
+    endif;
+
+    prefix = lower(strtrim(strsect(ref, 1, open_pos - 1)));
+    if not (prefix $== fam);
+        errorlog "qardlRestriction: parameter reference '" $+ ref $+
+                 "' does not match requested family '" $+ fam $+ "'";
+        end;
+    endif;
+
+    args = strtrim(strsplit(strsect(ref, open_pos + 1, close_pos - open_pos - 1), ","));
+    if rows(args) == 1 and cols(args) == 2;
+        args = args';
+    endif;
+    if rows(args) /= 2;
+        errorlog "qardlRestriction: parameter references must use [name_or_lag,tau]";
+        end;
+    endif;
+
+    first_arg = strtrim(args[1]);
+    tau_arg = strtrim(args[2]);
+    tau_idx = _qardlTauIndex(tau_arg, tau);
+
+    if fam $== "phi";
+        lag_idx = round(strtof(first_arg));
+        if lag_idx < 1 or lag_idx > p;
+            errorlog "qardlRestriction: phi lag index is out of range";
+            end;
+        endif;
+        retp((tau_idx - 1)*p + lag_idx);
+    endif;
+
+    var_idx = _qardlXVarIndex(first_arg, xvars, k0);
+    retp((tau_idx - 1)*k0 + var_idx);
+endp;
+
+proc (1) = _qardlTauIndex(tau_arg, tau);
+    local tau_val, idx, best_dist, dist, ii;
+
+    tau_val = strtof(tau_arg);
+    if scalmiss(tau_val);
+        errorlog "qardlRestriction: tau must be numeric";
+        end;
+    endif;
+
+    idx = 0;
+    best_dist = 1e256;
+    ii = 1;
+    do until ii > rows(tau);
+        dist = abs(tau[ii] - tau_val);
+        if dist < best_dist;
+            best_dist = dist;
+            idx = ii;
+        endif;
+        ii = ii + 1;
+    endo;
+
+    if best_dist > 1e-8;
+        errorlog "qardlRestriction: tau " $+ tau_arg $+ " was not estimated in qaOut";
+        end;
+    endif;
+
+    retp(idx);
+endp;
+
+proc (1) = _qardlXVarIndex(var_arg, xvars, k0);
+    local idx_num, idx;
+
+    idx_num = strtof(var_arg);
+    if not scalmiss(idx_num);
+        idx = round(idx_num);
+        if idx >= 1 and idx <= k0;
+            retp(idx);
+        endif;
+    endif;
+
+    idx = indsav(lower(strtrim(var_arg)), lower(xvars));
+    if rows(idx) == 1;
+        retp(idx[1]);
+    endif;
+
+    errorlog "qardlRestriction: regressor not found: " $+ var_arg;
+    end;
+endp;
+
 proc (1) = _qardlDefaultXVars(k0);
     local ii, xvars;
 

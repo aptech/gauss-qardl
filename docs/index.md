@@ -221,6 +221,14 @@ Computes asymptotic normal p-values for levels-form estimates.
 
 Computes asymptotic normal p-values for QARDL-ECM estimates.
 
+[qardlWald](command-reference/qardlWald.md)
+
+Runs QARDL Wald tests from string restrictions.
+
+[qardlRestriction](command-reference/qardlRestriction.md)
+
+Converts QARDL string restrictions into restriction matrices.
+
 [wtestlrb](command-reference/wtestlrb.md)
 
 Runs custom Wald tests for long-run beta restrictions.

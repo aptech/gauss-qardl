@@ -18,18 +18,11 @@ formula = "real_dividend ~ real_earnings";
 //         package default maximum lag search bounds.
 afOut = ardlFull(shiller, formula = formula, verbose = 1, criterion = "bic");
 
-// Step 3: Inspect workflow-level output, including bounds testing and lags.
-print;
-print "S&P 500 dividend/earnings ARDL full workflow";
-print "--------------------------------------------";
-print "Bounds F-stat: " afOut.ardl_fstat;
-print "Selected p, q: " afOut.pst~afOut.qst;
-
-// Step 5: Use the unified prediction and forecast helpers on the ARDL output.
+// Step 4: Use the unified prediction and forecast helpers on the ARDL output.
 fit = predictARDL(afOut.ar, shiller, formula);
 fcst = forecastARDL(afOut.ar, shiller, 3, formula);
 
-// Step 6: Display the fitted-sample prediction size and 3-step forecast.
+// Step 5: Display the fitted-sample prediction size and 3-step forecast.
 print;
 print "Prediction rows and 3-step forecast";
 print rows(fit);

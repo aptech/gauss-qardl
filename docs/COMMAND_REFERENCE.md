@@ -83,6 +83,8 @@ sections.
 
 - [qardl_pval](command-reference/qardl_pval.md)
 - [qardl_pval_ecm](command-reference/qardl_pval_ecm.md)
+- [qardlWald](command-reference/qardlWald.md)
+- [qardlRestriction](command-reference/qardlRestriction.md)
 - [wtestlrb](command-reference/wtestlrb.md)
 - [wtestsrp](command-reference/wtestsrp.md)
 - [wtestsrg](command-reference/wtestsrg.md)

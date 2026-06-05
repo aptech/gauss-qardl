@@ -27,6 +27,7 @@ print "p q k nobs = " qaOut.p~qaOut.q~qaOut.k~qaOut.nobs;
 // Constancy-style restrictions for beta_1, phi_1, and gamma_1 across the
 // first two quantiles. The rolling routine will trim phi restrictions if a
 // smaller p is selected in a window.
+struct waldTestRestrictions waldR;
 waldR.bigR_beta = zeros(1, qaOut.k*rows(tau));
 waldR.bigR_beta[1, 1] = 1;
 waldR.bigR_beta[1, qaOut.k+1] = -1;

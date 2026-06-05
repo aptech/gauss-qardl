@@ -45,21 +45,11 @@ panel = make_csardl_example_panel(8, 70);
 // Step 3: Estimate a fixed-order pooled CS-ARDL levels model.
 csaOut = csardl(panel, 1, 1, 1, "", 0);
 
-// Step 4: Access selected output fields directly from the returned structure.
-print;
-print "CS-ARDL fixed-order example";
-print "---------------------------";
-print "p q cs_lags units nobs: " csaOut.p~csaOut.q~csaOut.cs_lags~csaOut.nunits~csaOut.nobs;
-print "Pooled long-run beta";
-print csaOut.bigbt;
-
-// Step 5: Print the standard formatted CS-ARDL coefficient table.
+// Step 4: Print the standard formatted CS-ARDL coefficient table.
 printCSARDL(csaOut);
 
-// Step 6: Run the optional mean-group and panel diagnostic layer.
+// Step 5: Run the optional mean-group and panel diagnostic layer.
 //         This reports unit-specific long-run coefficients, mean-group
 //         estimates, Wald-style checks, and Pesaran CD.
 diagOut = csardlDiagnostics(panel, 1, 1, 1, "", 0);
 printCSARDLDiagnostics(diagOut);
-print "Slope heterogeneity p-value: " diagOut.slope_hetero_pv;
-print "Pesaran CD p-value: " diagOut.cd_pv;

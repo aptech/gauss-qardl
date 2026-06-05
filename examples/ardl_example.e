@@ -23,18 +23,9 @@ data = applyQARDLFormula(shiller, formula);
 // Step 4: Estimate the levels-form ARDL model at the selected lag orders.
 arOut = ardl(shiller, pst, qst, formula, 0);
 
-// Step 5: Access selected output fields directly from the returned structure.
-print;
-print "S&P 500 dividend/earnings ARDL";
-print "------------------------------";
-print "BIC-selected p, q: " pst~qst;
-print "p q k nobs:        " arOut.p~arOut.q~arOut.k~arOut.nobs;
-print "Long-run beta";
-print arOut.bigbt;
-
-// Step 6: Print the standard formatted ARDL coefficient table.
+// Step 5: Print the standard formatted ARDL coefficient table.
 printARDL(arOut);
 
-// Step 7: Run and print residual diagnostics for the fitted ARDL model.
+// Step 6: Run and print residual diagnostics for the fitted ARDL model.
 diagOut = ardlResidualDiagnostics(arOut, 4);
 printARDLResidualDiagnostics(diagOut);

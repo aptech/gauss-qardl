@@ -33,6 +33,10 @@
   `nardlFull`, and `csardlFull`. The default `-1` follows `verbose`, `0`
   stores diagnostics silently, and `1` prints diagnostics even when
   `verbose = 0`.
+- `qardlWald` and `qardlRestriction` for GAUSS `waldTest`-style QARDL
+  restriction strings, including equality syntax, linear combinations, and
+  generated `R`/`r` matrices while preserving the existing QARDL Wald
+  scaling and p-value conventions.
 - Expanded R `ardl.nardl` parity inventory and validation harness, including
   fixed-order ARDL/NARDL levels and ECM comparisons, runtime comparison output,
   and optional sparse GETS keep/coefficient diagnostics when R is available.

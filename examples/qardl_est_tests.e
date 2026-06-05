@@ -5,8 +5,8 @@ cls;
 /*
 ** Estimation and inference with the modern QARDL API.
 **
-** This example keeps the manual Wald-test construction from the original
-** example, but anchors it in the newer output helpers and automatic tests.
+** This example uses the newer output helpers, automatic tests, and
+** string-based custom Wald restrictions.
 */
 
 data = loadd(__FILE_DIR $+ "qardl_data.dat");
@@ -50,32 +50,22 @@ print "gamma " wt_gamma~pv_gamma;
 print "phi   " wt_phi~pv_phi;
 
 /*
-** Manual restriction matrices are still supported for custom hypotheses.
-** The output metadata makes the dimensions explicit.
+** Custom Wald restrictions can be written directly. The generated R and r
+** matrices are returned for auditing or reuse.
 */
-k = qaOut.k;
-s = rows(qaOut.tau);
+restr_beta = "beta[x1,0.25] = beta[x1,0.50]" $|
+             "beta[x1,0.50] = beta[x1,0.75]";
+restr_gamma = "gamma[x1,0.25] = gamma[x1,0.50]" $|
+              "gamma[x1,0.50] = gamma[x1,0.75]";
+restr_phi = "phi[1,0.25] = phi[1,0.50]" $|
+            "phi[1,0.50] = phi[1,0.75]";
 
-ca_beta = zeros(2, k*s);
-ca_beta[1, 1] = 1;
-ca_beta[1, k+1] = -1;
-ca_beta[2, k+1] = 1;
-ca_beta[2, 2*k+1] = -1;
-sm_beta = zeros(2, 1);
-
-ca_phi = zeros(2, qaOut.p*s);
-ca_phi[1, 1] = 1;
-ca_phi[1, qaOut.p+1] = -1;
-ca_phi[2, qaOut.p+1] = 1;
-ca_phi[2, 2*qaOut.p+1] = -1;
-sm_phi = zeros(2, 1);
-
-ca_gamma = ca_beta;
-sm_gamma = sm_beta;
-
-{ wt_beta, pv_beta } = wtestlrb(qaOut.bigbt, qaOut.bigbt_cov, ca_beta, sm_beta, data);
-{ wt_phi, pv_phi } = wtestsrp(qaOut.phi, qaOut.phi_cov, ca_phi, sm_phi, data);
-{ wt_gamma, pv_gamma } = wtestsrg(qaOut.gamma, qaOut.gamma_cov, ca_gamma, sm_gamma, data);
+{ wt_beta, pv_beta, bigR_beta, smr_beta } =
+    qardlWald(qaOut, "beta", restr_beta, data);
+{ wt_gamma, pv_gamma, bigR_gamma, smr_gamma } =
+    qardlWald(qaOut, "gamma", restr_gamma, data);
+{ wt_phi, pv_phi, bigR_phi, smr_phi } =
+    qardlWald(qaOut, "phi", restr_phi, data);
 
 print;
 print "Custom Wald tests: statistic | p-value";
