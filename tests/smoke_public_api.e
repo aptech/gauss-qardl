@@ -388,12 +388,27 @@ R_beta = zeros(1, qaOut.k*rows(tau));
 R_beta[1, 1] = 1;
 R_beta[1, qaOut.k + 1] = -1;
 { wt_beta, pv_beta } = wtestlrb(qaOut.bigbt, qaOut.bigbt_cov, R_beta, 0, data);
-{ wt_qw, pv_qw, bigR_qw, smr_qw } = qardlWald(qaOut, "beta",
-    "beta[x1,0.25] = beta[x1,0.50]", data);
-call assert_close(bigR_qw, R_beta, 1e-12, "qardlWald generated wrong beta restriction matrix");
-call assert_close(smr_qw, 0, 1e-12, "qardlWald generated wrong beta restriction rhs");
-call assert_close(wt_qw|pv_qw, wt_beta|pv_beta, 1e-10,
+struct qardlWaldOut qwOut;
+qwOut = qardlWald(qaOut, data = data, test = "custom", family = "beta",
+                  restrictions = "beta[x1,0.25] = beta[x1,0.50]",
+                  print_results = 0);
+call assert_true(qwOut.test $== "custom" and qwOut.family $== "beta",
+                 "qardlWald custom metadata invalid");
+call assert_close(qwOut.bigR, R_beta, 1e-12, "qardlWald generated wrong beta restriction matrix");
+call assert_close(qwOut.smr, 0, 1e-12, "qardlWald generated wrong beta restriction rhs");
+call assert_close(qwOut.wald|qwOut.pv, wt_beta|pv_beta, 1e-10,
                   "qardlWald beta result differs from wtestlrb");
+call assert_close(qwOut.wald_beta|qwOut.pv_beta, wt_beta|pv_beta, 1e-10,
+                  "qardlWald beta convenience fields invalid");
+
+qwOut = qardlWald(qaOut, data = data, test = "constancy", print_results = 0);
+call assert_true(qwOut.test $== "constancy" and rows(qwOut.wald) == 3 and
+                 rows(qwOut.pv) == 3 and qwOut.family $== "all",
+                 "qardlWald constancy output invalid");
+qwOut = qardlWald(qaOut, data = data, test = "symmetry", print_results = 0);
+call assert_true(qwOut.test $== "symmetry" and rows(qwOut.wald) == 3 and
+                 rows(qwOut.pv) == 3 and qwOut.family $== "all",
+                 "qardlWald symmetry output invalid");
 
 restr_qw = "gamma[x1,0.25] = gamma[x1,0.50]" $|
            "phi[1,0.25] - phi[1,0.50]";

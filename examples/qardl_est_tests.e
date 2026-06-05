@@ -60,17 +60,17 @@ restr_gamma = "gamma[x1,0.25] = gamma[x1,0.50]" $|
 restr_phi = "phi[1,0.25] = phi[1,0.50]" $|
             "phi[1,0.50] = phi[1,0.75]";
 
-{ wt_beta, pv_beta, bigR_beta, smr_beta } =
-    qardlWald(qaOut, "beta", restr_beta, data);
-{ wt_gamma, pv_gamma, bigR_gamma, smr_gamma } =
-    qardlWald(qaOut, "gamma", restr_gamma, data);
-{ wt_phi, pv_phi, bigR_phi, smr_phi } =
-    qardlWald(qaOut, "phi", restr_phi, data);
+wald_beta = qardlWald(qaOut, data = data, test = "custom",
+                      family = "beta", restrictions = restr_beta);
+wald_gamma = qardlWald(qaOut, data = data, test = "custom",
+                       family = "gamma", restrictions = restr_gamma);
+wald_phi = qardlWald(qaOut, data = data, test = "custom",
+                     family = "phi", restrictions = restr_phi);
 
 print;
 print "Custom Wald tests: statistic | p-value";
-print "beta  " wt_beta~pv_beta;
-print "gamma " wt_gamma~pv_gamma;
-print "phi   " wt_phi~pv_phi;
+print "beta  " wald_beta.wald~wald_beta.pv;
+print "gamma " wald_gamma.wald~wald_gamma.pv;
+print "phi   " wald_phi.wald~wald_phi.pv;
 
 plotQARDL(qaOut, tau, 1);

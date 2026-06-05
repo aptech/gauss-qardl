@@ -1076,6 +1076,31 @@ struct rollingWaldTests {
 
 };
 
+struct qardlWaldOut {
+    // Standardized metadata
+    string model_family;
+    string test;
+    string family;
+    string array restrictions;
+    matrix tau;
+
+    // Summary rows. Built-in tests use beta/gamma/phi rows; custom tests use one row.
+    matrix wald;
+    matrix pv;
+
+    // Family-specific convenience fields
+    matrix wald_beta;
+    matrix pv_beta;
+    matrix wald_gamma;
+    matrix pv_gamma;
+    matrix wald_phi;
+    matrix pv_phi;
+
+    // Generated restriction matrices for custom tests
+    matrix bigR;
+    matrix smr;
+};
+
 struct waldTestRestrictions {
 
     // Restrictions for gamma

@@ -5273,36 +5273,244 @@ endp;
 /*
 **> qardlWald
 **
-**  Purpose:    Run QARDL Wald tests from user-friendly string restrictions.
-**              Restrictions are parsed into R and r matrices and evaluated
-**              with the existing QARDL Wald scaling and chi-square p-values.
+**  Purpose:    Unified QARDL Wald-test entry point for built-in and custom
+**              restrictions. Use named arguments to select constancy,
+**              symmetry, or custom string restrictions.
 **
-**  Format:     { wt, pv, R, r } = qardlWald(qaOut, family, restrictions, data);
-**              { wt, pv, R, r } = qardlWald(qaOut, family, restrictions, data,
-**                                           rhs, formula);
+**  Format:     wOut = qardlWald(qaOut, data = data, test = "constancy");
+**              wOut = qardlWald(qaOut, data = data, test = "symmetry");
+**              wOut = qardlWald(qaOut, data = data, test = "custom",
+**                               family = "beta", restrictions = restrictions);
 **
-**  Examples:   { wt, pv, R, r } = qardlWald(qaOut, "beta",
-**                      "beta[x1,0.25] = beta[x1,0.50]", data);
-**
-**              { wt, pv, R, r } = qardlWald(qaOut, "gamma",
-**                      "2*gamma[x1,0.25] - gamma[x2,0.25]", data, 0);
+**  Output:     qardlWaldOut structure.
 */
-proc (4) = qardlWald(struct qardlOut qaOut, family, restrictions, data,
-                     rhs = error(0), formula = "");
-    local bigR, smr, fam, wt, pv;
+proc (struct qardlWaldOut) = qardlWald(struct qardlOut qaOut,
+                                       data = error(0),
+                                       test = "custom",
+                                       family = "beta",
+                                       restrictions = "",
+                                       rhs = error(0),
+                                       formula = "",
+                                       print_results = 1);
+    local bigR, smr, fam, wt, pv, test_norm;
+    local wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi;
+    struct qardlWaldOut wOut;
 
-    fam = _qardlNormalizeWaldFamily(family);
-    { bigR, smr } = qardlRestriction(qaOut, fam, restrictions, rhs, formula);
-
-    if fam $== "beta";
-        { wt, pv } = wtestlrb(qaOut.bigbt, qaOut.bigbt_cov, bigR, smr, data);
-    elseif fam $== "gamma";
-        { wt, pv } = wtestsrg(qaOut.gamma, qaOut.gamma_cov, bigR, smr, data);
-    else;
-        { wt, pv } = wtestsrp(qaOut.phi, qaOut.phi_cov, bigR, smr, data);
+    if rows(data) == 1 and cols(data) == 1 and scalmiss(data);
+        errorlog "qardlWald: data must be supplied as a named argument";
+        end;
     endif;
 
-    retp(wt, pv, bigR, smr);
+    test_norm = _qardlNormalizeWaldTest(test);
+    fam = _qardlNormalizeWaldFamily(family);
+
+    wOut.model_family = "QARDL-Wald";
+    wOut.test = test_norm;
+    wOut.family = fam;
+    wOut.restrictions = restrictions;
+    wOut.tau = qaOut.tau;
+    wOut.bigR = error(0);
+    wOut.smr = error(0);
+    wOut.wald_beta = error(0);
+    wOut.pv_beta = error(0);
+    wOut.wald_gamma = error(0);
+    wOut.pv_gamma = error(0);
+    wOut.wald_phi = error(0);
+    wOut.pv_phi = error(0);
+
+    if test_norm $== "constancy";
+        { wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi } =
+            wtestconst(qaOut, qaOut.tau, data);
+        wOut.family = "all";
+        wOut.wald = wt_beta|wt_gamma|wt_phi;
+        wOut.pv = pv_beta|pv_gamma|pv_phi;
+        wOut.wald_beta = wt_beta;
+        wOut.pv_beta = pv_beta;
+        wOut.wald_gamma = wt_gamma;
+        wOut.pv_gamma = pv_gamma;
+        wOut.wald_phi = wt_phi;
+        wOut.pv_phi = pv_phi;
+    elseif test_norm $== "symmetry";
+        { wt_beta, pv_beta, wt_gamma, pv_gamma, wt_phi, pv_phi } =
+            wtestsym(qaOut, qaOut.tau, data);
+        wOut.family = "all";
+        wOut.wald = wt_beta|wt_gamma|wt_phi;
+        wOut.pv = pv_beta|pv_gamma|pv_phi;
+        wOut.wald_beta = wt_beta;
+        wOut.pv_beta = pv_beta;
+        wOut.wald_gamma = wt_gamma;
+        wOut.pv_gamma = pv_gamma;
+        wOut.wald_phi = wt_phi;
+        wOut.pv_phi = pv_phi;
+    else;
+        if strlen(strtrim(restrictions[1])) == 0;
+            errorlog "qardlWald: custom tests require restrictions";
+            end;
+        endif;
+
+        { bigR, smr } = qardlRestriction(qaOut, fam, restrictions, rhs, formula);
+
+        if fam $== "beta";
+            { wt, pv } = wtestlrb(qaOut.bigbt, qaOut.bigbt_cov, bigR, smr, data);
+            wOut.wald_beta = wt;
+            wOut.pv_beta = pv;
+        elseif fam $== "gamma";
+            { wt, pv } = wtestsrg(qaOut.gamma, qaOut.gamma_cov, bigR, smr, data);
+            wOut.wald_gamma = wt;
+            wOut.pv_gamma = pv;
+        else;
+            { wt, pv } = wtestsrp(qaOut.phi, qaOut.phi_cov, bigR, smr, data);
+            wOut.wald_phi = wt;
+            wOut.pv_phi = pv;
+        endif;
+
+        wOut.wald = wt;
+        wOut.pv = pv;
+        wOut.bigR = bigR;
+        wOut.smr = smr;
+    endif;
+
+    if print_results;
+        call printQARDLWald(wOut);
+    endif;
+
+    retp(wOut);
+endp;
+
+/*
+**> printQARDLWald
+**
+**  Purpose:    Print QARDL Wald-test results with interpretation notes.
+*/
+proc (0) = printQARDLWald(struct qardlWaldOut wOut, ...);
+    local header, note, table_width, eq_line, dash_line;
+    local ii, fam_names, wt, pv, sig, outcome;
+    local alpha;
+    local fam_label;
+
+    alpha = dynargsGet(1, 0.05);
+
+    header = "Family          Wald statistic        P-value    Sig.";
+    note = _qardlSignifNote();
+    table_width = maxc(strlen(header)|84|strlen(note));
+    eq_line = _qardlTableBorder("=", table_width);
+    dash_line = _qardlTableBorder("-", table_width);
+
+    print eq_line;
+    print "QARDL Wald Test";
+    print eq_line;
+    print "Test: " $+ _qardlWaldTestLabel(wOut.test);
+    if wOut.test $== "custom";
+        print "Family: " $+ wOut.family;
+        print "Restrictions: " $+ ftos(rows(wOut.bigR), "%g", 1, 0);
+    endif;
+    print dash_line;
+    print header;
+    print dash_line;
+
+    if wOut.test $== "custom";
+        sprintf("%-12s%20.6f%15.6f%8s", wOut.family, wOut.wald[1],
+                wOut.pv[1], _qardlSignifStars(wOut.pv[1]));
+    else;
+        fam_names = "beta"|"gamma"|"phi";
+        ii = 1;
+        do until ii > 3;
+            if ii == 1;
+                fam_label = "beta";
+            elseif ii == 2;
+                fam_label = "gamma";
+            else;
+                fam_label = "phi";
+            endif;
+            wt = wOut.wald[ii, 1];
+            pv = wOut.pv[ii, 1];
+            if scalmiss(wt) or scalmiss(pv);
+                sprintf("%-12s%20s%15s%8s", fam_label, "", "", "");
+            else;
+                sig = _qardlSignifStars(pv);
+                sprintf("%-12s%20.6f%15.6f%8s", fam_label, wt, pv, sig);
+            endif;
+            ii = ii + 1;
+        endo;
+    endif;
+
+    print eq_line;
+    print note;
+    call _qardlPrintWaldInterpretation(wOut, alpha);
+endp;
+
+proc (0) = _qardlPrintWaldInterpretation(struct qardlWaldOut wOut, alpha);
+    local ii, fam_names, null_text, interpretation, outcome;
+    local fam_label;
+
+    call _qardlPrintInterpHeader();
+
+    if wOut.test $== "custom";
+        outcome = _qardlWaldOutcome(wOut.pv[1], alpha);
+        if not scalmiss(wOut.pv[1]) and wOut.pv[1] < alpha;
+            interpretation = "Specified restrictions are rejected.";
+        else;
+            interpretation = "Specified restrictions are not rejected.";
+        endif;
+        call _qardlPrintInterpRow("Custom Wald",
+                                  "specified restrictions hold",
+                                  outcome,
+                                  interpretation);
+    else;
+        fam_names = "beta"|"gamma"|"phi";
+        ii = 1;
+        do until ii > 3;
+            if ii == 1;
+                fam_label = "beta";
+            elseif ii == 2;
+                fam_label = "gamma";
+            else;
+                fam_label = "phi";
+            endif;
+            outcome = _qardlWaldOutcome(wOut.pv[ii, 1], alpha);
+            if wOut.test $== "constancy";
+                null_text = fam_label $+ " constant across quantiles";
+                if not scalmiss(wOut.pv[ii, 1]) and wOut.pv[ii, 1] < alpha;
+                    interpretation = fam_label $+ " varies across quantiles.";
+                else;
+                    interpretation = "No evidence that " $+ fam_label $+
+                                     " varies across quantiles.";
+                endif;
+            else;
+                null_text = fam_label $+ " symmetric across quantiles";
+                if not scalmiss(wOut.pv[ii, 1]) and wOut.pv[ii, 1] < alpha;
+                    interpretation = fam_label $+ " shows evidence of quantile asymmetry.";
+                else;
+                    interpretation = "No evidence of " $+ fam_label $+ " quantile asymmetry.";
+                endif;
+            endif;
+
+            call _qardlPrintInterpRow(fam_label $+ " " $+ wOut.test,
+                                      null_text, outcome, interpretation);
+            ii = ii + 1;
+        endo;
+    endif;
+
+    call _qardlPrintInterpEnd();
+endp;
+
+proc (1) = _qardlWaldOutcome(pv, alpha);
+    if scalmiss(pv);
+        retp("Not available");
+    endif;
+    if pv < alpha;
+        retp("Reject at " $+ _qardlAlphaLabel(alpha));
+    endif;
+    retp("Do not reject");
+endp;
+
+proc (1) = _qardlWaldTestLabel(test);
+    if test $== "constancy";
+        retp("Parameter constancy across quantiles");
+    elseif test $== "symmetry";
+        retp("Quantile symmetry");
+    endif;
+    retp("Custom linear restrictions");
 endp;
 
 /*
@@ -5393,6 +5601,24 @@ proc (1) = _qardlNormalizeWaldFamily(family);
     endif;
 
     errorlog "qardlWald: family must be 'beta', 'gamma', or 'phi'";
+    end;
+endp;
+
+proc (1) = _qardlNormalizeWaldTest(test);
+    test = lower(strtrim(test));
+
+    if test $== "custom" or test $== "restriction" or
+       test $== "restrictions" or test $== "linear";
+        retp("custom");
+    elseif test $== "constancy" or test $== "constant" or
+           test $== "parameter-constancy" or test $== "parameter_constancy";
+        retp("constancy");
+    elseif test $== "symmetry" or test $== "symmetric" or
+           test $== "quantile-symmetry" or test $== "quantile_symmetry";
+        retp("symmetry");
+    endif;
+
+    errorlog "qardlWald: test must be 'custom', 'constancy', or 'symmetry'";
     end;
 endp;
 

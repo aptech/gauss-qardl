@@ -223,11 +223,15 @@ Computes asymptotic normal p-values for QARDL-ECM estimates.
 
 [qardlWald](command-reference/qardlWald.md)
 
-Runs QARDL Wald tests from string restrictions.
+Runs QARDL Wald tests from one named-argument interface.
 
 [qardlRestriction](command-reference/qardlRestriction.md)
 
 Converts QARDL string restrictions into restriction matrices.
+
+[printQARDLWald](command-reference/printQARDLWald.md)
+
+Prints QARDL Wald-test results with interpretation notes.
 
 [wtestlrb](command-reference/wtestlrb.md)
 
