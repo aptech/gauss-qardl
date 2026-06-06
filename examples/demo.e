@@ -15,7 +15,7 @@ data = data[., 1:3];
 
 // qardlFull does lag selection, ARDL bounds testing, QARDL levels estimation,
 // and QARDL-ECM estimation in one call.
-tau = { 0.25, 0.5, 0.75 };
+tau = { 0.10, 0.25, 0.45, 0.5, 0.65, 0.75, 0.90 };
 qfOut = qardlFull(data, 7, 7, tau);
 
 print;
@@ -85,4 +85,5 @@ print ci_beta;
 // Plot helpers remain separate from estimation, so batch workflows can skip
 // them and interactive workflows can opt in.
 plotQARDLbands(qfOut.qa, tau, 0.05);
+plotOpenWindow;
 plotQIRF(qirfOut, 1);

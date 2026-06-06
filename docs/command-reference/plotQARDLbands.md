@@ -26,7 +26,15 @@ Nothing. Produces GAUSS plots.
 ## Remarks
 
 Confidence bands are computed from the covariance matrices stored in `qaOut`.
-No uncertainty is recomputed inside the plotting helper.
+No uncertainty is recomputed inside the plotting helper. The standard-error
+normalization matches `printQARDL`, `qardl_pval`, and the published QARDL
+author-demo validation tables. For the original iid levels-form QARDL
+covariance path with `q > 0`, this applies the author-demo scaling before
+forming pointwise normal bands.
+
+These are coefficient-path bands over `tau`; they are not QIRF bootstrap bands.
+Use `blockBootstrapQIRF` followed by `plotQIRF(qOut, 1)` for impulse-response
+bands over forecast horizons.
 
 ## Examples
 

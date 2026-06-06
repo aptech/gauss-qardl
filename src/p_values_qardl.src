@@ -71,10 +71,9 @@ proc (3) = qardl_pval(struct qardlOut qaOut);
     local z_bigbt, z_phi, z_gamma;
     local p_bigbt, p_phi, p_gamma;
 
-    // Standard errors from diagonal of covariance matrices
-    stderr_bigbt = sqrt(diag(qaOut.bigbt_cov));
-    stderr_phi   = sqrt(diag(qaOut.phi_cov));
-    stderr_gamma = sqrt(diag(qaOut.gamma_cov));
+    // Standard errors from diagonal of covariance matrices, using the same
+    // scaling as printQARDL() and plotQARDLbands().
+    { stderr_bigbt, stderr_phi, stderr_gamma } = _qardlLevelsSE(qaOut);
 
     // z-statistics (asymptotic normal approximation)
     z_bigbt = qaOut.bigbt ./ stderr_bigbt;

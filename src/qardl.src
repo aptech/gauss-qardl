@@ -1786,10 +1786,12 @@ proc (0) = plotQARDLbands(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 }, alph
     _phi   = reshape(_phi,   ntau, p);
     _gamma = reshape(_gamma, ntau, k);
 
-    // Standard errors from covariance diagonals
-    se_beta  = reshape(sqrt(diag(qaOut.bigbt_cov)),  ntau, k);
-    se_phi   = reshape(sqrt(diag(qaOut.phi_cov)),    ntau, p);
-    se_gamma = reshape(sqrt(diag(qaOut.gamma_cov)),  ntau, k);
+    // Standard errors from covariance diagonals using the same scaling as
+    // printed QARDL tables and qardl_pval().
+    { se_beta, se_phi, se_gamma } = _qardlLevelsSE(qaOut);
+    se_beta  = reshape(se_beta,  ntau, k);
+    se_phi   = reshape(se_phi,   ntau, p);
+    se_gamma = reshape(se_gamma, ntau, k);
 
     // Pointwise bands
     zcrit = cdfni(1 - alpha/2);
@@ -2760,9 +2762,7 @@ proc (0) = printQARDL(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 });
     alpha_ci = 1 - level;
     zcrit = cdfni(1 - alpha_ci/2);
 
-    se_bt  = sqrt(diag(qaOut.bigbt_cov));
-    se_phi = sqrt(diag(qaOut.phi_cov));
-    se_gam = sqrt(diag(qaOut.gamma_cov));
+    { se_bt, se_phi, se_gam } = _qardlLevelsSE(qaOut);
 
     z_bt  = qaOut.bigbt  ./ se_bt;
     z_phi = qaOut.phi    ./ se_phi;
@@ -3276,9 +3276,10 @@ proc (0) = saveQARDLResults(struct qardlOut qaOut, tau = { 0.25, 0.5, 0.75 }, ou
     _phi   = reshape(_phi,   ss, p);
 
     // Standard errors
-    se_beta  = reshape(sqrt(diag(qaOut.bigbt_cov)),  ss, k);
-    se_gamma = reshape(sqrt(diag(qaOut.gamma_cov)),  ss, k);
-    se_phi   = reshape(sqrt(diag(qaOut.phi_cov)),    ss, p);
+    { se_beta, se_phi, se_gamma } = _qardlLevelsSE(qaOut);
+    se_beta  = reshape(se_beta,  ss, k);
+    se_gamma = reshape(se_gamma, ss, k);
+    se_phi   = reshape(se_phi,   ss, p);
 
     // z-statistics and p-values
     z_beta   = _beta  ./ se_beta;
@@ -4114,6 +4115,35 @@ proc (0) = _qardlValidateWaldInputs(param, cov, bigR, smr, data, caller);
         errorlog caller $+ ": data must contain at least two observations";
         end;
     endif;
+endp;
+
+proc (3) = _qardlLevelsSE(struct qardlOut qaOut);
+    local se_beta, se_phi, se_gamma;
+    local n_raw, scale_beta, scale_short;
+
+    scale_beta = 1;
+    scale_short = 1;
+
+    /*
+    ** The original iid QARDL covariance formulas store beta covariance at
+    ** (n-1)^2 scale and phi/gamma covariance at (n-1) scale, matching the
+    ** author demo tables and Wald-test normalizations. The robust, HAC, and
+    ** q=0 covariance paths store ordinary covariance estimates.
+    */
+    if lower(qaOut.covariance_type) $== "iid" and qaOut.q > 0;
+        n_raw = qaOut.sample_end - qaOut.sample_start + 1;
+        if n_raw < 2;
+            n_raw = qaOut.nobs + maxc(qaOut.p|qaOut.q);
+        endif;
+        scale_beta = (n_raw - 1)^2;
+        scale_short = n_raw - 1;
+    endif;
+
+    se_beta  = sqrt(diag(qaOut.bigbt_cov / scale_beta));
+    se_phi   = sqrt(diag(qaOut.phi_cov   / scale_short));
+    se_gamma = sqrt(diag(qaOut.gamma_cov / scale_short));
+
+    retp(se_beta, se_phi, se_gamma);
 endp;
 
 proc (1) = _qardlLevelsDesignOK(data, ppp, qqq);

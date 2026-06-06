@@ -119,4 +119,20 @@ call assert_close(qaMedian.gamma~se_gamma~t_gamma~pv_gamma,
                   read_expected("qardl_author_demo2_gamma_table.csv"),
                   table_tol, "author demo median gamma table changed");
 
+{ se_beta_fn, se_phi_fn, se_gamma_fn } = _qardlLevelsSE(qaMedian);
+call assert_close(se_beta_fn, se_beta, table_tol,
+                  "shared QARDL beta standard-error scaling changed");
+call assert_close(se_phi_fn, se_phi, table_tol,
+                  "shared QARDL phi standard-error scaling changed");
+call assert_close(se_gamma_fn, se_gamma, table_tol,
+                  "shared QARDL gamma standard-error scaling changed");
+
+{ pv_beta_fn, pv_phi_fn, pv_gamma_fn } = qardl_pval(qaMedian);
+call assert_close(pv_beta_fn, pv_beta, table_tol,
+                  "qardl_pval beta published scaling changed");
+call assert_close(pv_phi_fn, pv_phi, table_tol,
+                  "qardl_pval phi published scaling changed");
+call assert_close(pv_gamma_fn, pv_gamma, table_tol,
+                  "qardl_pval gamma published scaling changed");
+
 print "published/qardl_author_demo1.e: PASS";

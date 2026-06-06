@@ -36,10 +36,10 @@ files.
 | Plot helper | Confidence bands | Notes |
 | --- | --- | --- |
 | `plotQARDL` | Optional | Delegates to `plotQARDLbands` when `show_bands = 1`. |
-| `plotQARDLbands` | Yes | Uses covariance matrices stored in `qardlOut`. |
+| `plotQARDLbands` | Yes | Uses standardized QARDL levels standard errors from `qardlOut`; these are coefficient-path bands over `tau`. |
 | `plotRollingQARDL` | Optional | Uses stored rolling standard errors. |
 | `plotRollingQARDLECM` | Optional | Uses stored rolling standard errors. |
-| `plotQIRF` | Optional | Uses `qirfOut.irf_lb` and `qirfOut.irf_ub` when available. |
+| `plotQIRF` | Optional | Uses bootstrap `qirfOut.irf_lb` and `qirfOut.irf_ub` over response horizons when available. |
 
 When QIRF confidence-band fields are not populated, `plotQIRF(qOut, 1)`
 prints a message and plots response paths only.

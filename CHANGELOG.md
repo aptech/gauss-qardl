@@ -61,6 +61,10 @@
 ### Fixed
 - Clarified R-package ECM convention differences, including unrestricted ECM
   behavior and sample/lag-alignment differences in validation notes.
+- Corrected levels-form QARDL standard-error normalization for
+  `plotQARDLbands`, `printQARDL`, `qardl_pval`, `saveQARDLResults`, and
+  generic QARDL table export so coefficient bands and tables match the
+  published author-demo scaling.
 - Added source smoke coverage for new full-workflow diagnostic fields,
   sparse GETS outputs, unified selection wrappers, and package public API
   metadata.

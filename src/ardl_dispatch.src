@@ -397,9 +397,7 @@ proc (0) = _saveARDLTableQARDL(struct qardlOut qaOut, fpath, table_format, preci
     k = qaOut.k;
     p = rows(qaOut.phi) / ss;
 
-    se_bt = sqrt(diag(qaOut.bigbt_cov));
-    se_phi = sqrt(diag(qaOut.phi_cov));
-    se_gam = sqrt(diag(qaOut.gamma_cov));
+    { se_bt, se_phi, se_gam } = _qardlLevelsSE(qaOut);
     z_bt = qaOut.bigbt ./ se_bt;
     z_phi = qaOut.phi ./ se_phi;
     z_gam = qaOut.gamma ./ se_gam;
