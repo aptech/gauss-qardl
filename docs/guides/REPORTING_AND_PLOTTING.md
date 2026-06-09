@@ -44,6 +44,10 @@ files.
 When QIRF confidence-band fields are not populated, `plotQIRF(qOut, 1)`
 prints a message and plots response paths only.
 
+`plotQIRF` keeps the existing single-row layout for one to four quantiles. If a
+QIRF output contains five or more quantiles, it automatically uses a compact
+grid with shared horizon and response scales across panels.
+
 ## Automated Plot Smoke Tests
 
 `tests/run_plot_smoke_tests.ps1` is wired into the source test runner and

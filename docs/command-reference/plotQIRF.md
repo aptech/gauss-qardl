@@ -30,6 +30,10 @@ by `blockBootstrapQIRF` are pointwise percentile bootstrap bands. If
 `show_bands = 1` but `qOut.bands_available` is `0`, the response paths are
 plotted without bands.
 
+For one to four quantiles, `plotQIRF` uses the standard single-row layout. For
+five or more quantiles, it automatically switches to a compact grid layout
+with shared x- and y-axis ranges across quantile panels.
+
 ## Examples
 
 ```gauss

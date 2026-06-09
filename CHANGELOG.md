@@ -57,6 +57,9 @@
 - Documentation links, feature matrix, migration guide, and command references
   now describe diagnostics stored by full workflows and the
   `print_diagnostics` control.
+- `plotQIRF` now keeps the existing single-row layout for one to four
+  quantiles and automatically switches to compact shared-scale grid layouts
+  for five or more quantiles.
 
 ### Fixed
 - Clarified R-package ECM convention differences, including unrestricted ECM

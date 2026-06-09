@@ -346,7 +346,8 @@ endp;
 **
 **  Purpose:    Plot quantile impulse response functions from a qirfOut struct.
 **              One panel per quantile, showing the response path over horizons
-**              0,...,H with a horizontal zero reference line.
+**              0,...,H with a horizontal zero reference line.  Uses a single
+**              row for up to four quantiles and a compact grid otherwise.
 **
 **  Format:     plotQIRF(qirfOut);
 **              plotQIRF(qirfOut, show_bands, alpha);
@@ -359,7 +360,8 @@ endp;
 **  Developed:  April 2026
 */
 proc (0) = plotQIRF(struct qirfOut qOut, show_bands = 0, alpha = 0.05);
-    local ss, jj, H, horizons, shock_lbl;
+    local ss, jj, H, horizons, shock_lbl, nrows, ncols, row_idx, col_idx;
+    local ydat, ymin, ymax, ypad, mid_row, last_row_count, x_label_col;
     struct plotControl myPlot;
 
     call _qardlValidatePlotBandInputs(show_bands, alpha, "plotQIRF");
@@ -376,6 +378,7 @@ proc (0) = plotQIRF(struct qirfOut qOut, show_bands = 0, alpha = 0.05);
     ss      = rows(qOut.tau);
     H       = qOut.H;
     horizons = seqa(0, 1, H+1);
+    { nrows, ncols } = _qirfPlotLayout(ss);
 
     if qOut.permanent;
         shock_lbl = "Permanent";
@@ -383,11 +386,35 @@ proc (0) = plotQIRF(struct qirfOut qOut, show_bands = 0, alpha = 0.05);
         shock_lbl = "Temporary";
     endif;
 
+    if show_bands;
+        ydat = qOut.irf_lb~qOut.irf~qOut.irf_ub~zeros(H+1, ss);
+    else;
+        ydat = qOut.irf~zeros(H+1, ss);
+    endif;
+    ymin = minc(minc(ydat));
+    ymax = maxc(maxc(ydat));
+    ypad = 0.05*(ymax - ymin);
+    if ypad <= 0;
+        ypad = 0.05*maxc(1|abs(ymax));
+    endif;
+
+    mid_row = ceil(nrows/2);
+    if nrows == 2;
+        mid_row = 2;
+    endif;
+    last_row_count = ss - (nrows - 1)*ncols;
+    x_label_col = ceil(last_row_count/2);
+    if last_row_count == 2;
+        x_label_col = 2;
+    endif;
+
     myPlot = plotGetDefaults("xy");
     plotSetTitle(&myPlot, "", "Arial", 16);
     plotSetTextInterpreter(&myPlot, "LaTex", "all");
     plotSetXLabel(&myPlot, "Horizon", "Arial", 14);
     plotSetYLabel(&myPlot, "Response", "Arial", 14);
+    plotSetXRange(&myPlot, 0, H);
+    plotSetYRange(&myPlot, ymin - ypad, ymax + ypad);
     plotSetTicLabelFont(&myPlot, "Arial", 12);
     plotSetYTicCount(&myPlot, 5);
     if show_bands;
@@ -395,8 +422,25 @@ proc (0) = plotQIRF(struct qirfOut qOut, show_bands = 0, alpha = 0.05);
     endif;
 
     for jj(1, ss, 1);
-        plotLayout(1, ss, jj);
-        plotSetTitle(&myPlot, "\\text{" $+ shock_lbl $+ " QIRF }\\tau = " $+ ntos(qOut.tau[jj]));
+        plotLayout(nrows, ncols, jj);
+        row_idx = ceil(jj/ncols);
+        col_idx = jj - (row_idx - 1)*ncols;
+
+        plotSetTitle(&myPlot, "\\text{" $+ shock_lbl $+ " QIRF, tau = " $+ _qirfTauLabel(qOut.tau[jj]) $+ "}");
+
+        if ss > 4;
+            if row_idx == nrows and col_idx == x_label_col;
+                plotSetXLabel(&myPlot, "Horizon", "Arial", 14);
+            else;
+                plotSetXLabel(&myPlot, " ", "Arial", 14);
+            endif;
+
+            if row_idx == mid_row and col_idx == 1;
+                plotSetYLabel(&myPlot, "Response", "Arial", 14);
+            else;
+                plotSetYLabel(&myPlot, " ", "Arial", 14);
+            endif;
+        endif;
 
         if show_bands;
             plotXY(myPlot, horizons, qOut.irf_lb[., jj]~qOut.irf[., jj]~qOut.irf_ub[., jj]~zeros(H+1, 1));
@@ -406,4 +450,23 @@ proc (0) = plotQIRF(struct qirfOut qOut, show_bands = 0, alpha = 0.05);
     endfor;
 
     plotClearLayout();
+endp;
+
+
+proc (2) = _qirfPlotLayout(ss);
+    local nrows, ncols;
+
+    if ss <= 4;
+        retp(1, ss);
+    endif;
+
+    ncols = ceil(sqrt(ss));
+    nrows = ceil(ss/ncols);
+
+    retp(nrows, ncols);
+endp;
+
+
+proc _qirfTauLabel(tau);
+    retp(ftos(tau, "%*.*lf", 1, 2));
 endp;

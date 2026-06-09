@@ -33,4 +33,19 @@ qOut = qirf(qaOut, qaOut.p, qaOut.q, 4, tau, 1, 1);
 plotQIRF(qOut, 0, 0.05);
 plotQIRF(qOut, 1, 0.05);
 
+tau_grid = { 0.10, 0.25, 0.40, 0.55, 0.70, 0.85 };
+
+struct qardlOut qaGridOut;
+qaGridOut = qardl(data, 1, 1, tau_grid, "iid", 0, 0);
+
+struct qirfOut qGridOut;
+qGridOut = qirf(qaGridOut, qaGridOut.p, qaGridOut.q, 4, tau_grid, 1, 1);
+plotQIRF(qGridOut, 0, 0.05);
+
+qGridOut.irf_lb = qGridOut.irf - 0.05;
+qGridOut.irf_ub = qGridOut.irf + 0.05;
+qGridOut.bands_available = 1;
+qGridOut.alpha = 0.05;
+plotQIRF(qGridOut, 1, 0.05);
+
 print "smoke_plot_api.e: PASS";
